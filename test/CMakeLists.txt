@@ -7,6 +7,8 @@ foreach(TEST_FILE ${ALL_TEST_FILES})
 
     add_executable(${TEST_TARGET}_test ${TEST_FILE})
 
+    redefine_file_macro(${TEST_TARGET}_test)
+
     set_target_properties(${TEST_TARGET}_test
         PROPERTIES OUTPUT_NAME ${TEST_TARGET}
     )
