@@ -965,6 +965,9 @@ inline void* ThreadAlloc::try_realloc(void* p, size_t o, size_t n) {
 
 } // xx
 
+
+
+#ifndef CO_USE_SYS_MALLOC
 void* _salloc(size_t n) {
     assert(n <= 4096);
     return xx::talloc()->salloc(n);
@@ -973,8 +976,6 @@ void* _salloc(size_t n) {
 void _dealloc(std::function<void()>&& f, int x) {
     xx::g_root.add_destructor(std::forward<xx::F>(f), x);
 }
-
-#ifndef CO_USE_SYS_MALLOC
 void* alloc(size_t n) {
     return xx::talloc()->alloc(n);
 }
@@ -996,6 +997,14 @@ void* try_realloc(void* p, size_t o, size_t n) {
 }
 
 #else
+void* _salloc(size_t n) {
+    assert(n <= 4096);
+    return ::malloc(n); 
+}
+
+void _dealloc(std::function<void()>&& f, int x) {
+    xx::g_root.add_destructor(std::forward<xx::F>(f), x);
+}
 void* alloc(size_t n) { return ::malloc(n); }
 void* alloc(size_t n, size_t) { return ::malloc(n); }
 void free(void* p, size_t) { ::free(p); }

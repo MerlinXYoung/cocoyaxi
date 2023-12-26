@@ -39,7 +39,7 @@ struct queue {
     };
 
     _memb* _make_memb() {
-        _memb* m = (_memb*) co::alloc(sizeof(_memb) + N * sizeof(void*));
+        _memb* m = (_memb*) ::malloc(sizeof(_memb) + N * sizeof(void*));
         m->size = 0;
         m->rx = 0;
         m->wx = 0;
@@ -52,7 +52,7 @@ struct queue {
         for (auto h = _q.front(); h;) {
             const auto m = (_memb*)h;
             h = h->next;
-            co::free(m, sizeof(_memb) + N * sizeof(void*));
+            ::free(m);
             co::print("free memb: ", m);
         }
     }
@@ -80,7 +80,7 @@ struct queue {
                 if (_q.back() != _m) {
                     _memb* const m = (_memb*) _q.pop_front();
                     _m->size = m->size;
-                    co::free(m, sizeof(_memb) + N * sizeof(void*));
+                    ::free(m);
                 }
             }
         }
@@ -110,7 +110,7 @@ struct Buffer {
 
     void reset() {
         if (_h) {
-            co::free(_h, _h->cap + 8);
+            ::free(_h);
             _h = 0;
         }
     }
@@ -118,7 +118,7 @@ struct Buffer {
     void append(const void* p, size_t size) {
         const uint32 n = (uint32)size;
         if (!_h) {
-            _h = (H*) co::alloc(size + 8); assert(_h);
+            _h = (H*) ::malloc(size + 8); assert(_h);
             _h->cap = n;
             _h->size = 0;
             goto lable;
@@ -127,7 +127,7 @@ struct Buffer {
         if (_h->cap < _h->size + n) {
             const uint32 o = _h->cap;
             _h->cap += (o >> 1) + n;
-            _h = (H*) co::realloc(_h, o + 8, _h->cap + 8); assert(_h);
+            _h = (H*) ::realloc(_h, _h->cap + 8); assert(_h);
             goto lable;
         }
 
@@ -784,8 +784,8 @@ DEF_test(co) {
 
     DEF_case(pool) {
         co::pool p(
-            []() { return (void*) co::make<int>(0); },
-            [](void* p) { co::del((int*)p); },
+            []() { return (void*) new int(0); },
+            [](void* p) { delete (int*)p; },
             8192
         );
 

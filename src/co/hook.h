@@ -5,7 +5,7 @@ namespace co {
 // hook sleep or not
 void hook_sleep(bool x);
 
-} // co
+}  // namespace co
 
 // disable hook for android
 #ifdef __ANDROID__
@@ -16,10 +16,10 @@ void hook_sleep(bool x);
 #define __sys_api(x) ::x
 
 #else
-// We have to hook some native APIs, as third-party network libraries may block the 
+// We have to hook some native APIs, as third-party network libraries may block the
 // coroutine schedulers.
-#define __sys_api(x)        _sys_##x
-#define _CO_DEC_SYS_API(x)  extern x##_fp_t __sys_api(x)
+#define __sys_api(x) _sys_##x
+#define _CO_DEC_SYS_API(x) extern x##_fp_t __sys_api(x)
 
 struct HookInitializer {
     HookInitializer();
@@ -29,45 +29,56 @@ struct HookInitializer {
 static HookInitializer g_hook_initializer;
 
 #ifdef _WIN32
-#include <WinSock2.h>
-#include <ws2tcpip.h> // for inet_ntop...
 #include <MSWSock.h>
+#include <WinSock2.h>
+#include <ws2tcpip.h>  // for inet_ntop...
 
-#define _CO_DEF_SYS_API(x)  x##_fp_t __sys_api(x) = (x##_fp_t)x
+
+#define _CO_DEF_SYS_API(x) x##_fp_t __sys_api(x) = (x##_fp_t)x
 
 extern "C" {
 
-typedef SOCKET (WINAPI* socket_fp_t)(int, int, int);
-typedef int (WINAPI* closesocket_fp_t)(SOCKET);
-typedef int (WINAPI* shutdown_fp_t)(SOCKET, int);
-typedef int (WINAPI* setsockopt_fp_t)(SOCKET, int, int, const char*, int);
-typedef int (WINAPI* ioctlsocket_fp_t)(SOCKET, long, u_long*);
+typedef SOCKET(WINAPI* socket_fp_t)(int, int, int);
+typedef int(WINAPI* closesocket_fp_t)(SOCKET);
+typedef int(WINAPI* shutdown_fp_t)(SOCKET, int);
+typedef int(WINAPI* setsockopt_fp_t)(SOCKET, int, int, const char*, int);
+typedef int(WINAPI* ioctlsocket_fp_t)(SOCKET, long, u_long*);
 typedef SOCKET(WINAPI* accept_fp_t)(SOCKET, sockaddr*, int*);
-typedef int (WINAPI* connect_fp_t)(SOCKET, CONST sockaddr*, int);
-typedef int (WINAPI* recv_fp_t)(SOCKET, char*, int, int);
-typedef int (WINAPI* recvfrom_fp_t)(SOCKET, char*, int, int, sockaddr*, int*);
-typedef int (WINAPI* send_fp_t)(SOCKET, CONST char*, int, int);
-typedef int (WINAPI* sendto_fp_t)(SOCKET, CONST char*, int, int, CONST sockaddr*, int);
-typedef int (WINAPI* select_fp_t)(int, fd_set*, fd_set*, fd_set*, const timeval*);
+typedef int(WINAPI* connect_fp_t)(SOCKET, CONST sockaddr*, int);
+typedef int(WINAPI* recv_fp_t)(SOCKET, char*, int, int);
+typedef int(WINAPI* recvfrom_fp_t)(SOCKET, char*, int, int, sockaddr*, int*);
+typedef int(WINAPI* send_fp_t)(SOCKET, CONST char*, int, int);
+typedef int(WINAPI* sendto_fp_t)(SOCKET, CONST char*, int, int, CONST sockaddr*, int);
+typedef int(WINAPI* select_fp_t)(int, fd_set*, fd_set*, fd_set*, const timeval*);
 
-typedef void (WINAPI* Sleep_fp_t)(DWORD);
+typedef void(WINAPI* Sleep_fp_t)(DWORD);
 typedef SOCKET(WINAPI* WSASocketA_fp_t)(int, int, int, LPWSAPROTOCOL_INFOA, GROUP, DWORD);
-typedef SOCKET(WINAPI* WSASocketW_fp_t)( int, int, int, LPWSAPROTOCOL_INFOW, GROUP, DWORD);
-typedef int (WINAPI* WSAIoctl_fp_t)(SOCKET, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSAAsyncSelect_fp_t)(SOCKET, HWND, u_int, long);
-typedef int (WINAPI* WSAEventSelect_fp_t)( SOCKET, WSAEVENT, long);
+typedef SOCKET(WINAPI* WSASocketW_fp_t)(int, int, int, LPWSAPROTOCOL_INFOW, GROUP, DWORD);
+typedef int(WINAPI* WSAIoctl_fp_t)(SOCKET, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD,
+                                   LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSAAsyncSelect_fp_t)(SOCKET, HWND, u_int, long);
+typedef int(WINAPI* WSAEventSelect_fp_t)(SOCKET, WSAEVENT, long);
 typedef SOCKET(WINAPI* WSAAccept_fp_t)(SOCKET, sockaddr*, LPINT, LPCONDITIONPROC, DWORD_PTR);
-typedef int (WINAPI* WSAConnect_fp_t)(SOCKET, CONST sockaddr*, int, LPWSABUF, LPWSABUF, LPQOS, LPQOS);
-typedef int (WINAPI* WSARecv_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSARecvFrom_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, LPDWORD, sockaddr*, LPINT, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSASend_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, DWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSASendTo_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, DWORD, CONST sockaddr*, int, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSARecvMsg_fp_t)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSASendMsg_fp_t)(SOCKET, LPWSAMSG, DWORD, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-typedef int (WINAPI* WSAPoll_fp_t)(LPWSAPOLLFD, ULONG, INT);
+typedef int(WINAPI* WSAConnect_fp_t)(SOCKET, CONST sockaddr*, int, LPWSABUF, LPWSABUF, LPQOS,
+                                     LPQOS);
+typedef int(WINAPI* WSARecv_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, LPDWORD, LPWSAOVERLAPPED,
+                                  LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSARecvFrom_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, LPDWORD, sockaddr*, LPINT,
+                                      LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSASend_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, DWORD, LPWSAOVERLAPPED,
+                                  LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSASendTo_fp_t)(SOCKET, LPWSABUF, DWORD, LPDWORD, DWORD, CONST sockaddr*, int,
+                                    LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSARecvMsg_fp_t)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED,
+                                     LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSASendMsg_fp_t)(SOCKET, LPWSAMSG, DWORD, LPDWORD, LPWSAOVERLAPPED,
+                                     LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+typedef int(WINAPI* WSAPoll_fp_t)(LPWSAPOLLFD, ULONG, INT);
 typedef DWORD(WINAPI* WSAWaitForMultipleEvents_fp_t)(DWORD, CONST HANDLE*, BOOL, DWORD, BOOL);
-typedef BOOL(WINAPI* GetQueuedCompletionStatus_fp_t)(HANDLE, LPDWORD, PULONG_PTR, LPOVERLAPPED*, DWORD);
-typedef BOOL(WINAPI* GetQueuedCompletionStatusEx_fp_t)(HANDLE, LPOVERLAPPED_ENTRY, ULONG, PULONG, DWORD, BOOL);
+typedef BOOL(WINAPI* GetQueuedCompletionStatus_fp_t)(HANDLE, LPDWORD, PULONG_PTR, LPOVERLAPPED*,
+                                                     DWORD);
+typedef BOOL(WINAPI* GetQueuedCompletionStatusEx_fp_t)(HANDLE, LPOVERLAPPED_ENTRY, ULONG, PULONG,
+                                                       DWORD, BOOL);
 
 _CO_DEC_SYS_API(socket);
 _CO_DEC_SYS_API(closesocket);
@@ -101,47 +112,49 @@ _CO_DEC_SYS_API(WSAWaitForMultipleEvents);
 _CO_DEC_SYS_API(GetQueuedCompletionStatus);
 _CO_DEC_SYS_API(GetQueuedCompletionStatusEx);
 
-} // "C"
+}  // "C"
 
 #else
 
-#include <unistd.h>
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>  // struct sockaddr_in...
 #include <netdb.h>       // getaddrinfo, gethostby...
+#include <netinet/in.h>  // struct sockaddr_in...
 #include <poll.h>
-#include <sys/select.h>
 #include <sys/ioctl.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #ifdef __linux__
-#include <sys/epoll.h>   // epoll
+#include <sys/epoll.h>  // epoll
 #else
+#include <sys/event.h>  // kevent
 #include <time.h>
-#include <sys/event.h>   // kevent
+
 #endif
 
-#define _CO_DEF_SYS_API(x)  x##_fp_t __sys_api(x) = 0
+#define _CO_DEF_SYS_API(x) x##_fp_t __sys_api(x) = 0
 
 namespace co {
 
 // deduce type of the second parameter of ioctl
-template<typename T>
+template <typename T>
 struct ioctl_param;
 
-template<typename X, typename Y>
-struct ioctl_param<int(*)(X, Y, ...)> {
+template <typename X, typename Y>
+struct ioctl_param<int (*)(X, Y, ...)> {
     typedef Y type;
 };
 
 #if __cplusplus >= 201703L
-template<typename X, typename Y>
-struct ioctl_param<int(*)(X, Y, ...) noexcept> {
+template <typename X, typename Y>
+struct ioctl_param<int (*)(X, Y, ...) noexcept> {
     typedef Y type;
 };
 #endif
 
-} // co
+}  // namespace co
 
 extern "C" {
 
@@ -182,11 +195,15 @@ typedef struct hostent* (*gethostbyaddr_fp_t)(const void*, socklen_t, int);
 typedef int (*epoll_wait_fp_t)(int, struct epoll_event*, int, int);
 typedef int (*accept4_fp_t)(int, struct sockaddr*, socklen_t*, int);
 typedef struct hostent* (*gethostbyname2_fp_t)(const char*, int);
-typedef int (*gethostbyname_r_fp_t)(const char*, struct hostent*, char*, size_t, struct hostent**, int*);
-typedef int (*gethostbyname2_r_fp_t)(const char*, int, struct hostent*, char*, size_t, struct hostent**, int*);
-typedef int (*gethostbyaddr_r_fp_t)(const void*, socklen_t, int, struct hostent*, char*, size_t, struct hostent**, int*);
+typedef int (*gethostbyname_r_fp_t)(const char*, struct hostent*, char*, size_t, struct hostent**,
+                                    int*);
+typedef int (*gethostbyname2_r_fp_t)(const char*, int, struct hostent*, char*, size_t,
+                                     struct hostent**, int*);
+typedef int (*gethostbyaddr_r_fp_t)(const void*, socklen_t, int, struct hostent*, char*, size_t,
+                                    struct hostent**, int*);
 #else
-typedef int (*kevent_fp_t)(int, const struct kevent*, int, struct kevent*, int, const struct timespec*);
+typedef int (*kevent_fp_t)(int, const struct kevent*, int, struct kevent*, int,
+                           const struct timespec*);
 #endif
 
 _CO_DEC_SYS_API(socket);
@@ -233,7 +250,7 @@ _CO_DEC_SYS_API(gethostbyaddr_r);
 _CO_DEC_SYS_API(kevent);
 #endif
 
-} // "C"
+}  // "C"
 
-#endif // #ifdef _WIN32
-#endif // #ifdef _CO_DISABLE_HOOK
+#endif  // #ifdef _WIN32
+#endif  // #ifdef _CO_DISABLE_HOOK

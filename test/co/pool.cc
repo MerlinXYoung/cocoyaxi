@@ -23,8 +23,8 @@ class S {
 // use DEF_main to make code in main() also run in coroutine.
 DEF_main(argc, argv) {
     co::pool p(
-        []() { return (void*) co::make<S>(); }, // ccb
-        [](void* p) { co::del((S*)p); },        // dcb
+        []() { return (void*) new S(); }, // ccb
+        [](void* p) { delete (S*)p; },        // dcb
         1024                                    // max capacity
     );
 

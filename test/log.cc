@@ -1,6 +1,14 @@
 #include "co/log.h"
+
+#include <algorithm>
+#include <memory>
+#include <thread>
+#include <vector>
+
 #include "co/cout.h"
 #include "co/time.h"
+#include "co/os.h"
+
 
 DEF_bool(perf, false, "performance testing");
 
@@ -39,13 +47,27 @@ int main(int argc, char** argv) {
     } else {
         // usage of other logs
         DLOG << "This is DLOG (debug).. " << 23;
-        LOG  << "This is LOG  (info).. " << 23;
+        LOG << "This is LOG  (info).. " << 23;
         WLOG << "This is WLOG (warning).. " << 23;
         ELOG << "This is ELOG (error).. " << 23;
-        //FLOG << "This is FLOG (fatal).. " << 23;
+        // FLOG << "This is FLOG (fatal).. " << 23;
         LOG << "hello " << nested_log() << "  " << nested_log();
         TLOG("co") << "hello co";
         TLOG("bob") << "hello bob";
+    }
+    std::vector<std::shared_ptr<std::thread>> threads;
+    for (int i = 0; i < os::cpunum(); ++i) {
+        threads.emplace_back(new std::thread([] {
+            for (int j = 0; j < 10000; ++j) {
+                DLOG << "This is DLOG (debug).. " << j;
+                LOG << "This is LOG  (info).. " << j;
+                WLOG << "This is WLOG (warning).. " << j;
+                ELOG << "This is ELOG (error).. " << j;
+            }
+        }));
+    }
+    for (auto& p : threads) {
+        p->join();
     }
 
     return 0;

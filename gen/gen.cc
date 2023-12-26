@@ -353,7 +353,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    g_prog = co::make<Program>();
+    g_prog = new Program();
     g_sname = FLG_std ? "std::string" : "fastring";
     g_aname = FLG_std ? "std::vector" : "co::vector";
 
@@ -364,6 +364,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    co::del(g_prog);
+    delete g_prog;
     return 0;
 }

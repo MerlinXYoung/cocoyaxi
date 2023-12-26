@@ -18,11 +18,12 @@ struct Error {
     co::hash_map<int, uint32> pos;
 };
 
-static __thread Error* g_err = 0;
 
 inline Error& error() {
-    return g_err ? *g_err : *(g_err = co::_make_static<Error>());
+    static thread_local Error _err;
+    return _err;
 }
+
 
 } // xx
 

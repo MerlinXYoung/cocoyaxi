@@ -1,7 +1,6 @@
 #pragma once
 
 #include "co/def.h"
-#include "co/mem.h"
 #include "co/atomic.h"
 #include "co/table.h"
 
@@ -122,10 +121,13 @@ class SockCtx {
 
 #endif
 
-extern co::table<SockCtx>* g_ctx_tb;
+
+
+
 
 inline SockCtx& get_sock_ctx(size_t sock) {
-    return (*g_ctx_tb)[sock];
+    static co::table<SockCtx> _tb(15, 16);
+    return _tb[sock];
 }
 
 } // co

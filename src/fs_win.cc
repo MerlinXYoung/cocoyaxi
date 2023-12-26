@@ -1,9 +1,8 @@
 #ifdef _WIN32
 #include "co/fs.h"
-#include "co/mem.h"
 
 #ifdef _MSC_VER
-#pragma warning (disable:4800)
+#pragma warning(disable : 4800)
 #endif
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -12,18 +11,15 @@
 
 namespace fs {
 
-__thread fastring* g_s;
-
 inline fastring& cache() {
-    return g_s ? *g_s : *(g_s = co::_make_static<fastring>(512));
+    static thread_local fastring _s(512);
+    return _s;
 }
 
 const int W = sizeof(wchar_t);
 typedef wchar_t* PWC;
 
-inline int nwc(const char* p) {
-    return MultiByteToWideChar(CP_UTF8, 0, p, -1, NULL, 0);
-}
+inline int nwc(const char* p) { return MultiByteToWideChar(CP_UTF8, 0, p, -1, NULL, 0); }
 
 inline void utf82wc(const char* p, wchar_t* w, int n) {
     MultiByteToWideChar(CP_UTF8, 0, p, -1, w, n);
@@ -72,26 +68,18 @@ const DWORD g_bad_attr = INVALID_FILE_ATTRIBUTES;
 const DWORD g_attr_dir = FILE_ATTRIBUTE_DIRECTORY;
 const DWORD g_attr_lnk = FILE_ATTRIBUTE_REPARSE_POINT;
 
-inline DWORD _getattr(const wchar_t* path) {
-    return GetFileAttributesW(path);
-}
+inline DWORD _getattr(const wchar_t* path) { return GetFileAttributesW(path); }
 
 inline bool _isdir(const wchar_t* path) {
     const DWORD x = _getattr(path);
     return x != g_bad_attr && (x & g_attr_dir);
 }
 
-inline bool _mkdir(const wchar_t* path) {
-    return CreateDirectoryW(path, 0);
-}
+inline bool _mkdir(const wchar_t* path) { return CreateDirectoryW(path, 0); }
 
-bool exists(const char* path) {
-    return _getattr(widen(path)) != g_bad_attr;
-}
+bool exists(const char* path) { return _getattr(widen(path)) != g_bad_attr; }
 
-bool isdir(const char* path) {
-    return _isdir(widen(path));
-}
+bool isdir(const char* path) { return _isdir(widen(path)); }
 
 int64 mtime(const char* path) {
     WIN32_FILE_ATTRIBUTE_DATA info;
@@ -123,8 +111,8 @@ bool mkdir(const char* path, bool p) {
 bool mkdir(char* path, bool p) {
     if (!p) return _mkdir(widen(path));
 
-    char* s = (char*) strrchr(path, '/');
-    if (s == 0) s = (char*) strrchr(path, '\\');
+    char* s = (char*)strrchr(path, '/');
+    if (s == 0) s = (char*)strrchr(path, '\\');
     if (s == 0) return _mkdir(widen(path));
 
     const char c = *s;
@@ -182,7 +170,7 @@ static bool _rmdir(fastring& s, wchar_t c) {
     *(wchar_t*)(s.data() + n) = L'\0';
     return RemoveDirectoryW((PWC)s.data());
 
-  err:
+err:
     FindClose(h);
     return false;
 }
@@ -190,7 +178,7 @@ static bool _rmdir(fastring& s, wchar_t c) {
 bool remove(const char* path, bool r) {
     const wchar_t* wpath = widen(path);
     const DWORD attr = _getattr(wpath);
-    if (attr == g_bad_attr) return true; // not exists
+    if (attr == g_bad_attr) return true;  // not exists
     if (!(attr & g_attr_dir)) return DeleteFileW(wpath);
     if (!r) return RemoveDirectoryW(wpath);
 
@@ -232,7 +220,7 @@ bool mv(const char* from, const char* to) {
         return MoveFileExW(x, y, f);
     }
 
-    if (a & g_attr_dir) RemoveDirectoryW(y); // remove dir y if it is empty
+    if (a & g_attr_dir) RemoveDirectoryW(y);  // remove dir y if it is empty
     return MoveFileExW(x, y, MOVEFILE_COPY_ALLOWED);
 }
 
@@ -259,21 +247,21 @@ namespace xx {
 HANDLE open(const char* path, char mode) {
     wchar_t* s = widen(path);
     switch (mode) {
-      case 'r':
-        return CreateFileW(s, GENERIC_READ, 7, 0, OPEN_EXISTING, 0, 0);
-      case 'a':
-        return CreateFileW(s, FILE_APPEND_DATA, 7, 0, OPEN_ALWAYS, 0, 0);
-      case 'w':
-        return CreateFileW(s, GENERIC_WRITE, 7, 0, CREATE_ALWAYS, 0, 0);
-      case 'm':
-        return CreateFileW(s, GENERIC_WRITE, 7, 0, OPEN_ALWAYS, 0, 0);
-      case '+':
-        return CreateFileW(s, GENERIC_READ | GENERIC_WRITE, 7, 0, OPEN_ALWAYS, 0, 0);
-      default:
-        return nullfd;
+        case 'r':
+            return CreateFileW(s, GENERIC_READ, 7, 0, OPEN_EXISTING, 0, 0);
+        case 'a':
+            return CreateFileW(s, FILE_APPEND_DATA, 7, 0, OPEN_ALWAYS, 0, 0);
+        case 'w':
+            return CreateFileW(s, GENERIC_WRITE, 7, 0, CREATE_ALWAYS, 0, 0);
+        case 'm':
+            return CreateFileW(s, GENERIC_WRITE, 7, 0, OPEN_ALWAYS, 0, 0);
+        case '+':
+            return CreateFileW(s, GENERIC_READ | GENERIC_WRITE, 7, 0, OPEN_ALWAYS, 0, 0);
+        default:
+            return nullfd;
     }
 }
-} // xx
+}  // namespace xx
 
 struct fctx {
     union {
@@ -285,7 +273,8 @@ struct fctx {
 
 file::file(size_t n) : _p(0) {
     const size_t x = n + sizeof(fctx) + 1;
-    _p = co::alloc(x); assert(_p);
+    _p = ::malloc(x);
+    assert(_p);
     fctx* p = (fctx*)_p;
     p->n = (uint32)x;
     p->fd = nullfd;
@@ -295,19 +284,17 @@ file::file(size_t n) : _p(0) {
 file::~file() {
     if (_p) {
         this->close();
-        co::free(_p, ((fctx*)_p)->n);
+        ::free(_p);
         _p = 0;
     }
 }
 
 file::operator bool() const {
-    fctx* p = (fctx*) _p;
+    fctx* p = (fctx*)_p;
     return p && p->fd != nullfd;
 }
 
-const char* file::path() const {
-    return _p ? ((char*)_p + sizeof(fctx)) : "";
-}
+const char* file::path() const { return _p ? ((char*)_p + sizeof(fctx)) : ""; }
 
 bool file::open(const char* path, char mode) {
     this->close();
@@ -318,7 +305,8 @@ bool file::open(const char* path, char mode) {
     fctx* p = (fctx*)_p;
 
     if (!p || p->n < x) {
-        _p = co::realloc(_p, p ? p->n : 0, x); assert(_p);
+        _p = ::realloc(_p, x);
+        assert(_p);
         p = (fctx*)_p;
         memcpy(p + 1, path, n);
         p->n = x;
@@ -338,7 +326,7 @@ void file::close() {
     }
 }
 
-static int g_seekfrom[3] = { FILE_BEGIN, FILE_CURRENT, FILE_END };
+static int g_seekfrom[3] = {FILE_BEGIN, FILE_CURRENT, FILE_END};
 
 void file::seek(int64 off, int whence) {
     fctx* p = (fctx*)_p;
@@ -359,7 +347,7 @@ size_t file::read(void* s, size_t n) {
 
     char* c = (char*)s;
     size_t remain = n;
-    const size_t N = 1u << 30; // 1G
+    const size_t N = 1u << 30;  // 1G
 
     while (true) {
         DWORD r = 0;
@@ -386,7 +374,7 @@ size_t file::write(const void* s, size_t n) {
 
     const char* c = (const char*)s;
     size_t remain = n;
-    const size_t N = 1u << 30; // 1G
+    const size_t N = 1u << 30;  // 1G
 
     while (true) {
         DWORD r = 0;
@@ -412,7 +400,7 @@ struct dctx {
 dir::~dir() {
     if (_p) {
         this->close();
-        co::free(_p, ((dctx*)_p)->n);
+        ::free(_p);
         _p = 0;
     }
 }
@@ -423,11 +411,12 @@ bool dir::open(const char* path) {
 
     const char c = strchr(path, '/') ? '/' : '\\';
     const size_t n = strlen(path);
-    const size_t x = n + sizeof(dctx) + 3; // append "/*"
+    const size_t x = n + sizeof(dctx) + 3;  // append "/*"
     dctx* d = (dctx*)_p;
 
     if (!d || d->n < x) {
-        _p = co::realloc(_p, d ? d->n : 0, x); assert(_p);
+        _p = ::realloc(_p, x);
+        assert(_p);
         d = (dctx*)_p;
         memcpy(d + 1, path, n);
         d->n = x;
@@ -444,7 +433,7 @@ bool dir::open(const char* path) {
         p[n] = '*';
         p[n + 1] = '\0';
     }
-    d->d = FindFirstFileW(widen(p), &d->e); 
+    d->d = FindFirstFileW(widen(p), &d->e);
     p[n] = '\0';
     return d->d != INVALID_HANDLE_VALUE;
 }
@@ -457,9 +446,7 @@ void dir::close() {
     }
 }
 
-const char* dir::path() const {
-    return _p ? ((char*)_p + sizeof(dctx)) : "";
-}
+const char* dir::path() const { return _p ? ((char*)_p + sizeof(dctx)) : ""; }
 
 co::vector<fastring> dir::all() const {
     dctx* d = (dctx*)_p;
@@ -505,6 +492,6 @@ dir::iterator dir::begin() const {
     return dir::iterator(NULL);
 }
 
-} // namespace fs
+}  // namespace fs
 
 #endif

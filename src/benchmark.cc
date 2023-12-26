@@ -1,6 +1,7 @@
 #include "co/benchmark.h"
-#include "co/fastring.h"
+
 #include "co/cout.h"
+#include "co/fastring.h"
 
 namespace bm {
 namespace xx {
@@ -14,10 +15,9 @@ int calc_iters(int64 ns) {
     return 1;
 }
 
-static co::vector<Group>* g_g;
-
 inline co::vector<Group>& groups() {
-    return g_g ? *g_g : *(g_g = co::_make_static<co::vector<Group>>());
+    static co::vector<Group> _g;
+    return _g;
 }
 
 bool add_group(const char* name, void (*f)(Group&)) {
@@ -67,15 +67,12 @@ void print_results(Group& g) {
         if (maxlen < x) maxlen = x;
     }
 
-    cout << "|  " << text::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ')
-         << "|  " << text::bold("ns/iter  ").blue()
-         << "|  " << text::bold("iters/s  ").blue()
-         << "|  " << text::bold("speedup  ").blue() << "|\n";
+    cout << "|  " << text::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ') << "|  "
+         << text::bold("ns/iter  ").blue() << "|  " << text::bold("iters/s  ").blue() << "|  "
+         << text::bold("speedup  ").blue() << "|\n";
 
-    cout << "| " << fastring(maxlen + 2, '-') << ' '
-         << "| " << fastring(9, '-') << ' '
-         << "| " << fastring(9, '-') << ' '
-         << "| " << fastring(9, '-') << ' ' << "|\n";
+    cout << "| " << fastring(maxlen + 2, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "| "
+         << fastring(9, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "|\n";
 
     for (size_t i = 0; i < g.res.size(); ++i) {
         auto& r = g.res[i];
@@ -83,8 +80,8 @@ void print_results(Group& g) {
         fastring t = Num(r.ns).str();
         size_t p = t.size() <= 7 ? 9 - t.size() : 2;
 
-        cout << "|  " << text::green(r.bm) << fastring(maxlen - bmlen + 2, ' ')
-             << "|  " << text::red(t) << fastring(p, ' ');
+        cout << "|  " << text::green(r.bm) << fastring(maxlen - bmlen + 2, ' ') << "|  "
+             << text::red(t) << fastring(p, ' ');
 
         double x = r.ns > 0 ? 1000000000.0 / r.ns : 1.2e12;
         t = Num(x).str();
@@ -104,7 +101,7 @@ void print_results(Group& g) {
     }
 }
 
-} // xx
+}  // namespace xx
 
 void run_benchmarks() {
     auto& groups = xx::groups();
@@ -116,4 +113,4 @@ void run_benchmarks() {
     }
 }
 
-} // bm
+}  // namespace bm

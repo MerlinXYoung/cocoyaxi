@@ -3,7 +3,6 @@
 #include "co/rpc.h"
 #include "co/tcp.h"
 #include "co/co.h"
-#include "co/mem.h"
 #include "co/fastring.h"
 #include "co/fastream.h"
 #include "co/str.h"

@@ -43,14 +43,14 @@ BM_group(malloc) {
     );
     BM_use(p);
 
-    BM_add(co::alloc)(
-        p = co::alloc(32);
-    );
-    BM_use(p);
+    // BM_add(co::alloc)(
+    //     p = co::alloc(32);
+    // );
+    // BM_use(p);
 
-    BM_add(co::alloc_with_align)(
-        p = co::alloc(32, 64);
-    );
+    // BM_add(co::alloc_with_align)(
+    //     p = co::alloc(32, 64);
+    // );
     BM_use(p);
 }
 
@@ -63,10 +63,10 @@ BM_group(malloc_free) {
     );
     BM_use(p);
 
-    BM_add(co::alloc+free)(
-        p = co::alloc(32);
-        co::free(p, 32);
-    );
+    // BM_add(co::alloc+free)(
+    //     p = co::alloc(32);
+    //     co::free(p, 32);
+    // );
 }
 
 int main(int argc, char** argv) {

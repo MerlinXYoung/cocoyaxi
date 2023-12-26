@@ -39,10 +39,7 @@ co::wait_group g_wg;
 
 void client_fun(int i) {
     tcp::Client c(FLG_h.c_str(), FLG_p, false);
-    defer(
-        c.close();
-        g_wg.done();
-    );
+    defer(c.close(); g_wg.done(););
     if (!c.connect(3000)) {
         co::print("connect to server failed..");
         return;
@@ -64,7 +61,7 @@ void client_fun(int i) {
         } else if (r == 0) {
             co::print("server close the connection");
             break;
-        } 
+        }
         ++count.r;
     }
 }
@@ -80,7 +77,7 @@ int main(int argc, char** argv) {
         tcp::Server().on_connection(conn_cb).start("0.0.0.0", FLG_p);
         while (true) sleep::sec(1024);
     } else {
-        g_count = (Count*) co::zalloc(sizeof(Count) * FLG_c);
+        g_count = (Count*)::calloc(FLG_c, sizeof(Count));
         g_wg.add(FLG_c);
         go([]() {
             co::sleep(FLG_t * 1000);
@@ -100,10 +97,7 @@ int main(int argc, char** argv) {
 
         co::print("server: ", FLG_h, ":", FLG_p);
         co::print("connection num: ", FLG_c, ", msg len: ", FLG_l, ", time: ", FLG_t, " seconds");
-        co::print("speed: ",
-            (ssum / FLG_t), " request/sec, ",
-            (rsum / FLG_t), " response/sec"
-        );
+        co::print("speed: ", (ssum / FLG_t), " request/sec, ", (rsum / FLG_t), " response/sec");
         co::print("requests: ", ssum);
         co::print("responses: ", rsum);
     }

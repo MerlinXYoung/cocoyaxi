@@ -92,6 +92,9 @@ if(BUILD_SHARED_LIBS)
 else()
     set(COOST_SHARED 0)
 endif()
+
+
+
 configure_file(
     "${PROJECT_SOURCE_DIR}/include/co/config.h.in"
     "${PROJECT_SOURCE_DIR}/include/co/config.h"

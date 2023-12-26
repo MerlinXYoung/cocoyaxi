@@ -157,8 +157,8 @@ inline fastring dbg(const std::pair<K, V>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const std::vector<T>& x) {
+template<typename T, typename A>
+inline fastring dbg(const std::vector<T, A>& x) {
     return xx::dbg(x);
 }
 
@@ -167,68 +167,68 @@ inline fastring dbg(const co::vector<T>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const std::list<T>& x) {
+template<typename T, typename A>
+inline fastring dbg(const std::list<T, A>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const co::list<T>& x) {
+// template<typename T>
+// inline fastring dbg(const co::list<T>& x) {
+//     return xx::dbg(x);
+// }
+
+template<typename T,typename A>
+inline fastring dbg(const std::deque<T, A>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const std::deque<T>& x) {
+// template<typename T>
+// inline fastring dbg(const co::deque<T>& x) {
+//     return xx::dbg(x);
+// }
+
+template<typename T, typename C, typename A>
+inline fastring dbg(const std::set<T, C, A>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const co::deque<T>& x) {
+// template<typename T>
+// inline fastring dbg(const co::set<T>& x) {
+//     return xx::dbg(x);
+// }
+
+template<typename K, typename V, typename C, typename A>
+inline fastring dbg(const std::map<K, V, C, A>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const std::set<T>& x) {
+// template<typename K, typename V>
+// inline fastring dbg(const co::map<K, V>& x) {
+//     return xx::dbg(x);
+// }
+
+template<typename T, typename H, typename P, typename A>
+inline fastring dbg(const std::unordered_set<T, H, P, A>& x) {
     return xx::dbg(x);
 }
 
-template<typename T>
-inline fastring dbg(const co::set<T>& x) {
+// template<typename T>
+// inline fastring dbg(const co::hash_set<T>& x) {
+//     return xx::dbg(x);
+// }
+
+template<typename K, typename V, typename H, typename P, typename A>
+inline fastring dbg(const std::unordered_map<K, V, H, P, A>& x) {
     return xx::dbg(x);
 }
 
-template<typename K, typename V>
-inline fastring dbg(const std::map<K, V>& x) {
-    return xx::dbg(x);
-}
+// template<typename K, typename V>
+// inline fastring dbg(const co::hash_map<K, V>& x) {
+//     return xx::dbg(x);
+// }
 
-template<typename K, typename V>
-inline fastring dbg(const co::map<K, V>& x) {
-    return xx::dbg(x);
-}
-
-template<typename T>
-inline fastring dbg(const std::unordered_set<T>& x) {
-    return xx::dbg(x);
-}
-
-template<typename T>
-inline fastring dbg(const co::hash_set<T>& x) {
-    return xx::dbg(x);
-}
-
-template<typename K, typename V>
-inline fastring dbg(const std::unordered_map<K, V>& x) {
-    return xx::dbg(x);
-}
-
-template<typename K, typename V>
-inline fastring dbg(const co::hash_map<K, V>& x) {
-    return xx::dbg(x);
-}
-
-template<typename K, typename V>
-inline fastring dbg(const co::lru_map<K, V>& x) {
+template<typename K, typename V, typename H, typename P, typename A>
+inline fastring dbg(const co::lru_map<K, V, H, P, A>& x) {
     return xx::dbg(x);
 }
 

@@ -1,4 +1,5 @@
 #include "co/cout.h"
+#include <mutex>
 
 static const char* fg[16] = {
     "\033[0m",   // default
@@ -128,20 +129,15 @@ fastream& operator<<(fastream& s, color::Color c) {
 namespace co {
 namespace xx {
 
-std::once_flag g_m_flag;
-static std::mutex* g_m;
 
 inline std::mutex& cmutex() {
-    std::call_once(g_m_flag, []() {
-        g_m = co::_make_rootic<std::mutex>();
-    });
-    return *g_m;
+    static std::mutex _mtx;
+    return _mtx;
 }
 
-static __thread fastream* g_s;
-
 inline fastream& cstream() {
-    return g_s ? *g_s : *(g_s = co::_make_rootic<fastream>(256));
+    static thread_local fastream _s(256);
+    return _s;
 }
 
 Cout::Cout() : s(cstream()) {

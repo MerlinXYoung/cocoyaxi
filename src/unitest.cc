@@ -1,21 +1,22 @@
 #include "co/unitest.h"
+
 #include "co/time.h"
+
 
 namespace unitest {
 namespace xx {
 
-static co::vector<Test>* g_t;
-
 inline co::vector<Test>& tests() {
-    return g_t ? *g_t : *(g_t = co::_make_static<co::vector<Test>>());
+    static co::vector<Test> _t;
+    return _t;
 }
 
-bool add_test(const char* name, bool& e, void(*f)(Test&)) {
+bool add_test(const char* name, bool& e, void (*f)(Test&)) {
     tests().push_back(Test(name, e, f));
     return true;
 }
 
-} // xx
+}  // namespace xx
 
 int run_tests() {
     // n: number of tests to do
@@ -26,7 +27,8 @@ int run_tests() {
     auto& tests = xx::tests();
 
     co::vector<xx::Test*> enabled(32);
-    for (auto& t: tests) if (t.enabled) enabled.push_back(&t);
+    for (auto& t : tests)
+        if (t.enabled) enabled.push_back(&t);
 
     if (enabled.empty()) { /* run all tests by default */
         n = tests.size();
@@ -34,17 +36,23 @@ int run_tests() {
             cout << "> begin test: " << t.name << endl;
             timer.restart();
             t.f(t);
-            if (!t.failed.empty()) { ++ft; fc += t.failed.size(); }
+            if (!t.failed.empty()) {
+                ++ft;
+                fc += t.failed.size();
+            }
             cout << "< test " << t.name << " done in " << timer.us() << " us" << endl;
         }
 
     } else {
         n = enabled.size();
-        for (auto& t: enabled) {
+        for (auto& t : enabled) {
             cout << "> begin test: " << t->name << endl;
             timer.restart();
             t->f(*t);
-            if (!t->failed.empty()) { ++ft; fc += t->failed.size(); }
+            if (!t->failed.empty()) {
+                ++ft;
+                fc += t->failed.size();
+            }
             cout << "< test " << t->name << " done in " << timer.us() << " us" << endl;
         }
     }
@@ -70,8 +78,8 @@ int run_tests() {
                         last_case = f.c;
                         cout << color::red << " case " << f.c << ":\n" << color::deflt;
                     }
-                    cout << color::yellow << "  " << f.file << ':' << f.line << "] "
-                        << color::deflt << f.msg << '\n';
+                    cout << color::yellow << "  " << f.file << ':' << f.line << "] " << color::deflt
+                         << f.msg << '\n';
                 }
                 cout.flush();
             }
@@ -84,4 +92,4 @@ int run_tests() {
     return fc;
 }
 
-} // namespace unitest
+}  // namespace unitest

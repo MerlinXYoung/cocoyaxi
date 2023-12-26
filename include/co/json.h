@@ -31,7 +31,7 @@ class Array {
     static const uint32 R = sizeof(_H) / N;
 
     explicit Array(uint32 cap) {
-        _h = (_H*) co::alloc(N * (R + cap));
+        _h = (_H*) ::malloc(N * (R + cap));
         _h->cap = cap;
         _h->size = 0;
     }
@@ -39,7 +39,7 @@ class Array {
     Array() : Array(1024 - R) {}
 
     ~Array() {
-        co::free(_h, N * (R + _h->cap));
+        ::free(_h);
     }
 
     T* data() const { return _h->p; }
@@ -54,7 +54,7 @@ class Array {
         if (_h->size == _h->cap) {
             const size_t n = N * _h->cap;
             const size_t o = sizeof(_H) + n;
-            _h = (_H*) co::realloc(_h, o, o + n); assert(_h);
+            _h = (_H*) ::realloc(_h,  o + n); assert(_h);
             _h->cap <<= 1;
         }
         _h->p[_h->size++] = v;
@@ -90,7 +90,7 @@ class Array {
     void reset() {
         _h->size = 0;
         if (_h->cap > 8192) {
-            co::free(_h, N * (R + _h->cap));
+            ::free(_h);
             new(this) Array();
         }
     }

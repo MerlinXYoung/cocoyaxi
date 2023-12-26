@@ -1,12 +1,12 @@
 #pragma once
 
-#include "def.h"
-#include "god.h"
-#include "mem.h"
-#include "__/dtoa_milo.h"
-
 #include <assert.h>
 #include <string.h>
+
+#include "__/dtoa_milo.h"
+#include "def.h"
+#include "god.h"
+
 
 namespace dp {
 
@@ -34,7 +34,7 @@ constexpr _fpt _15(double v) { return _fpt(v, 15); }
 constexpr _fpt _16(double v) { return _fpt(v, 16); }
 constexpr _fpt _n(double v, int n) { return _fpt(v, n); }
 
-} // dp
+}  // namespace dp
 
 namespace fast {
 namespace xx {
@@ -46,12 +46,10 @@ struct __coapi Initializer {
 
 static Initializer g_initializer;
 
-} // xx
+}  // namespace xx
 
 // double to ascii string, return length of the result
-inline int dtoa(double v, char* buf, int mdp=324) {
-    return milo::dtoa(v, buf, mdp);
-}
+inline int dtoa(double v, char* buf, int mdp = 324) { return milo::dtoa(v, buf, mdp); }
 
 // unsigned integer to hex string (e.g. 255 -> 0xff), return length of the result
 __coapi int u32toh(uint32 v, char* buf);
@@ -74,74 +72,65 @@ inline int i64toa(int64 v, char* buf) {
 }
 
 // signed integer to ascii string
-template<typename V, god::if_t<sizeof(V) <= sizeof(int32), int> = 0>
+template <typename V, god::if_t<sizeof(V) <= sizeof(int32), int> = 0>
 inline int itoa(V v, char* buf) {
     return i32toa((int32)v, buf);
 }
 
-template<typename V, god::if_t<(sizeof(V) == sizeof(int64)), int> = 0>
+template <typename V, god::if_t<(sizeof(V) == sizeof(int64)), int> = 0>
 inline int itoa(V v, char* buf) {
     return i64toa((int64)v, buf);
 }
 
 // unsigned integer to ascii string
-template<typename V, god::if_t<sizeof(V) <= sizeof(int32), int> = 0>
+template <typename V, god::if_t<sizeof(V) <= sizeof(int32), int> = 0>
 inline int utoa(V v, char* buf) {
     return u32toa((uint32)v, buf);
 }
 
-template<typename V, god::if_t<(sizeof(V) == sizeof(int64)), int> = 0>
+template <typename V, god::if_t<(sizeof(V) == sizeof(int64)), int> = 0>
 inline int utoa(V v, char* buf) {
     return u64toa((uint64)v, buf);
 }
 
 #if __arch64
 // pointer to hex string
-inline int ptoh(const void* p, char* buf) {
-    return u64toh((uint64)(size_t)p, buf);
-}
+inline int ptoh(const void* p, char* buf) { return u64toh((uint64)(size_t)p, buf); }
 
 #else
-inline int ptoh(const void* p, char* buf) {
-    return u32toh((uint32)(size_t)p, buf);
-}
+inline int ptoh(const void* p, char* buf) { return u32toh((uint32)(size_t)p, buf); }
 #endif
 
 class __coapi stream {
   public:
-    constexpr stream() noexcept
-        : _cap(0), _size(0), _p(0) {
-    }
-    
-    explicit stream(size_t cap)
-        : _cap(cap), _size(0) {
-        _p = cap > 0 ? (char*)co::alloc(cap) : 0;
+    constexpr stream() noexcept : _cap(0), _size(0), _p(0) {}
+
+    explicit stream(size_t cap) : _cap(cap), _size(0) { _p = cap > 0 ? (char*)::malloc(cap) : 0; }
+
+    stream(size_t cap, size_t size) : _cap(cap), _size(size) {
+        _p = cap > 0 ? (char*)::malloc(cap) : 0;
     }
 
-    stream(size_t cap, size_t size)
-        : _cap(cap), _size(size) {
-        _p = cap > 0 ? (char*)co::alloc(cap) : 0;
-    }
-
-    stream(char* p, size_t cap, size_t size)
-        : _cap(cap), _size(size), _p(p) {
-    }
+    stream(char* p, size_t cap, size_t size) : _cap(cap), _size(size), _p(p) {}
 
     ~stream() { this->reset(); }
 
     stream(const stream&) = delete;
     void operator=(const stream&) = delete;
 
-    stream(stream&& s) noexcept
-        : _cap(s._cap), _size(s._size), _p(s._p) {
+    stream(stream&& s) noexcept : _cap(s._cap), _size(s._size), _p(s._p) {
         s._p = 0;
         s._cap = s._size = 0;
     }
 
     stream& operator=(stream&& s) {
         if (&s != this) {
-            if (_p) co::free(_p, _cap);
-            new (this) stream(std::move(s));
+            if (_p) ::free(_p);
+            _p = s._p;
+            _cap = s._cap;
+            _size = s._size;
+            s._p = nullptr;
+            s._cap = s._size = 0;
         }
         return *this;
     }
@@ -182,7 +171,7 @@ class __coapi stream {
         this->reserve(n + 1);
         _size = n;
     }
-   
+
     // resize and fill the expanded memory with character @c
     void resize(size_t n, char c) {
         if (_size < n) {
@@ -194,14 +183,15 @@ class __coapi stream {
 
     void reserve(size_t n) {
         if (_cap < n) {
-            _p = (char*) co::realloc(_p, _cap, n); assert(_p);
+            _p = (char*)::realloc(_p, n);
+            assert(_p);
             _cap = n;
         }
     }
 
     void reset() {
         if (_p) {
-            co::free(_p, _cap);
+            ::free(_p);
             _p = 0;
             _cap = _size = 0;
         }
@@ -209,9 +199,9 @@ class __coapi stream {
 
     void ensure(size_t n) {
         if (_cap < _size + n + 1) {
-            const size_t cap = _cap;
             _cap += ((_cap >> 1) + n + 1);
-            _p = (char*) co::realloc(_p, cap, _cap); assert(_p);
+            _p = (char*)::realloc(_p, _cap);
+            assert(_p);
         }
     }
 
@@ -238,7 +228,7 @@ class __coapi stream {
     }
 
     stream& append(const void* s, size_t n) {
-        const char* const p = (const char*) s;
+        const char* const p = (const char*)s;
         if (p < _p || p >= _p + _size) return this->append_nomchk(p, n);
 
         const size_t pos = p - _p;
@@ -260,9 +250,7 @@ class __coapi stream {
         return v ? this->append_nomchk("true", 4) : this->append_nomchk("false", 5);
     }
 
-    stream& operator<<(char v) {
-        return this->append(v);
-    }
+    stream& operator<<(char v) { return this->append(v); }
 
     stream& operator<<(short v) {
         this->ensure(sizeof(v) * 3);
@@ -320,9 +308,7 @@ class __coapi stream {
         return *this;
     }
 
-    stream& operator<<(float v) {
-        return this->operator<<((double)v);
-    }
+    stream& operator<<(float v) { return this->operator<<((double)v); }
 
     stream& operator<<(const dp::_fpt& v) {
         this->ensure(v.d + 8);
@@ -336,13 +322,11 @@ class __coapi stream {
         return *this;
     }
 
-    stream& operator<<(std::nullptr_t) {
-        return this->append_nomchk("0x0", 3);
-    }
+    stream& operator<<(std::nullptr_t) { return this->append_nomchk("0x0", 3); }
 
     size_t _cap;
     size_t _size;
     char* _p;
 };
 
-} // namespace fast
+}  // namespace fast

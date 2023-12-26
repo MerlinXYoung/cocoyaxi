@@ -88,7 +88,7 @@ literal_begin (['\"])
 }
 
 {identifier} {
-    yylval.iden = co::strdup(yytext);
+    yylval.iden = ::strdup(yytext);
     return tok_identifier;
 }
 
@@ -132,7 +132,7 @@ literal_begin (['\"])
             break;
           default:
             if (c == q) {
-                yylval.iden = co::strdup(s.c_str());
+                yylval.iden = ::strdup(s.c_str());
                 return tok_literal;
             }
             s.append(c);

@@ -1,7 +1,9 @@
 #include "sched.h"
+
+#include <mutex>
+
 #include "co/os.h"
 #include "co/rand.h"
-#include <mutex>
 
 DEF_uint32(co_sched_num, os::cpunum(), ">>#1 number of coroutine schedulers");
 DEF_uint32(co_stack_num, 8, ">>#1 number of stacks per scheduler, must be power of 2");
@@ -22,22 +24,29 @@ inline void init_sock() {}
 inline void cleanup_sock() {}
 #endif
 
-co::table<SockCtx>* g_ctx_tb;
-
 namespace xx {
 
 __thread Sched* gSched = 0;
 
 Sched::Sched(uint32 id, uint32 sched_num, uint32 stack_num, uint32 stack_size)
-    : _cputime(0), _task_mgr(), _timer_mgr(), _wait_ms(-1), _timeout(false),
-      _bufs(128), _co_pool(), _running(0), _id(id), _sched_num(sched_num),
-      _stack_num(stack_num), _stack_size(stack_size) {
-    new(&_x.ev) co::sync_event();
+    : _cputime(0),
+      _task_mgr(),
+      _timer_mgr(),
+      _wait_ms(-1),
+      _timeout(false),
+      _bufs(128),
+      _co_pool(),
+      _running(0),
+      _id(id),
+      _sched_num(sched_num),
+      _stack_num(stack_num),
+      _stack_size(stack_size) {
+    new (&_x.ev) co::sync_event();
     _x.epoll = co::make<Epoll>(id);
     _x.stopped = false;
-    _main_co = _co_pool.pop(); // id 0 is reserved for _main_co
+    _main_co = _co_pool.pop();  // id 0 is reserved for _main_co
     _main_co->sched = this;
-    _stack = (Stack*) co::zalloc(stack_num * sizeof(Stack));
+    _stack = (Stack*)co::zalloc(stack_num * sizeof(Stack));
 }
 
 Sched::~Sched() {
@@ -58,29 +67,30 @@ void Sched::stop() {
     const int n = atomic_inc(&g_cnt, mo_relaxed);
     if (atomic_swap(&_x.stopped, true, mo_acq_rel) == false) {
         _x.epoll->signal();
-      #if defined(_WIN32) && defined(BUILDING_CO_SHARED)
+#if defined(_WIN32) && defined(BUILDING_CO_SHARED)
         if (n == 1) {
             // the thread may not respond in dll, wait at most 64ms here
             co::Timer t;
-            while (!_x.ev.wait(1) && t.ms() < 64);
+            while (!_x.ev.wait(1) && t.ms() < 64)
+                ;
         }
-      #else
+#else
         _x.ev.wait();
-      #endif
+#endif
     }
 }
 
 void Sched::main_func(tb_context_from_t from) {
     ((Coroutine*)from.priv)->ctx = from.ctx;
-  #ifdef _MSC_VER
+#ifdef _MSC_VER
     __try {
         ((Coroutine*)from.priv)->sched->running()->cb->run();
-    } __except(_co_on_exception(GetExceptionInformation())) {
+    } __except (_co_on_exception(GetExceptionInformation())) {
     }
-  #else
+#else
     ((Coroutine*)from.priv)->sched->running()->cb->run();
-  #endif // _WIN32
-    tb_context_jump(from.ctx, 0); // jump back to the from context
+#endif                             // _WIN32
+    tb_context_jump(from.ctx, 0);  // jump back to the from context
 }
 
 /*
@@ -100,17 +110,21 @@ void Sched::resume(Coroutine* co) {
     Stack* const s = co->stack;
     _running = co;
     if (s->p == 0) {
-        s->p = (char*) co::alloc(_stack_size);
+        s->p = (char*)co::alloc(_stack_size);
         s->top = s->p + _stack_size;
         s->co = co;
     }
 
     if (co->ctx == 0) {
         // resume new coroutine
-        if (s->co != co) { this->save_stack(s->co); s->co = co; }
+        if (s->co != co) {
+            this->save_stack(s->co);
+            s->co = co;
+        }
         co->ctx = tb_context_make(s->p, _stack_size, main_func);
         SCHEDLOG << "resume new co: " << co << " id: " << co->id;
-        from = tb_context_jump(co->ctx, _main_co); // jump to main_func(from):  from.priv == _main_co
+        from =
+            tb_context_jump(co->ctx, _main_co);  // jump to main_func(from):  from.priv == _main_co
 
     } else {
         // remove timer before resume the coroutine
@@ -121,14 +135,14 @@ void Sched::resume(Coroutine* co) {
         }
 
         // resume suspended coroutine
-        SCHEDLOG << "resume co: " << co << " id: " <<  co->id << " stack: " << co->buf.size();
+        SCHEDLOG << "resume co: " << co << " id: " << co->id << " stack: " << co->buf.size();
         if (s->co != co) {
             this->save_stack(s->co);
             CHECK_EQ(s->top, (char*)co->ctx + co->buf.size());
-            memcpy(co->ctx, co->buf.data(), co->buf.size()); // restore stack data
+            memcpy(co->ctx, co->buf.data(), co->buf.size());  // restore stack data
             s->co = co;
         }
-        from = tb_context_jump(co->ctx, _main_co); // jump back to where yiled() was called
+        from = tb_context_jump(co->ctx, _main_co);  // jump back to where yiled() was called
     }
 
     if (from.priv) {
@@ -168,9 +182,9 @@ void Sched::loop() {
                 continue;
             }
 
-          #if defined(_WIN32)
+#if defined(_WIN32)
             auto info = xx::per_io_info(ev.lpOverlapped);
-            auto co = (Coroutine*) info->co;
+            auto co = (Coroutine*)info->co;
             if (atomic_bool_cas(&info->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
                 info->n = ev.dwNumberOfBytesTransferred;
                 if (co->sched == this) {
@@ -181,16 +195,17 @@ void Sched::loop() {
             } else {
                 co::free(info, info->mlen);
             }
-          #elif defined(__linux__)
+#elif defined(__linux__)
             int32 rco = 0, wco = 0;
             auto& ctx = co::get_sock_ctx(_x.epoll->user_data(ev));
-            if ((ev.events & EPOLLIN)  || !(ev.events & EPOLLOUT)) rco = ctx.get_ev_read(this->id());
-            if ((ev.events & EPOLLOUT) || !(ev.events & EPOLLIN))  wco = ctx.get_ev_write(this->id());
+            if ((ev.events & EPOLLIN) || !(ev.events & EPOLLOUT)) rco = ctx.get_ev_read(this->id());
+            if ((ev.events & EPOLLOUT) || !(ev.events & EPOLLIN))
+                wco = ctx.get_ev_write(this->id());
             if (rco) this->resume(&_co_pool[rco]);
             if (wco) this->resume(&_co_pool[wco]);
-          #else
+#else
             this->resume((Coroutine*)_x.epoll->user_data(ev));
-          #endif
+#endif
         }
 
         SCHEDLOG << "> check tasks ready to resume..";
@@ -280,10 +295,9 @@ struct SchedInfo {
     uint32 seed;
 };
 
-static __thread SchedInfo* g_si;
-
 inline SchedInfo& sched_info() {
-    return g_si ? *g_si : *(g_si = co::_make_static<SchedInfo>());
+    static thread_local SchedInfo _si;
+    return _si;
 }
 
 static uint32 g_nco = 0;
@@ -335,7 +349,7 @@ SchedManager::SchedManager() {
     }
 
     for (uint32 i = 0; i < n; ++i) {
-        Sched* sched = co::_make_static<Sched>(i, n, m, s);
+        Sched* sched = new Sched(i, n, m, s);
         if (i != 0 || !g_main_thread_as_sched) sched->start();
         _scheds.push_back(sched);
     }
@@ -352,60 +366,42 @@ std::once_flag g_sched_man_flag;
 static SchedManager* g_sched_man;
 
 inline SchedManager* sched_man() {
-    std::call_once(g_sched_man_flag, []() {
-        g_sched_man = co::_make_static<SchedManager>();
-    });
+    std::call_once(g_sched_man_flag, []() { g_sched_man = co::_make_static<SchedManager>(); });
     return g_sched_man;
-}
-
-static int g_sched_nifty;
-SchedInitializer::SchedInitializer() {
-    if (g_sched_nifty++ == 0) {
-        g_ctx_tb = co::_make_static<co::table<SockCtx>>(15, 16);
-    }
-}
-
-SchedInitializer::~SchedInitializer() {
 }
 
 void SchedManager::stop() {
     for (size_t i = 0; i < _scheds.size(); ++i) {
         _scheds[i]->stop();
     }
+    for (size_t i = 0; i < _scheds.size(); ++i) {
+        delete _scheds[i];
+    }
+
     atomic_swap(&is_active(), false, mo_acq_rel);
 }
 
-} // xx
+}  // namespace xx
 
-void go(Closure* cb) {
-    xx::sched_man()->next_sched()->add_new_task(cb);
-}
+void go(Closure* cb) { xx::sched_man()->next_sched()->add_new_task(cb); }
 
-void co::Sched::go(Closure* cb) {
-    ((xx::Sched*)this)->add_new_task(cb);
-}
+void co::Sched::go(Closure* cb) { ((xx::Sched*)this)->add_new_task(cb); }
 
-void co::MainSched::loop() {
-    ((xx::Sched*)this)->loop();
-}
+void co::MainSched::loop() { ((xx::Sched*)this)->loop(); }
 
 const co::vector<co::Sched*>& scheds() {
-    return (co::vector<co::Sched*>&) xx::sched_man()->scheds();
+    return (co::vector<co::Sched*>&)xx::sched_man()->scheds();
 }
 
-int sched_num() {
-    return xx::is_active() ? (int)xx::sched_man()->scheds().size() : os::cpunum();
-}
+int sched_num() { return xx::is_active() ? (int)xx::sched_man()->scheds().size() : os::cpunum(); }
 
-co::Sched* sched() { return (co::Sched*) xx::gSched; }
+co::Sched* sched() { return (co::Sched*)xx::gSched; }
 
-co::Sched* next_sched() {
-    return (co::Sched*) xx::sched_man()->next_sched();
-}
+co::Sched* next_sched() { return (co::Sched*)xx::sched_man()->next_sched(); }
 
 co::MainSched* main_sched() {
     xx::g_main_thread_as_sched = true;
-    return (co::MainSched*) xx::sched_man()->scheds()[0];
+    return (co::MainSched*)xx::sched_man()->scheds()[0];
 }
 
 void* coroutine() {
@@ -475,8 +471,6 @@ bool on_stack(const void* p) {
     return s->on_stack(p);
 }
 
-void stop_scheds() {
-    xx::sched_man()->stop();
-}
+void stop_scheds() { xx::sched_man()->stop(); }
 
-} // co
+}  // namespace co

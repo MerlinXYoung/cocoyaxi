@@ -76,7 +76,7 @@ class Value {
     Value() = default;
     ~Value() {
         if (_type == type_string && _s) {
-            co::free(_s, strlen(_s) + 1);
+            ::free(_s);
         }
     }
 
@@ -107,8 +107,8 @@ class Field {
   public:
     Field() : _type(0), _value(0) {}
     ~Field() {
-        if (_type->type() != type_object) co::del(_type);
-        if (_value) co::del(_value);
+        if (_type->type() != type_object) delete _type;
+        if (_value) delete _value;
     }
 
     const fastring& name() const { return _name; }
@@ -133,7 +133,7 @@ class Array : public Type {
     }
 
     virtual ~Array() {
-        if (_element_type->type() != type_object) co::del(_element_type);
+        if (_element_type->type() != type_object) delete (_element_type);
     }
 
     Type* element_type() const {
@@ -155,8 +155,8 @@ class Object : public Type {
     }
 
     virtual ~Object() {
-        for (auto& x : _fields) co::del(x);
-        for (auto& x : _anony_objects) co::del(x);
+        for (auto& x : _fields) delete (x);
+        for (auto& x : _anony_objects) delete (x);
     }
 
     bool add_field(Field* f) {
@@ -232,9 +232,9 @@ class Program {
         _fbase.clear();
         _fname.clear();
         _pkgs.clear();
-        co::del(_serv);
+        delete (_serv);
         _serv = 0;
-        for (auto& x : _objects) co::del(x);
+        for (auto& x : _objects) delete (x);
         _objects.clear();
         _idx.clear();
     }

@@ -279,7 +279,7 @@ DEF_test(vector){
         for (int i = 0; i < 4; ++i) {
             v.push_back("aaa");
         }
-        void* p = co::alloc(32);
+        void* p = ::malloc(32);
         for (int i = 0; i < 4; ++i) {
             v.push_back("bbb");
         }
@@ -295,7 +295,7 @@ DEF_test(vector){
         EXPECT_EQ(v.size(), 14);
         EXPECT_EQ(v[3], "bbb");
 
-        co::free(p, 32);
+        ::free(p);
     }
 
     static int gc = 0;

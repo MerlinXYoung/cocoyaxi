@@ -1,7 +1,6 @@
 #pragma once
 
 #include "def.h"
-#include "mem.h"
 #include "vector.h"
 #include "fastring.h"
 
@@ -71,7 +70,7 @@ __coapi void add_flag(
 
 #define DEF_string(name, value, help, ...) \
     fastring& FLG_##name = *[]() { \
-        auto _##name = ::co::_make_static<fastring>(value); \
+        auto _##name = new fastring(value);/*::co::_make_static<fastring>(value);*/ \
         ::flag::xx::add_flag('s', #name, #value, help, __FILE__, __LINE__, _##name, ""#__VA_ARGS__); \
         return _##name; \
     }()

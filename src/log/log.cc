@@ -3,7 +3,6 @@
 #include "../co/hook.h"
 #include "co/co.h"
 #include "co/fs.h"
-#include "co/mem.h"
 #include "co/os.h"
 #include "co/str.h"
 #include "co/time.h"
@@ -48,7 +47,7 @@ DEF_bool(log_compress, false, ">>#0 if true, compress rotated log files with xz"
 static bool g_init_done;
 static bool g_dummy = []() {
     atomic_store(&g_init_done, true, mo_release);
-    return *co::_make_static<bool>(false);
+    return false;
 }();
 
 namespace _xx { namespace log {
@@ -61,7 +60,7 @@ class ExceptHandler;
 
 struct Mod {
     Mod();
-    ~Mod() = default;
+    ~Mod();
     fastring* exename;
     fastring* stream;
     LogTime* log_time;
@@ -72,8 +71,10 @@ struct Mod {
     bool check_failed;
 };
 
-static Mod* g_mod;
-inline Mod& mod() { return *g_mod; }
+inline Mod& mod() {
+    static Mod _mod;
+    return _mod;
+}
 
 inline void log2stderr(const char* s, size_t n) {
 #ifdef _WIN32
@@ -871,7 +872,7 @@ LONG WINAPI on_except(PEXCEPTION_POINTERS p) {
 #endif
 
 ExceptHandler::ExceptHandler() {
-    _stack_trace = co::_make_static<StackTrace>();
+    _stack_trace = new StackTrace();
     _old_handlers[SIGINT] = os::signal(SIGINT, on_signal);
     _old_handlers[SIGTERM] = os::signal(SIGTERM, on_signal);
 #ifdef _WIN32
@@ -902,6 +903,7 @@ ExceptHandler::~ExceptHandler() {
     os::signal(SIGBUS, SIG_DFL);
     os::signal(SIGILL, SIG_DFL);
 #endif
+    delete _stack_trace;
 }
 
 #if defined(_WIN32) && !defined(SIGQUIT)
@@ -1057,26 +1059,29 @@ int ExceptHandler::handle_exception(void*) { return 0; }
 
 Mod::Mod() {
     _at_mod_init();
-    exename = co::_make_static<fastring>(os::exename());
-    stream = co::_make_static<fastring>(4096);
-    log_time = co::_make_static<LogTime>();
-    log_file = co::_make_static<LogFile>();
-    log_fatal = co::_make_static<LogFile>();
-    logger = co::_make_static<Logger>(log_time, log_file);
-    except_handler = co::_make_static<ExceptHandler>();
+    exename = new fastring(os::exename());
+    stream = new fastring(4096);
+    log_time = new LogTime();
+    log_file = new LogFile();
+    log_fatal = new LogFile();
+    logger = new Logger(log_time, log_file);
+    except_handler = new ExceptHandler();
     check_failed = false;
 }
-
-static int g_nifty_counter;
-Initializer::Initializer() {
-    if (g_nifty_counter++ == 0) {
-        g_mod = co::_make_static<Mod>();
-    }
+Mod::~Mod() {
+    delete except_handler;
+    delete logger;
+    delete log_fatal;
+    delete log_file;
+    delete log_time;
+    delete stream;
+    delete exename;
 }
 
-static __thread fastream* g_s;
-
-inline fastream& log_stream() { return g_s ? *g_s : *(g_s = co::_make_static<fastream>(256)); }
+inline fastream& log_stream() {
+    static thread_local fastream _s(256);
+    return _s;
+}
 
 LevelLogSaver::LevelLogSaver(const char* fname, unsigned fnlen, unsigned line, int level)
     : _s(log_stream()) {
