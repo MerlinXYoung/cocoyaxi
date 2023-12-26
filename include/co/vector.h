@@ -9,7 +9,6 @@
 #include "def.h"
 #include "god.h"
 
-
 namespace co {
 
 template <typename T>

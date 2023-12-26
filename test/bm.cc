@@ -1,16 +1,13 @@
+#include "benchmark.h"
 #include "co/all.h"
-#include "co/benchmark.h"
+
 
 BM_group(atomic) {
     int i = 0;
 
-    BM_add(++)(
-        atomic_inc(&i);
-    );
+    BM_add(++)(atomic_inc(&i););
 
-    BM_add(--)(
-        atomic_dec(&i);
-    );
+    BM_add(--)(atomic_dec(&i););
 }
 
 BM_group(rand) {
@@ -18,29 +15,21 @@ BM_group(rand) {
     x = ::rand();
     x = co::rand();
 
-    BM_add(::rand)(
-        x = ::rand();
-    );
+    BM_add(::rand)(x = ::rand(););
     BM_use(x);
 
-    BM_add(co::rand)(
-        x = co::rand();
-    );
+    BM_add(co::rand)(x = co::rand(););
     BM_use(x);
 
     uint32 seed = co::rand();
-    BM_add(co::rand(seed))(
-        x = co::rand(seed);
-    );
+    BM_add(co::rand(seed))(x = co::rand(seed););
     BM_use(x);
 }
 
 BM_group(malloc) {
     void* p;
 
-    BM_add(::malloc)(
-        p = ::malloc(32);
-    );
+    BM_add(::malloc)(p = ::malloc(32););
     BM_use(p);
 
     // BM_add(co::alloc)(
@@ -57,10 +46,7 @@ BM_group(malloc) {
 BM_group(malloc_free) {
     void* p;
 
-    BM_add(malloc+free)(
-        p = ::malloc(32);
-        ::free(p);
-    );
+    BM_add(malloc + free)(p = ::malloc(32); ::free(p););
     BM_use(p);
 
     // BM_add(co::alloc+free)(

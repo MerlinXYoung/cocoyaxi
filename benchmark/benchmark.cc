@@ -1,4 +1,4 @@
-#include "co/benchmark.h"
+#include "benchmark.h"
 
 #include "co/cout.h"
 #include "co/fastring.h"

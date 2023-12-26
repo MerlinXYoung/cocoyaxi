@@ -1,7 +1,7 @@
 #include "co/cout.h"
 #include "co/flag.h"
 #include "co/time.h"
-#include "co/benchmark.h"
+#include "benchmark.h"
 
 DEF_uint64(beg, 1000, "beg");
 DEF_uint64(end, 9999, "end");

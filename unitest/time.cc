@@ -1,7 +1,9 @@
-#include "co/unitest.h"
-#include "co/def.h"
 #include "co/time.h"
+
+#include "co/def.h"
 #include "co/str.h"
+#include "unitest.h"
+
 
 namespace test {
 
@@ -38,4 +40,4 @@ DEF_test(time) {
     }
 }
 
-} // namespace test
+}  // namespace test

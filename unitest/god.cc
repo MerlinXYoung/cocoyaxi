@@ -1,5 +1,7 @@
-#include "co/unitest.h"
 #include "co/god.h"
+
+#include "unitest.h"
+
 
 namespace test {
 
@@ -126,4 +128,4 @@ DEF_test(god) {
     }
 }
 
-} // test
+}  // namespace test

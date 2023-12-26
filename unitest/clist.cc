@@ -1,5 +1,7 @@
-#include "co/unitest.h"
 #include "co/clist.h"
+
+#include "unitest.h"
+
 
 namespace test {
 
@@ -161,4 +163,4 @@ DEF_test(clist) {
     }
 }
 
-} // test
+}  // namespace test

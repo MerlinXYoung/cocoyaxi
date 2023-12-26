@@ -1,5 +1,7 @@
-#include "co/unitest.h"
 #include <string.h>
+
+#include "unitest.h"
+
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -10,23 +12,23 @@ namespace test {
 void parse_serv_url(const char* url, fastring& ip, int& port, bool& https);
 
 inline uint32 find_index(uint32 size) {
-  #ifdef _WIN32
+#ifdef _WIN32
     unsigned long index;
     _BitScanReverse(&index, size - 1);
     return index - 3;
-  #else
+#else
     return 28 - __builtin_clz(size - 1);
-  #endif
+#endif
 }
 
 inline uint32 find_first_zero_bit(uint32 x) {
-  #ifdef _WIN32
+#ifdef _WIN32
     unsigned long index;
     return _BitScanForward(&index, ~x) ? index : 32;
-  #else
+#else
     const uint32 r = __builtin_ffs(~x);
     return r > 0 ? r - 1 : 32;
-  #endif
+#endif
 }
 
 DEF_test(alien) {
@@ -41,13 +43,13 @@ DEF_test(alien) {
         EXPECT_EQ(find_index(1u << 11), 7);
         EXPECT_EQ(find_index(1u << 12), 8);
 
-      #if 0
+#if 0
         for (uint32 x = 4; x < 12; ++x) {
             for (uint32 i = (1 << x) + 1; i < (1 << (x + 1)); ++i) {
                 EXPECT_EQ(find_index(i), x - 3);
             }
         }
-      #endif
+#endif
     }
 
     DEF_case(find_first_zero_bit) {
@@ -151,11 +153,11 @@ void parse_serv_url(const char* url, fastring& ip, int& port, bool& https) {
     const char* r;
     if (s != NULL) {
         r = strrchr(p, ':');
-        if (r == s) {                 /* ipv4:port */
+        if (r == s) { /* ipv4:port */
             ip = fastring(p, r - p);
             port = atoi(r + 1);
-        } else {                      /* ipv6 */
-            if (*(r - 1) == ']') {    /* ipv6:port */
+        } else {                   /* ipv6 */
+            if (*(r - 1) == ']') { /* ipv6:port */
                 if (*p == '[') ++p;
                 ip = fastring(p, r - p - 1);
                 port = atoi(r + 1);
@@ -167,4 +169,4 @@ void parse_serv_url(const char* url, fastring& ip, int& port, bool& https) {
     if (port == 0) port = https ? 443 : 80;
 }
 
-} // namespace test
+}  // namespace test

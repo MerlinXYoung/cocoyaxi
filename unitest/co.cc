@@ -1,6 +1,8 @@
-#include "co/unitest.h"
 #include "co/co.h"
+
 #include "co/cout.h"
+#include "unitest.h"
+
 
 namespace test {
 
@@ -8,13 +10,9 @@ int gc = 0;
 int gd = 0;
 
 struct TestChan {
-    explicit TestChan(int v = 0) : v(v) {
-        atomic_inc(&gc, mo_relaxed);
-    }
+    explicit TestChan(int v = 0) : v(v) { atomic_inc(&gc, mo_relaxed); }
 
-    TestChan(const TestChan& c) : v(c.v) {
-        atomic_inc(&gc, mo_relaxed);
-    }
+    TestChan(const TestChan& c) : v(c.v) { atomic_inc(&gc, mo_relaxed); }
 
     TestChan(TestChan&& c) : v(c.v) {
         c.v = 0;
@@ -39,7 +37,7 @@ struct queue {
     };
 
     _memb* _make_memb() {
-        _memb* m = (_memb*) ::malloc(sizeof(_memb) + N * sizeof(void*));
+        _memb* m = (_memb*)::malloc(sizeof(_memb) + N * sizeof(void*));
         m->size = 0;
         m->rx = 0;
         m->wx = 0;
@@ -61,7 +59,7 @@ struct queue {
     bool empty() const { return this->size() == 0; }
 
     void push_back(void* x) {
-        _memb* m = (_memb*) _q.back();
+        _memb* m = (_memb*)_q.back();
         if (!m || m->wx == N) {
             m = this->_make_memb();
             _q.push_back(m);
@@ -78,7 +76,7 @@ struct queue {
             if (_m->rx == _m->wx) {
                 _m->rx = _m->wx = 0;
                 if (_q.back() != _m) {
-                    _memb* const m = (_memb*) _q.pop_front();
+                    _memb* const m = (_memb*)_q.pop_front();
                     _m->size = m->size;
                     ::free(m);
                 }
@@ -106,7 +104,9 @@ struct Buffer {
     const char* data() const noexcept { return _h ? _h->p : 0; }
     uint32 size() const noexcept { return _h ? _h->size : 0; }
     uint32 capacity() const noexcept { return _h ? _h->cap : 0; }
-    void clear() noexcept { if (_h) _h->size = 0; }
+    void clear() noexcept {
+        if (_h) _h->size = 0;
+    }
 
     void reset() {
         if (_h) {
@@ -118,7 +118,8 @@ struct Buffer {
     void append(const void* p, size_t size) {
         const uint32 n = (uint32)size;
         if (!_h) {
-            _h = (H*) ::malloc(size + 8); assert(_h);
+            _h = (H*)::malloc(size + 8);
+            assert(_h);
             _h->cap = n;
             _h->size = 0;
             goto lable;
@@ -127,11 +128,12 @@ struct Buffer {
         if (_h->cap < _h->size + n) {
             const uint32 o = _h->cap;
             _h->cap += (o >> 1) + n;
-            _h = (H*) ::realloc(_h, _h->cap + 8); assert(_h);
+            _h = (H*)::realloc(_h, _h->cap + 8);
+            assert(_h);
             goto lable;
         }
 
-      lable:
+    lable:
         memcpy(_h->p + _h->size, p, n);
         _h->size += n;
     }
@@ -143,10 +145,10 @@ struct Coroutine {
     Coroutine() { memset(this, 0, sizeof(*this)); }
     ~Coroutine() { buf.~Buffer(); }
 
-    uint32 id; // coroutine id
-    void* ctx; // coroutine context, points to the stack bottom
+    uint32 id;  // coroutine id
+    void* ctx;  // coroutine context, points to the stack bottom
     union {
-        Buffer buf;   // for saving stack data of this coroutine
+        Buffer buf;  // for saving stack data of this coroutine
         void* pbuf;
     };
     void* x[5];
@@ -155,11 +157,10 @@ struct Coroutine {
 class CoroutinePool {
   public:
     static const int E = 5;
-    static const int N = 1 << E; // max coroutines per block
+    static const int N = 1 << E;  // max coroutines per block
     static const int M = 4;
 
-    CoroutinePool()
-        : _c(0), _o(0), _v(M), _use_count(M) {
+    CoroutinePool() : _c(0), _o(0), _v(M), _use_count(M) {
         _v.resize(M);
         _use_count.resize(M);
     }
@@ -173,39 +174,43 @@ class CoroutinePool {
 
     Coroutine* pop() {
         int id = 0;
-        if (!_v0.empty()) { id = _v0.pop_back(); goto reuse; }
-        if (!_vc.empty()) { id = _vc.pop_back(); goto reuse; }
+        if (!_v0.empty()) {
+            id = _v0.pop_back();
+            goto reuse;
+        }
+        if (!_vc.empty()) {
+            id = _vc.pop_back();
+            goto reuse;
+        }
         if (_o < N) goto newco;
         _c = !_blks.empty() ? *_blks.begin() : _c + 1;
         if (!_blks.empty()) _blks.erase(_blks.begin());
         _o = 0;
 
-      newco:
-        {
-            if (_c < _v.size()) {
-                if (!_v[_c]) _v[_c] = (Coroutine*) ::calloc(N, sizeof(Coroutine));
-            } else {
-                const int c = god::align_up<M>(_c + 1);
-                _v.resize(c);
-                _use_count.resize(c);
-                _v[_c] = (Coroutine*) ::calloc(N, sizeof(Coroutine));
-            }
-
-            auto& co = _v[_c][_o];
-            co.id = (_c << E) + _o++;
-            _use_count[_c]++;
-            return &co;
+    newco : {
+        if (_c < _v.size()) {
+            if (!_v[_c]) _v[_c] = (Coroutine*)::calloc(N, sizeof(Coroutine));
+        } else {
+            const int c = god::align_up<M>(_c + 1);
+            _v.resize(c);
+            _use_count.resize(c);
+            _v[_c] = (Coroutine*)::calloc(N, sizeof(Coroutine));
         }
 
-      reuse:
-        {
-            const int q = id >> E;
-            const int r = id & (N - 1);
-            auto& co = _v[q][r];
-            co.ctx = 0;
-            _use_count[q]++;
-            return &co;
-        }
+        auto& co = _v[_c][_o];
+        co.id = (_c << E) + _o++;
+        _use_count[_c]++;
+        return &co;
+    }
+
+    reuse : {
+        const int q = id >> E;
+        const int r = id & (N - 1);
+        auto& co = _v[q][r];
+        co.ctx = 0;
+        _use_count[q]++;
+        return &co;
+    }
     }
 
     void push(Coroutine* co) {
@@ -222,7 +227,7 @@ class CoroutinePool {
             goto end;
         }
 
-      end:
+    end:
         if (--_use_count[q] == 0) {
             ::free(_v[q]);
             _v[q] = 0;
@@ -247,13 +252,13 @@ class CoroutinePool {
     }
 
   private:
-    int _c; // current block
-    int _o; // offset in the current block [0, S)
+    int _c;  // current block
+    int _o;  // offset in the current block [0, S)
     co::vector<Coroutine*> _v;
     co::vector<int> _use_count;
-    co::vector<int> _v0; // id of coroutine in _v[0]
-    co::vector<int> _vc; // id of coroutine in _v[_c]
-    co::set<int> _blks; // blocks available
+    co::vector<int> _v0;  // id of coroutine in _v[0]
+    co::vector<int> _vc;  // id of coroutine in _v[_c]
+    co::set<int> _blks;   // blocks available
 };
 
 DEF_test(co) {
@@ -351,8 +356,8 @@ DEF_test(co) {
         EXPECT_EQ(e->id, 33);
         EXPECT_EQ(f->id, 34);
 
-        p.push(e); // push 33
-        p.push(f); // push 34
+        p.push(e);  // push 33
+        p.push(f);  // push 34
         e = p.pop();
         f = p.pop();
         EXPECT_EQ(e->id, 34);
@@ -365,7 +370,7 @@ DEF_test(co) {
         EXPECT_EQ(x->id, 128);
         EXPECT_EQ(y->id, 129);
 
-        p.push(b); // push 2
+        p.push(b);  // push 2
         z = p.pop();
         EXPECT_EQ(z->id, 2);
         o = p.pop();
@@ -509,7 +514,7 @@ DEF_test(co) {
             EXPECT_EQ(ev.wait(0), false);
         }
         {
-            co::event ev(true, true); // manual reset
+            co::event ev(true, true);  // manual reset
             co::wait_group wg(1);
 
             go([wg, ev, &v]() {
@@ -677,7 +682,7 @@ DEF_test(co) {
 
             y.v = 0;
             ch >> y;
-            EXPECT(!ch.done()); // timeout
+            EXPECT(!ch.done());  // timeout
             EXPECT_EQ(y.v, 0);
 
             wg.add(2);
@@ -783,11 +788,7 @@ DEF_test(co) {
     }
 
     DEF_case(pool) {
-        co::pool p(
-            []() { return (void*) new int(0); },
-            [](void* p) { delete (int*)p; },
-            8192
-        );
+        co::pool p([]() { return (void*)new int(0); }, [](void* p) { delete (int*)p; }, 8192);
 
         int n = co::sched_num();
         auto& scheds = co::scheds();
@@ -809,7 +810,7 @@ DEF_test(co) {
         wg.add(n);
         for (int i = 0; i < n; ++i) {
             scheds[i]->go([wg, p, i, &vi]() {
-                int* x = (int*) p.pop();
+                int* x = (int*)p.pop();
                 vi[i] = *x;
                 p.push(x);
                 wg.done();
@@ -825,4 +826,4 @@ DEF_test(co) {
     }
 }
 
-} // test
+}  // namespace test

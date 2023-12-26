@@ -1,6 +1,8 @@
-﻿#include "co/unitest.h"
-#include "co/json.h"
+﻿#include "co/json.h"
+
 #include "co/str.h"
+#include "unitest.h"
+
 
 namespace test {
 
@@ -111,8 +113,11 @@ DEF_test(json) {
         s = fastring(30, 'x').append('\n').append(500, 'x');
         EXPECT(s.is_string());
         EXPECT_EQ(s.size(), 531);
-        EXPECT_EQ(s.str(), fastring("\"").append(30, 'x').append("\\n").append(500, 'x').append('"'));
-        EXPECT_EQ(s.dbg(), fastring("\"").append(30, 'x').append("\\n").append(1, 'x').append(3, '.').append('"'));
+        EXPECT_EQ(s.str(),
+                  fastring("\"").append(30, 'x').append("\\n").append(500, 'x').append('"'));
+        EXPECT_EQ(
+            s.dbg(),
+            fastring("\"").append(30, 'x').append("\\n").append(1, 'x').append(3, '.').append('"'));
 
         s = fastring(600, 'x');
         EXPECT_EQ(s.str(), fastring("\"").append(600, 'x').append('"'));
@@ -142,7 +147,7 @@ DEF_test(json) {
     DEF_case(operator=) {
         co::Json s = "hello world";
         EXPECT(s.is_string());
-        
+
         s = 1;
         EXPECT(s.is_int());
         EXPECT_EQ(s.as_int(), 1);
@@ -182,14 +187,14 @@ DEF_test(json) {
     }
 
     DEF_case(initializer_list) {
-        co::Json a = { 1, 2, 3 };
+        co::Json a = {1, 2, 3};
         EXPECT(a.is_array());
         EXPECT_EQ(a.size(), 3);
 
         co::Json o = {
-            { "x", 3 },
-            { "y", 7 },
-            { "z", { 1, 2, 3 } },
+            {"x", 3},
+            {"y", 7},
+            {"z", {1, 2, 3}},
         };
         EXPECT(o.is_object());
         EXPECT_EQ(o["x"].as_int(), 3);
@@ -198,8 +203,8 @@ DEF_test(json) {
         EXPECT_EQ(o["z"][2].as_int(), 3);
 
         a = json::array({
-            { "x", 3 },
-            { "y", 7 },
+            {"x", 3},
+            {"y", 7},
         });
         EXPECT(a.is_array());
         EXPECT_EQ(a.size(), 2);
@@ -208,11 +213,9 @@ DEF_test(json) {
         EXPECT_EQ(a[0][0].as_string(), "x");
         EXPECT_EQ(a[1][0].as_string(), "y");
     }
- 
+
     DEF_case(dup) {
-        co::Json x = {
-            1, "xxx", 3.14
-        };
+        co::Json x = {1, "xxx", 3.14};
         co::Json y = x.dup();
 
         EXPECT(!x.is_null());
@@ -220,16 +223,16 @@ DEF_test(json) {
         EXPECT_EQ(x.str(), y.str());
 
         co::Json o = {
-            { "x", 3 },
-            { "y", "888" },
-            { "z", { 1, 2, 3 } },
+            {"x", 3},
+            {"y", "888"},
+            {"z", {1, 2, 3}},
         };
 
         co::Json v = o.dup();
         EXPECT(!o.is_null());
         EXPECT_EQ(o.str(), v.str());
     }
-   
+
     DEF_case(array) {
         co::Json a = json::array();
         EXPECT(a.is_array());
@@ -297,7 +300,7 @@ DEF_test(json) {
         EXPECT_EQ(o.object_size(), 10);
         EXPECT_EQ(o["9"].as_int(), 9);
 
-        co::Json a = { 1, 2, 3 };
+        co::Json a = {1, 2, 3};
         o.add_member("a", a);
         EXPECT(o["a"].is_array());
         EXPECT_EQ(o["a"][0].as_int(), 1);
@@ -318,9 +321,9 @@ DEF_test(json) {
 
     DEF_case(get) {
         co::Json o = {
-            { "x", 3 },
-            { "y", 7 },
-            { "z", { 1, 2, 3 } },
+            {"x", 3},
+            {"y", 7},
+            {"z", {1, 2, 3}},
         };
         EXPECT(o.get("xxx").is_null());
         EXPECT(o.get("xxx", 1, "xx").is_null());
@@ -337,7 +340,7 @@ DEF_test(json) {
         // {"a":1,"b":[0,1,2],"c":{"d":["oo"]}}
         co::Json x;
         x.set("a", 1);
-        x.set("b", co::Json({ 0,1,2 }));
+        x.set("b", co::Json({0, 1, 2}));
         x.set("c", "d", 0, "oo");
         EXPECT_EQ(x.get("a").as_int(), 1);
         EXPECT_EQ(x.get("b", 0).as_int(), 0);
@@ -363,9 +366,9 @@ DEF_test(json) {
 
     DEF_case(remove) {
         co::Json x = {
-            { "a", 1 },
-            { "b", 2 },
-            { "c", {1,2,3} },
+            {"a", 1},
+            {"b", 2},
+            {"c", {1, 2, 3}},
         };
 
         x.remove("a");
@@ -391,9 +394,9 @@ DEF_test(json) {
 
     DEF_case(erase) {
         co::Json x = {
-            { "a", 1 },
-            { "b", 2 },
-            { "c", {1,2,3} },
+            {"a", 1},
+            {"b", 2},
+            {"c", {1, 2, 3}},
         };
 
         x.erase("a");
@@ -438,7 +441,9 @@ DEF_test(json) {
 
         auto it = a.begin();
         EXPECT_EQ((*it).as_int(), 1);
-        ++it; ++it; ++it;
+        ++it;
+        ++it;
+        ++it;
         EXPECT_EQ((*it).as_int(), 4);
         ++it;
         EXPECT(it == a.end());
@@ -506,8 +511,8 @@ DEF_test(json) {
         EXPECT_EQ(json::parse("1.0000000000000002").as_double(), 1.0000000000000002);
         EXPECT_EQ(json::parse("4.9406564584124654e-324").as_double(), 4.9406564584124654e-324);
         EXPECT_EQ(json::parse("1.7976931348623157e+308").as_double(), 1.7976931348623157e+308);
-        EXPECT(json::parse("18446744073709551616").is_double()); // MAX_UINT64 + 1
-        EXPECT(json::parse("-9223372036854775809").is_double()); // MIN_INT64 - 1
+        EXPECT(json::parse("18446744073709551616").is_double());  // MAX_UINT64 + 1
+        EXPECT(json::parse("-9223372036854775809").is_double());  // MIN_INT64 - 1
 
         fastring s("1234.567");
         s.resize(6);
@@ -632,4 +637,4 @@ DEF_test(json) {
     }
 }
 
-} // namespace test
+}  // namespace test

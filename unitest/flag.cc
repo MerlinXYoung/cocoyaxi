@@ -1,6 +1,8 @@
-#include "co/unitest.h"
 #include "co/flag.h"
+
 #include "co/fs.h"
+#include "unitest.h"
+
 
 DEF_bool(ut_bool, false, "bool type");
 DEF_int32(ut_int32, -32, "int32 type");
@@ -26,14 +28,8 @@ DEF_test(flag) {
     DEF_case(_xx_space_xx) {
         int argc = 15;
         const char* argv[15] = {
-            "xxx",
-            "-ut_bool", "true",
-            "-ut_int32", "-4K",
-            "-ut_int64", "-8G",
-            "-ut_uint32", "4M",
-            "-ut_uint64", "8T",
-            "-ut_double", "3.14",
-            "-ut_string", "again",
+            "xxx", "-ut_bool",   "true", "-ut_int32",  "-4K",  "-ut_int64",  "-8G",   "-ut_uint32",
+            "4M",  "-ut_uint64", "8T",   "-ut_double", "3.14", "-ut_string", "again",
         };
         flag::parse(argc, (char**)argv);
 
@@ -49,14 +45,8 @@ DEF_test(flag) {
     DEF_case(_xx_eq_xx) {
         int argc = 8;
         const char* argv[8] = {
-            "xxx",
-            "-ut_bool=false",
-            "-ut_int32=4k",
-            "-ut_int64=8g",
-            "-ut_uint32=32",
-            "-ut_uint64=64",
-            "-ut_double=0.23",
-            "-ut_string=hello",
+            "xxx",           "-ut_bool=false", "-ut_int32=4k",    "-ut_int64=8g",
+            "-ut_uint32=32", "-ut_uint64=64",  "-ut_double=0.23", "-ut_string=hello",
         };
         flag::parse(argc, (char**)argv);
 
@@ -72,14 +62,8 @@ DEF_test(flag) {
     DEF_case(xx_eq_xx) {
         int argc = 8;
         const char* argv[8] = {
-            "xxx",
-            "ut_bool=true",
-            "ut_int32=-4k",
-            "ut_int64=-8g",
-            "ut_uint32=4m",
-            "ut_uint64=8t",
-            "ut_double=3.14",
-            "ut_string=what",
+            "xxx",          "ut_bool=true", "ut_int32=-4k",   "ut_int64=-8g",
+            "ut_uint32=4m", "ut_uint64=8t", "ut_double=3.14", "ut_string=what",
         };
         flag::parse(argc, (char**)argv);
 
@@ -119,4 +103,4 @@ DEF_test(flag) {
     }
 }
 
-} // test
+}  // namespace test

@@ -110,4 +110,5 @@ function redefine_file_macro(target, sourcefile, opt)
 end
 
 -- include sub-projects
-includes("src", "gen", "test", "unitest")
+--"unitest1",
+includes("src", "gen", "test", "unitest", "benchmark", "utest")

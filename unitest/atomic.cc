@@ -1,6 +1,8 @@
-#include "co/unitest.h"
-#include "co/def.h"
 #include "co/atomic.h"
+
+#include "co/def.h"
+#include "unitest.h"
+
 
 namespace test {
 
@@ -150,8 +152,8 @@ DEF_test(atomic) {
 
     DEF_case(pointer) {
         typedef void (*func_t)();
-        func_t f = (func_t) 8;
-        void* p = (void*) 0;
+        func_t f = (func_t)8;
+        void* p = (void*)0;
 
         atomic_swap(&p, (void*)8);
         EXPECT_EQ(p, (void*)8);
@@ -164,4 +166,4 @@ DEF_test(atomic) {
     }
 }
 
-} // namespace test
+}  // namespace test

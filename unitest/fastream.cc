@@ -1,6 +1,8 @@
-#include "co/unitest.h"
-#include "co/def.h"
 #include "co/fastream.h"
+
+#include "co/def.h"
+#include "unitest.h"
+
 
 namespace test {
 
@@ -186,17 +188,17 @@ DEF_test(fastream) {
         fastream fs;
         fs.append(u16);
         EXPECT_EQ(fs.size(), sizeof(u16));
-        EXPECT_EQ(*((const uint16*) fs.data()), 16);
+        EXPECT_EQ(*((const uint16*)fs.data()), 16);
 
         fs.clear();
         fs.append(u32);
         EXPECT_EQ(fs.size(), sizeof(u32));
-        EXPECT_EQ(*((const uint32*) fs.data()), 32);
+        EXPECT_EQ(*((const uint32*)fs.data()), 32);
 
         fs.clear();
         fs.append(u64);
         EXPECT_EQ(fs.size(), sizeof(u64));
-        EXPECT_EQ(*((const uint64*) fs.data()), 64);
+        EXPECT_EQ(*((const uint64*)fs.data()), 64);
 
         fs.append(fs);
         EXPECT_EQ(fs.size(), sizeof(u64) * 2);
@@ -235,7 +237,7 @@ DEF_test(fastream) {
         EXPECT_LT(fs.size(), 24);
 
         fs.clear();
-        fs << (void*) MAX_UINT64;
+        fs << (void*)MAX_UINT64;
         EXPECT_LT(fs.size(), 24);
 
         fs.clear();
@@ -244,4 +246,4 @@ DEF_test(fastream) {
     }
 }
 
-} // namespace test
+}  // namespace test

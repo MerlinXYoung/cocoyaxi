@@ -1,11 +1,13 @@
+#include <algorithm>
+
+#include "benchmark.h"
+#include "co/cout.h"
 #include "co/def.h"
+#include "co/fastream.h"
 #include "co/flag.h"
 #include "co/str.h"
-#include "co/fastream.h"
 #include "co/time.h"
-#include "co/cout.h"
-#include "co/benchmark.h"
-#include <algorithm>
+
 
 #ifndef _WIN32
 #define max std::max
@@ -15,7 +17,7 @@ int64 QS(const char* s, int64 n, const char* x, int64 m) {
     if (n < m) return -1;
 
     typedef unsigned char u8;
-    int64 tbl[256] = { 0 };
+    int64 tbl[256] = {0};
     for (int64 i = 0; i < m; ++i) tbl[(const u8)x[i]] = m - i;
 
     int64 j = 0;
@@ -28,17 +30,15 @@ int64 QS(const char* s, int64 n, const char* x, int64 m) {
     return -1;
 }
 
-inline int64 QS(const char* s, const char* x) {
-    return QS(s, strlen(s), x, strlen(x));
-}
+inline int64 QS(const char* s, const char* x) { return QS(s, strlen(s), x, strlen(x)); }
 
 int64 RQS(const char* str, int64 n, const char* sub, int64 m) {
     if (n < m) return -1;
 
-    const unsigned char* s = (const unsigned char*) str;
-    const unsigned char* p = (const unsigned char*) sub;
+    const unsigned char* s = (const unsigned char*)str;
+    const unsigned char* p = (const unsigned char*)sub;
 
-    int64 tbl[256] = { 0 };
+    int64 tbl[256] = {0};
     for (int64 i = m; i > 0; --i) tbl[p[i - 1]] = i;
 
     for (int64 j = n - m;;) {
@@ -54,19 +54,17 @@ int64 RQS(const char* str, int64 n, const char* sub, int64 m) {
     return -1;
 }
 
-inline int64 RQS(const char* s, const char* x) {
-    return RQS(s, strlen(s), x, strlen(x));
-}
+inline int64 RQS(const char* s, const char* x) { return RQS(s, strlen(s), x, strlen(x)); }
 
 // Two-Way algorithm
 //   search substring x in string s
 //   @n: length of @s
 //   @m: length of @x
-void  tw_init(const char* x, int64 m, int64* p, int64* q);
+void tw_init(const char* x, int64 m, int64* p, int64* q);
 int64 tw_find(const char* s, int64 n, const char* x, int64 m, int64 p, int64 q);
 
 // Two-Way reverse search
-void  tw_rinit(const char* x, int64 m, int64* p, int64* q);
+void tw_rinit(const char* x, int64 m, int64* p, int64* q);
 int64 tw_rfind(const char* s, int64 n, const char* x, int64 m, int64 p, int64 q);
 
 inline int64 tw_find(const char* s, int64 n, const char* x, int64 m) {
@@ -75,9 +73,7 @@ inline int64 tw_find(const char* s, int64 n, const char* x, int64 m) {
     return tw_find(s, n, x, m, p, q);
 }
 
-inline int64 tw_find(const char* s, const char* x) {
-    return tw_find(s, strlen(s), x, strlen(x));
-}
+inline int64 tw_find(const char* s, const char* x) { return tw_find(s, strlen(s), x, strlen(x)); }
 
 inline int64 tw_rfind(const char* s, int64 n, const char* x, int64 m) {
     int64 p, q;
@@ -85,15 +81,13 @@ inline int64 tw_rfind(const char* s, int64 n, const char* x, int64 m) {
     return tw_rfind(s, n, x, m, p, q);
 }
 
-inline int64 tw_rfind(const char* s, const char* x) {
-    return tw_rfind(s, strlen(s), x, strlen(x));
-}
+inline int64 tw_rfind(const char* s, const char* x) { return tw_rfind(s, strlen(s), x, strlen(x)); }
 
-void  tw_init(const char* x, int64 m, int64* p, int64* q) {
+void tw_init(const char* x, int64 m, int64* p, int64* q) {
     char a, b;
     int64 s1 = -1, s2 = -1, p1 = 1, p2 = 1, j, k;
 
-    // computing of the maximal suffix for <= 
+    // computing of the maximal suffix for <=
     j = 0, k = 1;
     while (j + k < m) {
         a = x[j + k];
@@ -112,7 +106,7 @@ void  tw_init(const char* x, int64 m, int64* p, int64* q) {
         }
     }
 
-    // computing of the maximal suffix for >= 
+    // computing of the maximal suffix for >=
     j = 0, k = 1;
     while (j + k < m) {
         a = x[j + k];
@@ -138,9 +132,7 @@ void  tw_init(const char* x, int64 m, int64* p, int64* q) {
     }
 }
 
-inline int64 tw_max(int64 x, int64 y) {
-    return x < y ? y : x;
-}
+inline int64 tw_max(int64 x, int64 y) { return x < y ? y : x; }
 
 int64 tw_find(const char* s, int64 n, const char* x, int64 m, int64 ell, int64 per) {
     int64 i, j, memory;
@@ -182,7 +174,7 @@ int64 tw_find(const char* s, int64 n, const char* x, int64 m, int64 ell, int64 p
     return -1;
 }
 
-void  tw_rinit(const char* x, int64 m, int64* p, int64* q) {
+void tw_rinit(const char* x, int64 m, int64* p, int64* q) {
     char a, b;
     int64 mm = m - 1, s1 = -1, s2 = -1, p1 = 1, p2 = 1, j, k;
 
@@ -273,13 +265,9 @@ int64 tw_rfind(const char* s, int64 n, const char* x, int64 m, int64 ell, int64 
     return -1;
 }
 
-inline int64 tw(const char* s, const char* x) {
-    return tw_find(s, x);
-}
+inline int64 tw(const char* s, const char* x) { return tw_find(s, x); }
 
-inline int64 rtw(const char* s, const char* x) {
-    return tw_rfind(s, x);
-}
+inline int64 rtw(const char* s, const char* x) { return tw_rfind(s, x); }
 
 DEF_int32(n, 256, "");
 DEF_string(s, "llo", "");
@@ -293,48 +281,25 @@ BM_group(string_search) {
     size_t r;
     const char* t;
 
-    BM_add(QS)(
-        v = QS(s, p);
-    )
-    BM_use(v);
+    BM_add(QS)(v = QS(s, p);) BM_use(v);
 
-    BM_add(tw)(
-        v = tw(s, p);
-    )
-    BM_use(v);
+    BM_add(tw)(v = tw(s, p);) BM_use(v);
 
-    BM_add(std::string::find)(
-        r = ss.find(p);
-    )
-    BM_use(r);
+    BM_add(std::string::find)(r = ss.find(p);) BM_use(r);
 
-    BM_add(strstr)(
-        t = strstr(s, p);
-    )
-    BM_use(t);
+    BM_add(strstr)(t = strstr(s, p);) BM_use(t);
 }
 
 BM_group(reverse_search) {
     int64 v;
     size_t r;
 
-    BM_add(RQS)(
-        v = RQS(s, p);
-    )
-    BM_use(v);
-    
+    BM_add(RQS)(v = RQS(s, p);) BM_use(v);
 
-    BM_add(rtw)(
-        v = rtw(s, p);
-    )
-    BM_use(v);
+    BM_add(rtw)(v = rtw(s, p);) BM_use(v);
 
-    BM_add(std::string::rfind)(
-        r = ss.rfind(p);
-    )
-    BM_use(r);
+    BM_add(std::string::rfind)(r = ss.rfind(p);) BM_use(r);
 }
-
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
