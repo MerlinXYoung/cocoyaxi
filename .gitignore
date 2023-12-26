@@ -1,4 +1,6 @@
 .xmake
+.cache
 build
 lib
 config.h
+
