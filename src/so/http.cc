@@ -63,14 +63,14 @@ struct curl_ctx_t {
             easy = 0;
         }
         if (arr) {
-            co::free(arr, arr_cap << 2);
+            ::free(arr);
             arr = 0;
         }
     }
 
     void add_header(uint32 k) {
         if (arr_cap < arr_size + 2) {
-            arr = (uint32*)co::realloc(arr, arr_cap << 2, (arr_cap + 32) << 2);
+            arr = (uint32*)::realloc(arr, (arr_cap + 32) << 2);
             arr_cap += 32;
             assert(arr);
         }
@@ -124,7 +124,7 @@ Client::Client(const char* serv_url) : _ctx(0) { this->reset(serv_url); }
 Client::~Client() {
     if (_ctx) {
         _ctx->~curl_ctx_t();
-        co::free(_ctx, sizeof(*_ctx));
+        ::free(_ctx);
         _ctx = 0;
     }
 }
@@ -132,7 +132,7 @@ Client::~Client() {
 void Client::close() {
     if (_ctx) {
         _ctx->~curl_ctx_t();
-        co::free(_ctx, sizeof(*_ctx));
+        ::free(_ctx);
         _ctx = 0;
     }
 }
@@ -152,7 +152,7 @@ void Client::reset(const char* serv_url) {
                 curl_global_cleanup();
             });
         });
-        _ctx = (curl_ctx_t*)co::zalloc(sizeof(curl_ctx_t));
+        _ctx = (curl_ctx_t*)::calloc(1, sizeof(curl_ctx_t));
         _ctx->easy = curl_easy_init();
 
         auto& s = _ctx->serv_url;
@@ -487,7 +487,7 @@ inline const char* status_str(int n) {
 
 inline void http_req_t::add_header(uint32 k, uint32 v) {
     if (arr_cap < arr_size + 2) {
-        arr = (uint32*)co::realloc(arr, arr_cap << 2, (arr_cap + 32) << 2);
+        arr = (uint32*)::realloc(arr, (arr_cap + 32) << 2);
         assert(arr);
         arr_cap += 32;
     }
@@ -526,8 +526,8 @@ const char* Req::body() const { return _p->buf->data() + _p->body; }
 Req::~Req() {
     if (_p) {
         _p->url.~fastring();
-        co::free(_p->arr, _p->arr_cap << 2);
-        co::free(_p, sizeof(*_p));
+        ::free(_p->arr);
+        ::free(_p);
         _p = 0;
     }
 }
@@ -541,7 +541,7 @@ void Res::set_body(const void* s, size_t n) { _p->set_body(s, n); }
 Res::~Res() {
     if (_p) {
         _p->header.~fastring();
-        co::free(_p, sizeof(*_p));
+        ::free(_p);
         _p = 0;
     }
 }
@@ -663,12 +663,12 @@ class ServerImpl {
     std::function<void(const Req&, Res&)> _on_req;
 };
 
-Server::Server() { _p = co::make<ServerImpl>(); }
+Server::Server() { _p = new ServerImpl(); }
 
 Server::~Server() {
     if (_p) {
         auto p = (ServerImpl*)_p;
-        if (!p->started()) co::del(p);
+        if (!p->started()) delete p;
         _p = 0;
     }
 }
@@ -690,7 +690,7 @@ void ServerImpl::start(const char* ip, int port, const char* key, const char* ca
     CHECK(_on_req != NULL) << "req callback not set..";
     atomic_store(&_started, true, mo_relaxed);
     _serv.on_connection(&ServerImpl::on_connection, this);
-    _serv.on_exit([this]() { co::del(this); });
+    _serv.on_exit([this]() { delete this; });
     _serv.start(ip, port, key, ca);
 }
 
@@ -765,8 +765,8 @@ void ServerImpl::on_connection(tcp::Connection conn) {
             HTTPLOG << "http recv req: " << buf.data();
 
             // parse http header
-            if (preq == 0) preq = (http_req_t*)co::zalloc(sizeof(http_req_t));
-            if (pres == 0) pres = (http_res_t*)co::zalloc(sizeof(http_res_t));
+            if (preq == 0) preq = (http_req_t*)::calloc(1, sizeof(http_req_t));
+            if (pres == 0) pres = (http_res_t*)::calloc(1, sizeof(http_res_t));
 
             r = parse_http_req(&buf, pos + 2, preq);
             if (r != 0) { /* parse error */

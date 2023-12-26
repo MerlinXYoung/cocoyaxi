@@ -1,6 +1,9 @@
 #include "co/co/thread.h"
 
+#include <memory>
+
 #include "co/unitest.h"
+
 
 namespace test {
 

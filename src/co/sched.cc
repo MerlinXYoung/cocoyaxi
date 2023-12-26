@@ -42,23 +42,23 @@ Sched::Sched(uint32 id, uint32 sched_num, uint32 stack_num, uint32 stack_size)
       _stack_num(stack_num),
       _stack_size(stack_size) {
     new (&_x.ev) co::sync_event();
-    _x.epoll = co::make<Epoll>(id);
+    _x.epoll = new Epoll(id);
     _x.stopped = false;
     _main_co = _co_pool.pop();  // id 0 is reserved for _main_co
     _main_co->sched = this;
-    _stack = (Stack*)co::zalloc(stack_num * sizeof(Stack));
+    _stack = (Stack*)::calloc(stack_num , sizeof(Stack));
 }
 
 Sched::~Sched() {
     this->stop();
-    co::del(_x.epoll);
+    delete _x.epoll;
     _x.ev.~sync_event();
     for (size_t i = 0; i < _bufs.size(); ++i) {
         void* p = _bufs[i];
         god::cast<Buffer*>(&p)->reset();
     }
     _bufs.clear();
-    co::free(_stack, _stack_num * sizeof(Stack));
+    ::free(_stack);
 }
 
 static int g_cnt = 0;
@@ -110,7 +110,7 @@ void Sched::resume(Coroutine* co) {
     Stack* const s = co->stack;
     _running = co;
     if (s->p == 0) {
-        s->p = (char*)co::alloc(_stack_size);
+        s->p = (char*)::malloc(_stack_size);
         s->top = s->p + _stack_size;
         s->co = co;
     }
@@ -362,12 +362,10 @@ SchedManager::~SchedManager() {
     co::cleanup_sock();
 }
 
-std::once_flag g_sched_man_flag;
-static SchedManager* g_sched_man;
 
 inline SchedManager* sched_man() {
-    std::call_once(g_sched_man_flag, []() { g_sched_man = co::_make_static<SchedManager>(); });
-    return g_sched_man;
+    static SchedManager _sched_man;
+    return &_sched_man;
 }
 
 void SchedManager::stop() {

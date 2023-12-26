@@ -118,11 +118,11 @@ class SSLConn : public Conn {
 };
 
 Connection::Connection(int sock) {
-    _p = co::make<TcpConn>(sock);
+    _p = new TcpConn(sock);
 }
 
 Connection::Connection(void* s) {
-    _p = co::make<SSLConn>((ssl::S*)s);
+    _p = new SSLConn((ssl::S*)s);
 }
 
 int Connection::socket() const {
@@ -145,7 +145,7 @@ int Connection::close(int ms) {
     Conn* p = (Conn*) god::swap(&_p, nullptr);
     if (p) {
         int r = p->close(ms);
-        co::del(p); // this is ok, sizeof TcpConn, SSLConn: < 4k
+        delete p; // this is ok, sizeof TcpConn, SSLConn: < 4k
         return r;
     }
     return 0;
@@ -155,7 +155,7 @@ int Connection::reset(int ms) {
     Conn* p = (Conn*) god::swap(&_p, nullptr);
     if (p) {
         int r = p->reset(ms);
-        co::del(p);
+        delete p;
         return r;
     }
     return 0;
@@ -195,7 +195,7 @@ class ServerImpl {
     void unref() {
         if (atomic_dec(&_count, mo_acq_rel) == 0) {
             if (_exit_cb) _exit_cb();
-            co::del(this);
+            delete this;
         }
     }
 
@@ -370,13 +370,13 @@ void ServerImpl::on_ssl_connection(sock_t fd) {
 }
 
 Server::Server() {
-    _p = co::make<ServerImpl>();
+    _p = new ServerImpl();
 }
 
 Server::~Server() {
     if (_p) {
         auto p = (ServerImpl*)_p;
-        if (!p->started()) co::del(p);
+        if (!p->started()) delete p;
         _p = 0;
     }
 }
@@ -410,11 +410,11 @@ Client::Client(const char* ip, int port, bool use_ssl)
     if (!ip || !*ip) ip = "127.0.0.1";
     const size_t n = strlen(ip) + 1;
     if (!use_ssl) {
-        _p = (char*) co::alloc(n + 16);
+        _p = (char*) ::malloc(n + 16);
         _u[1] = n + 16;
     } else {
         const int h = sizeof(void*) * 2;
-        _p = ((char*) co::alloc(n + 16 + h)) + h;
+        _p = ((char*) ::malloc(n + 16 + h)) + h;
         _u[1] = n + 16 + h;
         _s[-1] = _s[-2] = 0;
     }
@@ -431,7 +431,7 @@ Client::Client(const Client& c)
 Client::~Client() {
     this->close();
     if (_u && atomic_dec(_u, mo_acq_rel) == 0) {
-        co::free(!_use_ssl ? _p : _p - sizeof(void*)*2, _u[1]);
+        ::free(!_use_ssl ? _p : _p - sizeof(void*)*2);
         _u = 0;
     }
 }
