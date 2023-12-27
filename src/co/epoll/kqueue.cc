@@ -1,6 +1,8 @@
 #if !defined(_WIN32) && !defined(__linux__)
 #include "kqueue.h"
+
 #include "../close.h"
+
 
 namespace co {
 
@@ -12,19 +14,22 @@ Kqueue::Kqueue(int sched_id) : _signaled(0) {
     co::set_cloexec(_pipe_fds[1]);
     co::set_nonblock(_pipe_fds[0]);
     CHECK(this->add_ev_read(_pipe_fds[0], (void*)0));
-    _ev = (struct kevent*) ::calloc(1024, sizeof(struct kevent));
-    (void) sched_id;
+    _ev = (struct kevent*)::calloc(1024, sizeof(struct kevent));
+    (void)sched_id;
 }
 
 Kqueue::~Kqueue() {
     this->close();
-    if (_ev) { ::free(_ev); _ev = 0; }
+    if (_ev) {
+        ::free(_ev);
+        _ev = 0;
+    }
 }
 
 bool Kqueue::add_ev_read(int fd, void* p) {
     if (fd < 0) return false;
     auto& ctx = co::get_sock_ctx(fd);
-    if (ctx.has_ev_read()) return true; // already exists
+    if (ctx.has_ev_read()) return true;  // already exists
 
     struct kevent event;
     EV_SET(&event, fd, EVFILT_READ, EV_ADD, 0, 0, p);
@@ -41,7 +46,7 @@ bool Kqueue::add_ev_read(int fd, void* p) {
 bool Kqueue::add_ev_write(int fd, void* p) {
     if (fd < 0) return false;
     auto& ctx = co::get_sock_ctx(fd);
-    if (ctx.has_ev_write()) return true; // already exists
+    if (ctx.has_ev_write()) return true;  // already exists
 
     struct kevent event;
     EV_SET(&event, fd, EVFILT_WRITE, EV_ADD, 0, 0, p);
@@ -126,9 +131,9 @@ void Kqueue::handle_ev_pipe() {
             break;
         }
     }
-    atomic_store(&_signaled, 0, mo_release);
+    atomic_store(&_signaled, 0, std::memory_order_release);
 }
 
-} // co
+}  // namespace co
 
 #endif

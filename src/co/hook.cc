@@ -16,6 +16,7 @@ void hook_sleep(bool) {}
 #include <errno.h>
 #include <stdarg.h>
 
+#include "co/atomic.h"
 #include "co/cout.h"
 #include "co/defer.h"
 #include "co/table.h"
@@ -78,7 +79,8 @@ class HookCtx {
             uint8 nb;       // non_blocking
             uint8 so;       // socket or pipe fd
             uint8 nb_mark;  // non_blocking mark
-            uint8 flags;
+            // uint8 flags;
+            atomic_uint8_t flags;
             uint16 recv_timeout;
             uint16 send_timeout;
         } _s;
@@ -174,7 +176,7 @@ _CO_DEF_SYS_API(kevent);
 #else
 #define _hook(f) f
 #define _hook_api(f) \
-    if (!__sys_api(f)) atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), mo_relaxed)
+    if (!__sys_api(f)) atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed)
 #define hook_api(f) _hook_api(f)
 #endif
 

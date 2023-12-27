@@ -1,12 +1,13 @@
-#include "co/co.h"
-#include "co/god.h"
-
 #include "co/tcp.h"
-#include "co/ssl.h"
+
+#include "co/co.h"
+#include "co/defer.h"
+#include "co/god.h"
 #include "co/log.h"
+#include "co/ssl.h"
 #include "co/str.h"
 #include "co/time.h"
-#include "co/defer.h"
+
 
 DEF_int32(ssl_handshake_timeout, 3000, ">>#2 ssl handshake timeout in ms");
 
@@ -33,17 +34,11 @@ class TcpConn : public Conn {
     TcpConn(int sock) : _sock(sock) {}
     virtual ~TcpConn() { this->close(0); }
 
-    virtual int recv(void* buf, int n, int ms) {
-        return co::recv(_sock, buf, n, ms);
-    }
+    virtual int recv(void* buf, int n, int ms) { return co::recv(_sock, buf, n, ms); }
 
-    virtual int recvn(void* buf, int n, int ms) {
-        return co::recvn(_sock, buf, n, ms);
-    }
+    virtual int recvn(void* buf, int n, int ms) { return co::recvn(_sock, buf, n, ms); }
 
-    virtual int send(const void* buf, int n, int ms) {
-        return co::send(_sock, buf, n, ms);
-    }
+    virtual int send(const void* buf, int n, int ms) { return co::send(_sock, buf, n, ms); }
 
     virtual int close(int ms) {
         const int sock = god::swap(&_sock, -1);
@@ -55,13 +50,9 @@ class TcpConn : public Conn {
         return sock != -1 ? co::reset_tcp_socket(sock, ms) : 0;
     }
 
-    virtual int socket() {
-        return _sock;
-    }
+    virtual int socket() { return _sock; }
 
-    virtual const char* strerror() {
-        return co::strerror();
-    }
+    virtual const char* strerror() { return co::strerror(); }
 
   private:
     int _sock;
@@ -72,17 +63,11 @@ class SSLConn : public Conn {
     SSLConn(ssl::S* s) : _s(s) {}
     virtual ~SSLConn() { this->close(0); }
 
-    virtual int recv(void* buf, int n, int ms) {
-        return ssl::recv(_s, buf, n, ms);
-    }
+    virtual int recv(void* buf, int n, int ms) { return ssl::recv(_s, buf, n, ms); }
 
-    virtual int recvn(void* buf, int n, int ms) {
-        return ssl::recvn(_s, buf, n, ms);
-    }
+    virtual int recvn(void* buf, int n, int ms) { return ssl::recvn(_s, buf, n, ms); }
 
-    virtual int send(const void* buf, int n, int ms) {
-        return ssl::send(_s, buf, n, ms);
-    }
+    virtual int send(const void* buf, int n, int ms) { return ssl::send(_s, buf, n, ms); }
 
     virtual int close(int ms) {
         ssl::S* s = god::swap(&_s, nullptr);
@@ -105,54 +90,38 @@ class SSLConn : public Conn {
         return 0;
     }
 
-    virtual int socket() {
-        return _s ? ssl::get_fd(_s) : -1;
-    }
+    virtual int socket() { return _s ? ssl::get_fd(_s) : -1; }
 
-    virtual const char* strerror() {
-        return ssl::strerror(_s);
-    }
+    virtual const char* strerror() { return ssl::strerror(_s); }
 
   private:
     ssl::S* _s;
 };
 
-Connection::Connection(int sock) {
-    _p = new TcpConn(sock);
-}
+Connection::Connection(int sock) { _p = new TcpConn(sock); }
 
-Connection::Connection(void* s) {
-    _p = new SSLConn((ssl::S*)s);
-}
+Connection::Connection(void* s) { _p = new SSLConn((ssl::S*)s); }
 
-int Connection::socket() const {
-    return ((Conn*)_p)->socket();
-}
+int Connection::socket() const { return ((Conn*)_p)->socket(); }
 
-int Connection::recv(void* buf, int n, int ms) {
-    return ((Conn*)_p)->recv(buf, n, ms);
-}
+int Connection::recv(void* buf, int n, int ms) { return ((Conn*)_p)->recv(buf, n, ms); }
 
-int Connection::recvn(void* buf, int n, int ms) {
-    return ((Conn*)_p)->recvn(buf, n, ms);
-}
+int Connection::recvn(void* buf, int n, int ms) { return ((Conn*)_p)->recvn(buf, n, ms); }
 
-int Connection::send(const void* buf, int n, int ms) {
-    return ((Conn*)_p)->send(buf, n, ms);
-}
+int Connection::send(const void* buf, int n, int ms) { return ((Conn*)_p)->send(buf, n, ms); }
 
 int Connection::close(int ms) {
-    Conn* p = (Conn*) god::swap(&_p, nullptr);
+    Conn* p = (Conn*)god::swap(&_p, nullptr);
     if (p) {
         int r = p->close(ms);
-        delete p; // this is ok, sizeof TcpConn, SSLConn: < 4k
+        delete p;  // this is ok, sizeof TcpConn, SSLConn: < 4k
         return r;
     }
     return 0;
 }
 
 int Connection::reset(int ms) {
-    Conn* p = (Conn*) god::swap(&_p, nullptr);
+    Conn* p = (Conn*)god::swap(&_p, nullptr);
     if (p) {
         int r = p->reset(ms);
         delete p;
@@ -161,39 +130,39 @@ int Connection::reset(int ms) {
     return 0;
 }
 
-const char* Connection::strerror() const {
-    return ((Conn*)_p)->strerror();
-}
+const char* Connection::strerror() const { return ((Conn*)_p)->strerror(); }
 
 class ServerImpl {
   public:
     ServerImpl()
-        : _started(false), _count(0), _fd((sock_t)-1), _connfd((sock_t)-1),
-          _ssl_ctx(0), _status(0) {
-    }
+        : _started(false),
+          _count(0),
+          _fd((sock_t)-1),
+          _connfd((sock_t)-1),
+          _ssl_ctx(0),
+          _status(0) {}
 
     ~ServerImpl() {
         if (_fd != (sock_t)-1) this->exit();
-        if (_ssl_ctx) { ssl::free_ctx(_ssl_ctx); _ssl_ctx = 0; }
+        if (_ssl_ctx) {
+            ssl::free_ctx(_ssl_ctx);
+            _ssl_ctx = 0;
+        }
     }
 
-    void on_connection(std::function<void(Connection)>&& cb) {
-        _conn_cb = std::move(cb);
-    }
+    void on_connection(std::function<void(Connection)>&& cb) { _conn_cb = std::move(cb); }
 
-    void on_exit(std::function<void()>&& cb) {
-        _exit_cb = std::move(cb);
-    }
+    void on_exit(std::function<void()>&& cb) { _exit_cb = std::move(cb); }
 
     void start(const char* ip, int port, const char* key, const char* ca);
     void exit();
     bool started() const { return _started; }
 
-    uint32 conn_num() const { return atomic_load(&_count, mo_relaxed) - 1; }
-    uint32 ref() { return atomic_inc(&_count, mo_relaxed); }
+    uint32 conn_num() const { return co::atomic_load(&_count, co::mo_relaxed) - 1; }
+    uint32 ref() { return co::atomic_inc(&_count, co::mo_relaxed); }
 
     void unref() {
-        if (atomic_dec(&_count, mo_acq_rel) == 0) {
+        if (co::atomic_dec(&_count, co::mo_acq_rel) == 0) {
             if (_exit_cb) _exit_cb();
             delete this;
         }
@@ -209,7 +178,7 @@ class ServerImpl {
     fastring _ip;
     uint16 _port;
     bool _started;
-    uint32 _count; // refcount
+    uint32 _count;  // refcount
     sock_t _fd;
     sock_t _connfd;
     std::function<void(Connection)> _conn_cb;
@@ -219,7 +188,7 @@ class ServerImpl {
     int _status;
     int _addrlen;
     union {
-        struct sockaddr_in  v4;
+        struct sockaddr_in v4;
         struct sockaddr_in6 v6;
     } _addr;
 };
@@ -245,19 +214,19 @@ void ServerImpl::start(const char* ip, int port, const char* key, const char* ca
 
         _on_sock = std::bind(&ServerImpl::on_ssl_connection, this, std::placeholders::_1);
         this->ref();
-        atomic_store(&_started, true, mo_relaxed);
+        co::atomic_store(&_started, true, co::mo_relaxed);
         go(&ServerImpl::loop, this);
     } else {
         _on_sock = std::bind(&ServerImpl::on_tcp_connection, this, std::placeholders::_1);
         this->ref();
-        atomic_store(&_started, true, mo_relaxed);
+        co::atomic_store(&_started, true, co::mo_relaxed);
         go(&ServerImpl::loop, this);
     }
 }
 
 void ServerImpl::exit() {
-    int status = atomic_cas(&_status, 0, 1);
-    if (status == 2) return; // already stopped
+    int status = co::atomic_cas(&_status, 0, 1);
+    if (status == 2) return;  // already stopped
 
     if (status == 0) {
         sleep::ms(1);
@@ -274,10 +243,10 @@ void ServerImpl::stop() {
 }
 
 /**
- * the server loop 
- *   - It listens on a port and waits for connections. 
- *   - When a connection is accepted, it will start a new coroutine and call 
- *     the connection callback to handle the connection. 
+ * the server loop
+ *   - It listens on a port and waits for connections.
+ *   - When a connection is accepted, it will start a new coroutine and call
+ *     the connection callback to handle the connection.
  */
 void ServerImpl::loop() {
     do {
@@ -323,14 +292,15 @@ void ServerImpl::loop() {
 
         const uint32 n = this->ref() - 1;
         DLOG << "server " << _ip << ':' << _port
-             << " accept connection: " << co::addr2str(&_addr, _addrlen)
-             << ", connfd: " << _connfd << ", conn num: " << n;
+             << " accept connection: " << co::addr2str(&_addr, _addrlen) << ", connfd: " << _connfd
+             << ", conn num: " << n;
         go(&_on_sock, _connfd);
     }
 
     LOG << "server stopped: " << _ip << ':' << _port;
-    co::close(_fd); _fd = (sock_t)-1;
-    atomic_store(&_status, 2);
+    co::close(_fd);
+    _fd = (sock_t)-1;
+    co::atomic_store(&_status, 2);
     this->unref();
 }
 
@@ -354,24 +324,22 @@ void ServerImpl::on_ssl_connection(sock_t fd) {
     this->unref();
     return;
 
-  new_ssl_err:
+new_ssl_err:
     ELOG << "new SSL failed: " << ssl::strerror();
     goto end;
-  set_fd_err:
+set_fd_err:
     ELOG << "ssl set fd " << fd << " failed: " << ssl::strerror(s);
     goto end;
-  accept_err:
+accept_err:
     ELOG << "ssl accept failed: " << ssl::strerror(s);
     goto end;
-  end:
+end:
     if (s) ssl::free_ssl(s);
     co::close(fd, 1000);
     this->unref();
 }
 
-Server::Server() {
-    _p = new ServerImpl();
-}
+Server::Server() { _p = new ServerImpl(); }
 
 Server::~Server() {
     if (_p) {
@@ -391,17 +359,13 @@ Server& Server::on_exit(std::function<void()>&& cb) {
     return *this;
 }
 
-uint32 Server::conn_num() const {
-    return ((ServerImpl*)_p)->conn_num();
-}
+uint32 Server::conn_num() const { return ((ServerImpl*)_p)->conn_num(); }
 
 void Server::start(const char* ip, int port, const char* key, const char* ca) {
     ((ServerImpl*)_p)->start(ip, port, key, ca);
 }
 
-void Server::exit() {
-    ((ServerImpl*)_p)->exit();
-}
+void Server::exit() { ((ServerImpl*)_p)->exit(); }
 
 // |ref(4)|len(4)|port(8)|ip|
 // |ssl_ctx(void*)|ssl(void*)|ref(4)|len(4)|port(8)|ip|
@@ -410,11 +374,11 @@ Client::Client(const char* ip, int port, bool use_ssl)
     if (!ip || !*ip) ip = "127.0.0.1";
     const size_t n = strlen(ip) + 1;
     if (!use_ssl) {
-        _p = (char*) ::malloc(n + 16);
+        _p = (char*)::malloc(n + 16);
         _u[1] = n + 16;
     } else {
         const int h = sizeof(void*) * 2;
-        _p = ((char*) ::malloc(n + 16 + h)) + h;
+        _p = ((char*)::malloc(n + 16 + h)) + h;
         _u[1] = n + 16 + h;
         _s[-1] = _s[-2] = 0;
     }
@@ -423,15 +387,14 @@ Client::Client(const char* ip, int port, bool use_ssl)
     *(_p + 8 + fast::utoa((uint16)port, _p + 8)) = '\0';
 }
 
-Client::Client(const Client& c)
-    : _u(c._u), _fd(-1), _use_ssl(c._use_ssl), _connected(false) {
-    if (_u) atomic_inc(_u, mo_relaxed);
+Client::Client(const Client& c) : _u(c._u), _fd(-1), _use_ssl(c._use_ssl), _connected(false) {
+    if (_u) co::atomic_inc(_u, co::mo_relaxed);
 }
 
 Client::~Client() {
     this->close();
-    if (_u && atomic_dec(_u, mo_acq_rel) == 0) {
-        ::free(!_use_ssl ? _p : _p - sizeof(void*)*2);
+    if (_u && co::atomic_dec(_u, co::mo_acq_rel) == 0) {
+        ::free(!_use_ssl ? _p : _p - sizeof(void*) * 2);
         _u = 0;
     }
 }
@@ -454,17 +417,14 @@ bool Client::bind(const char* ip, int port) {
     const char* const serv_ip = _p + 16;
     const char* const serv_port = _p + 8;
     struct addrinfo *srv = 0, *cli = 0;
-    defer(
-        if (srv) freeaddrinfo(srv);
-        if (cli) freeaddrinfo(cli);
-    );
+    defer(if (srv) freeaddrinfo(srv); if (cli) freeaddrinfo(cli););
 
     int r = getaddrinfo(serv_ip, serv_port, NULL, &srv);
     if (r != 0) goto err;
 
     CHECK_NOTNULL(srv);
     if (_fd == -1) {
-        _fd = (int) co::tcp_socket(srv->ai_family);
+        _fd = (int)co::tcp_socket(srv->ai_family);
         if (_fd == -1) {
             ELOG << "tcp::Client::bind() failed: " << co::strerror();
             goto err;
@@ -481,7 +441,7 @@ bool Client::bind(const char* ip, int port) {
 
     return true;
 
-  err:
+err:
     return false;
 }
 
@@ -498,7 +458,7 @@ bool Client::connect(int ms) {
 
     CHECK_NOTNULL(info);
     if (_fd == -1) {
-        _fd = (int) co::tcp_socket(info->ai_family);
+        _fd = (int)co::tcp_socket(info->ai_family);
         if (_fd == -1) {
             ELOG << "connect to " << ip << ':' << port << " failed: " << co::strerror();
             goto end;
@@ -522,19 +482,19 @@ bool Client::connect(int ms) {
     _connected = true;
     return true;
 
-  new_ctx_err:
+new_ctx_err:
     ELOG << "ssl connect new client contex failed: " << ssl::strerror();
     goto end;
-  new_ssl_err:
+new_ssl_err:
     ELOG << "ssl connect new SSL failed: " << ssl::strerror();
     goto end;
-  set_fd_err:
+set_fd_err:
     ELOG << "ssl connect set fd " << _fd << " failed: " << ssl::strerror(_s[-1]);
     goto end;
-  connect_err:
+connect_err:
     ELOG << "ssl connect failed: " << ssl::strerror(_s[-1]);
     goto end;
-  end:
+end:
     this->disconnect();
     return false;
 }
@@ -542,16 +502,21 @@ bool Client::connect(int ms) {
 void Client::disconnect() {
     if (_fd != -1) {
         if (_use_ssl) {
-            if (_s[-1]) { ssl::free_ssl(_s[-1]); _s[-1] = 0; }
-            if (_s[-2]) { ssl::free_ctx(_s[-2]); _s[-2] = 0; }
+            if (_s[-1]) {
+                ssl::free_ssl(_s[-1]);
+                _s[-1] = 0;
+            }
+            if (_s[-2]) {
+                ssl::free_ctx(_s[-2]);
+                _s[-2] = 0;
+            }
         }
-        co::close(_fd); _fd = -1;
+        co::close(_fd);
+        _fd = -1;
     }
     _connected = false;
 }
 
-const char* Client::strerror() const {
-    return !_use_ssl ? co::strerror() : ssl::strerror(_s[-1]);
-}
+const char* Client::strerror() const { return !_use_ssl ? co::strerror() : ssl::strerror(_s[-1]); }
 
-} // tcp
+}  // namespace tcp

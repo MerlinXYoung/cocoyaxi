@@ -1,5 +1,7 @@
+#include "co/atomic.h"
 #include "co/stl.h"
 #include "sched.h"
+
 
 #ifndef _WIN32
 #ifdef __linux__
@@ -166,8 +168,9 @@ class mutex_impl {
         };
 
         _memb* _make_memb() {
-            //TODO: alines
-            _memb* m = (_memb*)::malloc(sizeof(_memb) + N * sizeof(void*));//, L1_CACHE_LINE_SIZE);
+            // TODO: alines
+            _memb* m =
+                (_memb*)::malloc(sizeof(_memb) + N * sizeof(void*));  //, L1_CACHE_LINE_SIZE);
             m->size = 0;
             m->rx = 0;
             m->wx = 0;
@@ -236,7 +239,7 @@ class mutex_impl {
     xx::mutex _m;
     xx::cv_t _cv;
     queue _wq;
-    uint32 _refn;
+    atomic_uint32_t _refn;
     uint8 _lock;
     bool _has_cv;
 };
@@ -313,7 +316,7 @@ class event_impl {
 
     void ref() { atomic_inc(&_refn, mo_relaxed); }
     uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
-    uint32* wg() noexcept { return &_wg; }
+    atomic_uint32_t* wg() noexcept { return &_wg; }
 
   private:
     xx::mutex _m;
@@ -321,8 +324,8 @@ class event_impl {
     co::clist _wc;
     uint32 _wt;
     uint32 _sn;
-    uint32 _refn;
-    uint32 _wg;  // for wait group
+    atomic_uint32_t _refn;
+    atomic_uint32_t _wg;  // for wait group
     bool _signaled;
     const bool _manual_reset;
     bool _has_cv;
@@ -539,9 +542,9 @@ class pipe_impl {
     struct waitx : co::clink {
         Coroutine* co;
         union {
-            uint8 state;
+            atomic_uint8_t state;
             struct {
-                uint8 state;
+                atomic_uint8_t state;
                 uint8 done;  // 1: ok, 2: channel closed
                 uint8 v;     // 0: cp, 1: mv, 2: need destruct the object in buf
             } x;
@@ -586,9 +589,9 @@ class pipe_impl {
     co::clist _wq;
     uint32 _rx;  // read pos
     uint32 _wx;  // write pos
-    uint32 _refn;
+    atomic_uint32_t _refn;
     uint8 _full;
-    uint8 _closed;
+    atomic_uint8_t _closed;
 };
 
 inline void pipe_impl::_read_block(void* p) {
@@ -853,8 +856,8 @@ void pipe_impl::close() {
 }
 
 pipe::pipe(uint32 buf_size, uint32 blk_size, uint32 ms, pipe::C&& c, pipe::D&& d) {
-    //TODO: alignes
-    _p = ::malloc(sizeof(pipe_impl));//, L1_CACHE_LINE_SIZE);
+    // TODO: alignes
+    _p = ::malloc(sizeof(pipe_impl));  //, L1_CACHE_LINE_SIZE);
     new (_p) pipe_impl(buf_size, blk_size, ms, std::move(c), std::move(d));
 }
 
@@ -904,7 +907,7 @@ class pool_impl {
 
     void _make_pools() {
         _size = co::sched_num();
-        _pools = (V*)::calloc(_size, sizeof(V) );
+        _pools = (V*)::calloc(_size, sizeof(V));
     }
 
     void _free_pools() {
@@ -919,7 +922,7 @@ class pool_impl {
     V* _pools;
     size_t _size;
     size_t _maxcap;
-    uint32 _refn;
+    atomic_uint32_t _refn;
     std::function<void*()> _ccb;
     std::function<void(void*)> _dcb;
 };
@@ -975,8 +978,8 @@ inline size_t pool_impl::size() const {
 }  // namespace xx
 
 mutex::mutex() {
-    //TODO:alignes
-    _p = ::malloc(sizeof(xx::mutex_impl));//, L1_CACHE_LINE_SIZE);
+    // TODO:alignes
+    _p = ::malloc(sizeof(xx::mutex_impl));  //, L1_CACHE_LINE_SIZE);
     new (_p) xx::mutex_impl();
 }
 
@@ -1000,8 +1003,8 @@ void mutex::unlock() const { god::cast<xx::mutex_impl*>(_p)->unlock(); }
 bool mutex::try_lock() const { return god::cast<xx::mutex_impl*>(_p)->try_lock(); }
 
 event::event(bool manual_reset, bool signaled) {
-    //TODO: alignes
-    _p = ::malloc(sizeof(xx::event_impl));//, L1_CACHE_LINE_SIZE);
+    // TODO: alignes
+    _p = ::malloc(sizeof(xx::event_impl));  //, L1_CACHE_LINE_SIZE);
     new (_p) xx::event_impl(manual_reset, signaled);
 }
 
@@ -1025,8 +1028,8 @@ void event::signal() const { god::cast<xx::event_impl*>(_p)->signal(); }
 void event::reset() const { god::cast<xx::event_impl*>(_p)->reset(); }
 
 sync_event::sync_event(bool manual_reset, bool signaled) {
-    //TODO:alignes
-    _p = ::malloc(sizeof(xx::sync_event_impl));//, L1_CACHE_LINE_SIZE);
+    // TODO:alignes
+    _p = ::malloc(sizeof(xx::sync_event_impl));  //, L1_CACHE_LINE_SIZE);
     new (_p) xx::sync_event_impl(manual_reset, signaled);
 }
 
@@ -1047,8 +1050,8 @@ void sync_event::wait() { ((xx::sync_event_impl*)_p)->wait(); }
 bool sync_event::wait(uint32 ms) { return ((xx::sync_event_impl*)_p)->wait(ms); }
 
 wait_group::wait_group(uint32 n) {
-    //TODO:: alignes
-    _p = ::malloc(sizeof(xx::event_impl));//, L1_CACHE_LINE_SIZE);
+    // TODO:: alignes
+    _p = ::malloc(sizeof(xx::event_impl));  //, L1_CACHE_LINE_SIZE);
     new (_p) xx::event_impl(false, false, n);
 }
 
@@ -1079,8 +1082,8 @@ void wait_group::done() const {
 void wait_group::wait() const { god::cast<xx::event_impl*>(_p)->wait((uint32)-1); }
 
 pool::pool() {
-    //TODO:: alignes
-    _p = ::malloc(sizeof(xx::pool_impl));//, L1_CACHE_LINE_SIZE);
+    // TODO:: alignes
+    _p = ::malloc(sizeof(xx::pool_impl));  //, L1_CACHE_LINE_SIZE);
     new (_p) xx::pool_impl();
 }
 

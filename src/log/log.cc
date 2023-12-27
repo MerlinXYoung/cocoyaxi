@@ -46,7 +46,7 @@ DEF_bool(log_compress, false, ">>#0 if true, compress rotated log files with xz"
 // and we are safe to start the logging thread.
 static bool g_init_done;
 static bool g_dummy = []() {
-    atomic_store(&g_init_done, true, mo_release);
+    co::atomic_store(&g_init_done, true, co::mo_release);
     return false;
 }();
 
@@ -455,7 +455,7 @@ Logger::Logger(LogTime* t, LogFile* f)
 }
 
 bool Logger::start() {
-    if (atomic_bool_cas(&_stop, -2, -1)) {
+    if (co::atomic_bool_cas(&_stop, -2, -1)) {
         do {
             // ensure max_log_buffer_size >= 1M, max_log_size >= 256
             auto& bs = FLG_max_log_buffer_size;
@@ -476,10 +476,10 @@ bool Logger::start() {
             }
         } while (0);
 
-        atomic_store(&_stop, 0);
+        co::atomic_store(&_stop, 0);
         std::thread(&Logger::thread_fun, this).detach();
     } else {
-        while (atomic_load(&_stop, mo_relaxed) < 0) {
+        while (atomic_load(&_stop, co::mo_relaxed) < 0) {
             sleep::ms(1);
         }
     }
@@ -489,7 +489,7 @@ bool Logger::start() {
 // if signal_safe is true, try to call only async-signal-safe api in this function
 // according to:  http://man7.org/linux/man-pages/man7/signal-safety.7.html
 void Logger::stop(bool signal_safe) {
-    int s = atomic_cas(&_stop, 0, 1);
+    int s = co::atomic_cas(&_stop, 0, 1);
     if (s < 0) return;  // thread not started
     if (s == 0) {
         if (!signal_safe) _log_event.signal();
@@ -530,7 +530,7 @@ void Logger::stop(bool signal_safe) {
             }
         }
 
-        atomic_swap(&_stop, 3);
+        co::atomic_swap(&_stop, 3);
     } else {
         while (_stop != 3) signal_safe_sleep(1);
     }
@@ -543,7 +543,7 @@ void Logger::push_level_log(char* s, size_t n) {
     if (unlikely(!g_thread_started)) {
         std::call_once(g_flag, [this]() {
             this->start();
-            atomic_store(&g_thread_started, true);
+            co::atomic_store(&g_thread_started, true);
         });
     }
     if (unlikely(n > FLG_max_log_size)) {
@@ -578,7 +578,7 @@ void Logger::push_topic_log(const char* topic, char* s, size_t n) {
     if (unlikely(!g_thread_started)) {
         std::call_once(g_flag, [this]() {
             this->start();
-            atomic_store(&g_thread_started, true);
+            co::atomic_store(&g_thread_started, true);
         });
     }
     if (unlikely(n > FLG_max_log_size)) {
@@ -619,7 +619,7 @@ void Logger::push_fatal_log(char* s, size_t n) {
     if (!FLG_cout) fwrite(s, 1, n, stderr);
     if (_file.open(NULL, fatal)) _file.write(s, n);
 
-    atomic_store(&mod().check_failed, true);
+    co::atomic_store(&mod().check_failed, true);
     abort();
 }
 
@@ -642,7 +642,7 @@ void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size
 void Logger::thread_fun() {
     bool signaled;
     int64 sec;
-    while (atomic_load(&g_init_done, mo_acquire) != true) _log_event.wait(8);
+    while (co::atomic_load(&g_init_done, co::mo_acquire) != true) _log_event.wait(8);
     while (!_stop) {
         signaled = _log_event.wait(FLG_log_flush_ms);
         if (_stop) break;
@@ -716,7 +716,7 @@ void Logger::thread_fun() {
         if (signaled) _log_event.reset();
     }
 
-    atomic_swap(&_stop, 2);
+    co::atomic_swap(&_stop, 2);
 }
 
 #ifdef _WIN32

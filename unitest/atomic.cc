@@ -2,8 +2,7 @@
 
 #include "co/def.h"
 #include "unitest.h"
-
-
+using namespace co;
 namespace test {
 
 DEF_test(atomic) {

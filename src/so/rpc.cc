@@ -66,7 +66,7 @@ class ServerImpl {
 
     void start(const char* ip, int port, const char* url, const char* key, const char* ca) {
         _url = url;
-        atomic_store(&_started, true, mo_relaxed);
+        co::atomic_store(&_started, true, co::mo_relaxed);
         _tcp_serv.on_connection(&ServerImpl::on_connection, this);
         _tcp_serv.on_exit([this]() { delete this; });
         _tcp_serv.start(ip, port, key, ca);
@@ -75,7 +75,7 @@ class ServerImpl {
     bool started() const { return _started; }
 
     void exit() {
-        atomic_store(&_stopped, true, mo_relaxed);
+        co::atomic_store(&_stopped, true, co::mo_relaxed);
         _tcp_serv.exit();
     }
 

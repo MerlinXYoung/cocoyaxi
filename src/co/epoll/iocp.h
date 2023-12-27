@@ -1,11 +1,11 @@
 #ifdef _WIN32
 #pragma once
 
-#include "co/co.h"
-#include "co/log.h"
-#include "co/error.h"
 #include "../hook.h"
 #include "../sock_ctx.h"
+#include "co/co.h"
+#include "co/error.h"
+#include "co/log.h"
 
 namespace co {
 
@@ -17,13 +17,13 @@ class Iocp {
     bool add_event(sock_t fd) {
         if (fd == (sock_t)-1) return false;
         auto& ctx = co::get_sock_ctx(fd);
-        if (ctx.has_event()) return true; // already exists
+        if (ctx.has_event()) return true;  // already exists
 
         if (CreateIoCompletionPort((HANDLE)fd, _iocp, fd, 0) != 0) {
             ctx.add_event();
             return true;
         } else {
-            //ELOG << "iocp add socket " << fd << " error: " << co::strerror();
+            // ELOG << "iocp add socket " << fd << " error: " << co::strerror();
             // always return true here.
             return true;
         }
@@ -53,7 +53,8 @@ class Iocp {
     }
 
     void signal() {
-        if (atomic_bool_cas(&_signaled, 0, 1, mo_acq_rel, mo_acquire)) {
+        if (atomic_bool_cas(&_signaled, 0, 1, std::memory_order_acq_rel,
+                            std::memory_order_acquire)) {
             const BOOL r = PostQueuedCompletionStatus(_iocp, 0, 0, 0);
             if (!r) {
                 const uint32 e = ::GetLastError();
@@ -65,7 +66,7 @@ class Iocp {
     const OVERLAPPED_ENTRY& operator[](int i) const { return _ev[i]; }
     void* user_data(const OVERLAPPED_ENTRY& ev) { return ev.lpOverlapped; }
     bool is_ev_pipe(const OVERLAPPED_ENTRY& ev) { return ev.lpOverlapped == 0; }
-    void handle_ev_pipe() { atomic_store(&_signaled, 0, mo_release); }
+    void handle_ev_pipe() { atomic_store(&_signaled, 0, std::memory_order_release); }
 
   private:
     HANDLE _iocp;
@@ -77,6 +78,6 @@ class Iocp {
 typedef OVERLAPPED_ENTRY epoll_event;
 typedef Iocp Epoll;
 
-} // co
+}  // namespace co
 
 #endif

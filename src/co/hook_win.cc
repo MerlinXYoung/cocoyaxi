@@ -18,7 +18,6 @@ void hook_sleep(bool) {}
 #include "detours/detours.h"
 #include "sched.h"
 
-
 DEF_bool(co_hook_log, false, ">>#1 enable log for hook if true");
 
 #define HOOKLOG DLOG_IF(FLG_co_hook_log)
@@ -65,14 +64,16 @@ class HookCtx {
     static const uint8 f_non_sock_stream = 8;
 
     void set_shut_read() {
-        if (atomic_or(&_s.flags, f_shut_read, mo_acq_rel) & f_shut_write) this->clear();
+        if (atomic_or(&_s.flags, f_shut_read, std::memory_order_acq_rel) & f_shut_write)
+            this->clear();
     }
 
     void set_shut_write() {
-        if (atomic_or(&_s.flags, f_shut_write, mo_acq_rel) & f_shut_read) this->clear();
+        if (atomic_or(&_s.flags, f_shut_write, std::memory_order_acq_rel) & f_shut_read)
+            this->clear();
     }
 
-    void set_skip_iocp() { atomic_or(&_s.flags, f_skip_iocp, mo_acq_rel); }
+    void set_skip_iocp() { atomic_or(&_s.flags, f_skip_iocp, std::memory_order_acq_rel); }
     bool has_skip_iocp() const { return _s.flags & f_skip_iocp; }
     void set_non_sock_stream() { _s.flags |= f_non_sock_stream; }
     bool is_sock_stream() const { return !(_s.flags & f_non_sock_stream); }
@@ -1295,7 +1296,7 @@ void cleanup_hook() {
 }
 #endif
 
-void hook_sleep(bool x) { atomic_store(&g_hook.hook_sleep, x, mo_relaxed); }
+void hook_sleep(bool x) { atomic_store(&g_hook.hook_sleep, x, std::memory_order_relaxed); }
 
 }  // namespace co
 

@@ -650,7 +650,7 @@ class ServerImpl {
     void on_connection(tcp::Connection conn);
 
     void exit() {
-        atomic_store(&_stopped, true);
+        co::atomic_store(&_stopped, true);
         _serv.exit();
     }
 
@@ -688,7 +688,7 @@ void Server::exit() { ((ServerImpl*)_p)->exit(); }
 
 void ServerImpl::start(const char* ip, int port, const char* key, const char* ca) {
     CHECK(_on_req != NULL) << "req callback not set..";
-    atomic_store(&_started, true, mo_relaxed);
+    co::atomic_store(&_started, true, co::mo_relaxed);
     _serv.on_connection(&ServerImpl::on_connection, this);
     _serv.on_exit([this]() { delete this; });
     _serv.start(ip, port, key, ca);

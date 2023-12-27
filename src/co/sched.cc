@@ -2,8 +2,10 @@
 
 #include <mutex>
 
+#include "co/atomic.h"
 #include "co/os.h"
 #include "co/rand.h"
+
 
 DEF_uint32(co_sched_num, os::cpunum(), ">>#1 number of coroutine schedulers");
 DEF_uint32(co_stack_num, 8, ">>#1 number of stacks per scheduler, must be power of 2");
@@ -46,7 +48,7 @@ Sched::Sched(uint32 id, uint32 sched_num, uint32 stack_num, uint32 stack_size)
     _x.stopped = false;
     _main_co = _co_pool.pop();  // id 0 is reserved for _main_co
     _main_co->sched = this;
-    _stack = (Stack*)::calloc(stack_num , sizeof(Stack));
+    _stack = (Stack*)::calloc(stack_num, sizeof(Stack));
 }
 
 Sched::~Sched() {
@@ -61,7 +63,7 @@ Sched::~Sched() {
     ::free(_stack);
 }
 
-static int g_cnt = 0;
+static atomic_int g_cnt = 0;
 
 void Sched::stop() {
     const int n = atomic_inc(&g_cnt, mo_relaxed);
@@ -361,7 +363,6 @@ SchedManager::~SchedManager() {
     this->stop();
     co::cleanup_sock();
 }
-
 
 inline SchedManager* sched_man() {
     static SchedManager _sched_man;

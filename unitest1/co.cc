@@ -11,18 +11,18 @@ int gc = 0;
 int gd = 0;
 
 struct TestChan {
-    explicit TestChan(int v = 0) : v(v) { atomic_inc(&gc, mo_relaxed); }
+    explicit TestChan(int v = 0) : v(v) { atomic_inc(&gc, std::memory_order_relaxed); }
 
-    TestChan(const TestChan& c) : v(c.v) { atomic_inc(&gc, mo_relaxed); }
+    TestChan(const TestChan& c) : v(c.v) { atomic_inc(&gc, std::memory_order_relaxed); }
 
     TestChan(TestChan&& c) : v(c.v) {
         c.v = 0;
-        atomic_inc(&gc, mo_relaxed);
+        atomic_inc(&gc, std::memory_order_relaxed);
     }
 
     ~TestChan() {
         if (v) v = 0;
-        atomic_inc(&gd, mo_relaxed);
+        atomic_inc(&gd, std::memory_order_relaxed);
     }
 
     int v;
