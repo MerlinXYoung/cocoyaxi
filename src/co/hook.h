@@ -21,18 +21,17 @@ void hook_sleep(bool x);
 #define __sys_api(x) _sys_##x
 #define _CO_DEC_SYS_API(x) extern x##_fp_t __sys_api(x)
 
-struct HookInitializer {
-    HookInitializer();
-    ~HookInitializer();
-};
+// struct HookInitializer {
+//     HookInitializer();
+//     ~HookInitializer();
+// };
 
-static HookInitializer g_hook_initializer;
+// static HookInitializer g_hook_initializer;
 
 #ifdef _WIN32
 #include <MSWSock.h>
 #include <WinSock2.h>
 #include <ws2tcpip.h>  // for inet_ntop...
-
 
 #define _CO_DEF_SYS_API(x) x##_fp_t __sys_api(x) = (x##_fp_t)x
 

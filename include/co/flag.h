@@ -70,7 +70,8 @@ __coapi void add_flag(
 
 #define DEF_string(name, value, help, ...) \
     fastring& FLG_##name = *[]() { \
-        auto _##name = new fastring(value);/*::co::_make_static<fastring>(value);*/ \
+        static fastring _impl(value); \
+        auto _##name = &_impl;/*new fastring(value);*//*::co::_make_static<fastring>(value);*/ \
         ::flag::xx::add_flag('s', #name, #value, help, __FILE__, __LINE__, _##name, ""#__VA_ARGS__); \
         return _##name; \
     }()

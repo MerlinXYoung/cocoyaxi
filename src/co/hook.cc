@@ -27,6 +27,11 @@ DEF_bool(co_hook_log, false, ">>#1 print log for API hooks");
 #define HOOKLOG DLOG_IF(FLG_co_hook_log)
 
 namespace co {
+// struct HookInitializer {
+//     HookInitializer();
+//     ~HookInitializer();
+// };
+// static HookInitializer g_hook_initializer;
 
 class HookCtx {
   public:
@@ -175,10 +180,11 @@ _CO_DEF_SYS_API(kevent);
 #else
 #define __str(a, b) a #b
 #define _hook(f) f
-#define _hook_api(f)                                                           \
-    if (!__sys_api(f)) do {                                                    \
-            LOG << __str("hook ", __sys_api(f));                               \
-            atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed); \
+#define _hook_api(f)                                                                       \
+    if (!__sys_api(f)) do {                                                                \
+            LOG << __str("hook ", __sys_api(f));                                           \
+            __sys_api(f) = reinterpret_cast<decltype(__sys_api(f))>(dlsym(RTLD_NEXT, #f)); \
+            /*atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed);*/         \
     } while (0)
 #define hook_api(f) _hook_api(f)
 #endif
@@ -1284,9 +1290,7 @@ static bool _init_hook() {
     return true;
 }
 
-static bool _dummy = _init_hook();
-
-static void init_hook() {
+static bool init_hook() {
     LOG << "";
 #ifdef __APPLE__
     _init_hook();
@@ -1337,21 +1341,30 @@ static void init_hook() {
     assert(__sys_api(kevent));
 #endif
 #endif
-    ;
+    return true;
 }
-
+static bool _dummy = _init_hook() && init_hook();
 void hook_sleep(bool x) { atomic_store(&g_hook.hook_sleep, x, mo_relaxed); }
+
+// static int g_nifty_counter;
+// HookInitializer::HookInitializer() {
+//     if (g_nifty_counter++ == 0) {
+//         co::init_hook();
+//     }
+// }
+
+// HookInitializer::~HookInitializer() {}
 
 }  // namespace co
 
-static int g_nifty_counter;
-HookInitializer::HookInitializer() {
-    if (g_nifty_counter++ == 0) {
-        co::init_hook();
-    }
-}
+// static int g_nifty_counter;
+// HookInitializer::HookInitializer() {
+//     if (g_nifty_counter++ == 0) {
+//         co::init_hook();
+//     }
+// }
 
-HookInitializer::~HookInitializer() {}
+// HookInitializer::~HookInitializer() {}
 
 #undef do_hook
 #undef _hook
