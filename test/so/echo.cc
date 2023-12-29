@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
         g_wg.add(FLG_c);
         go([]() {
             co::sleep(FLG_t * 1000);
-            atomic_store(&g_stop, true);
+            co::atomic_store(&g_stop, true);
         });
         for (int i = 0; i < FLG_c; ++i) {
             go(client_fun, i);

@@ -79,8 +79,7 @@ class HookCtx {
             uint8 nb;       // non_blocking
             uint8 so;       // socket or pipe fd
             uint8 nb_mark;  // non_blocking mark
-            // uint8 flags;
-            atomic_uint8_t flags;
+            uint8 flags;    // atomic
             uint16 recv_timeout;
             uint16 send_timeout;
         } _s;
@@ -174,9 +173,13 @@ _CO_DEF_SYS_API(kevent);
         atomic_store(&__sys_api(f), origin, mo_relaxed);                             \
     }
 #else
+#define __str(a, b) a #b
 #define _hook(f) f
-#define _hook_api(f) \
-    if (!__sys_api(f)) atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed)
+#define _hook_api(f)                                                           \
+    if (!__sys_api(f)) do {                                                    \
+            LOG << __str("hook ", __sys_api(f));                               \
+            atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed); \
+    } while (0)
 #define hook_api(f) _hook_api(f)
 #endif
 
@@ -1284,6 +1287,7 @@ static bool _init_hook() {
 static bool _dummy = _init_hook();
 
 static void init_hook() {
+    LOG << "";
 #ifdef __APPLE__
     _init_hook();
     (void)_dummy;

@@ -16,7 +16,7 @@ class S {
     int _v;
 
     int get_id() {
-        return atomic_inc(&g_id);
+        return co::atomic_inc(&g_id);
     }
 };
 

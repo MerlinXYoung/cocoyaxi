@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
 
     sleep::sec(2);
     serv.exit();
-    atomic_store(&g_stopped, true);
+    co::atomic_store(&g_stopped, true);
     delete gPool;
 
     sleep::sec(5);

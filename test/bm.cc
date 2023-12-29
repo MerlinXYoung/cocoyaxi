@@ -5,9 +5,9 @@
 BM_group(atomic) {
     int i = 0;
 
-    BM_add(++)(atomic_inc(&i););
+    BM_add(++)(co::atomic_inc(&i););
 
-    BM_add(--)(atomic_dec(&i););
+    BM_add(--)(co::atomic_dec(&i););
 }
 
 BM_group(rand) {

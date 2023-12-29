@@ -9,18 +9,18 @@ int gc = 0;
 int gd = 0;
 
 struct TestChan {
-    explicit TestChan(int v = 0) : v(v) { atomic_inc(&gc, std::memory_order_relaxed); }
+    explicit TestChan(int v = 0) : v(v) {co::atomic_inc(&gc, co::mo_relaxed); }
 
-    TestChan(const TestChan& c) : v(c.v) { atomic_inc(&gc, std::memory_order_relaxed); }
+    TestChan(const TestChan& c) : v(c.v) {co::atomic_inc(&gc, co::mo_relaxed); }
 
     TestChan(TestChan&& c) : v(c.v) {
         c.v = 0;
-        atomic_inc(&gc, std::memory_order_relaxed);
+       co::atomic_inc(&gc, co::mo_relaxed);
     }
 
     ~TestChan() {
         if (v) v = 0;
-        atomic_inc(&gd, std::memory_order_relaxed);
+       co::atomic_inc(&gd, co::mo_relaxed);
     }
 
     int v;
@@ -268,13 +268,13 @@ DEF_test(co) {
         wg.add(8);
         for (int i = 0; i < 7; ++i) {
             go([wg, &v]() {
-                atomic_inc(&v);
+               co::atomic_inc(&v);
                 wg.done();
             });
         }
 
         std::thread([wg, &v]() {
-            atomic_inc(&v);
+           co::atomic_inc(&v);
             wg.done();
         }).detach();
 
@@ -469,16 +469,16 @@ DEF_test(co) {
             wg.add(8);
             for (int i = 0; i < 7; ++i) {
                 go([wg, ev, &v]() {
-                    atomic_inc(&v);
+                   co::atomic_inc(&v);
                     ev.wait();
-                    atomic_dec(&v);
+                   co::atomic_dec(&v);
                     wg.done();
                 });
             }
             std::thread([wg, ev, &v]() {
-                atomic_inc(&v);
+               co::atomic_inc(&v);
                 ev.wait();
-                atomic_dec(&v);
+               co::atomic_dec(&v);
                 wg.done();
             }).detach();
 
@@ -491,17 +491,17 @@ DEF_test(co) {
 
             wg.add(2);
             go([wg, ev, &v]() {
-                atomic_inc(&v);
+               co::atomic_inc(&v);
                 while (v < 2) co::sleep(1);
                 ev.wait(1);
-                atomic_inc(&v);
+               co::atomic_inc(&v);
                 wg.done();
             });
             std::thread([wg, ev, &v]() {
-                atomic_inc(&v);
+               co::atomic_inc(&v);
                 while (v < 2) co::sleep(1);
                 ev.wait(1);
-                atomic_inc(&v);
+               co::atomic_inc(&v);
                 wg.done();
             }).detach();
 
