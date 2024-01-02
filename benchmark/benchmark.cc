@@ -6,7 +6,7 @@
 namespace bm {
 namespace xx {
 
-int calc_iters(int64 ns) {
+int calc_iters(int64_t ns) {
     if (ns <= 1000) return 100 * 1000;
     if (ns <= 10000) return 10 * 1000;
     if (ns <= 100000) return 1000;

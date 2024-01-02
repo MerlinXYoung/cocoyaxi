@@ -2,7 +2,6 @@
 
 #include "unitest.h"
 
-
 #ifdef _WIN32
 #include <intrin.h>
 #endif
@@ -11,7 +10,7 @@ namespace test {
 
 void parse_serv_url(const char* url, fastring& ip, int& port, bool& https);
 
-inline uint32 find_index(uint32 size) {
+inline uint32_t find_index(uint32_t size) {
 #ifdef _WIN32
     unsigned long index;
     _BitScanReverse(&index, size - 1);
@@ -21,12 +20,12 @@ inline uint32 find_index(uint32 size) {
 #endif
 }
 
-inline uint32 find_first_zero_bit(uint32 x) {
+inline uint32_t find_first_zero_bit(uint32_t x) {
 #ifdef _WIN32
     unsigned long index;
     return _BitScanForward(&index, ~x) ? index : 32;
 #else
-    const uint32 r = __builtin_ffs(~x);
+    const uint32_t r = __builtin_ffs(~x);
     return r > 0 ? r - 1 : 32;
 #endif
 }
@@ -44,8 +43,8 @@ DEF_test(alien) {
         EXPECT_EQ(find_index(1u << 12), 8);
 
 #if 0
-        for (uint32 x = 4; x < 12; ++x) {
-            for (uint32 i = (1 << x) + 1; i < (1 << (x + 1)); ++i) {
+        for (uint32_t x = 4; x < 12; ++x) {
+            for (uint32_t i = (1 << x) + 1; i < (1 << (x + 1)); ++i) {
                 EXPECT_EQ(find_index(i), x - 3);
             }
         }
@@ -53,7 +52,7 @@ DEF_test(alien) {
     }
 
     DEF_case(find_first_zero_bit) {
-        for (uint32 i = 1; i < 32; ++i) {
+        for (uint32_t i = 1; i < 32; ++i) {
             EXPECT_EQ(find_first_zero_bit((1u << i) - 1), i);
             EXPECT_EQ(find_first_zero_bit((1u << i)), 0);
         }
@@ -62,7 +61,7 @@ DEF_test(alien) {
         EXPECT_EQ(find_first_zero_bit(23), 3);
         EXPECT_EQ(find_first_zero_bit(73), 1);
         EXPECT_EQ(find_first_zero_bit(107), 2);
-        EXPECT_EQ(find_first_zero_bit((uint32)-1), 32);
+        EXPECT_EQ(find_first_zero_bit((uint32_t)-1), 32);
     }
 
     DEF_case(parse_serv_url) {

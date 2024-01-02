@@ -1,8 +1,10 @@
 #include "co/json.h"
+
 #include "co/cout.h"
+#include "co/defer.h"
 #include "co/flag.h"
 #include "co/time.h"
-#include "co/defer.h"
+
 
 DEF_uint32(n, 64, "string length for this test");
 
@@ -31,16 +33,10 @@ co::Json f() {
 }
 
 co::Json g() {
-    co::Json v = {
-        { "name", "vin" },
-        { "age", 23 },
-        { "num", {1, 2, 3} },
-        { "o", {
-            { "o1", 3.14 },
-            { "o2", fastring(FLG_n, 'o') },
-            { "o3", { 1, 2, 3 } }
-        }}
-    };
+    co::Json v = {{"name", "vin"},
+                  {"age", 23},
+                  {"num", {1, 2, 3}},
+                  {"o", {{"o1", 3.14}, {"o2", fastring(FLG_n, 'o')}, {"o3", {1, 2, 3}}}}};
     return v;
 }
 
@@ -50,12 +46,9 @@ co::Json h() {
         .add_member("age", 23)
         .add_member("num", co::Json().push_back(1).push_back(2).push_back(3))
         .add_member("o", co::Json()
-            .add_member("o1", 3.14)
-            .add_member("o2", fastring(FLG_n, 'o'))
-            .add_member("o3", co::Json()
-                .push_back(1).push_back(2).push_back(3)
-            )
-        );
+                             .add_member("o1", 3.14)
+                             .add_member("o2", fastring(FLG_n, 'o'))
+                             .add_member("o3", co::Json().push_back(1).push_back(2).push_back(3)));
 }
 
 int main(int argc, char** argv) {
@@ -83,11 +76,11 @@ int main(int argc, char** argv) {
     int n = 10000;
     co::print("s.size(): ", s.size());
 
-    int64 beg = now::us();
+    int64_t beg = now::us();
     for (int i = 0; i < n; ++i) {
         co::Json xx = json::parse(s.data(), s.size());
     }
-    int64 end = now::us();
+    int64_t end = now::us();
 
     co::print("parse average time used: ", (end - beg) * 1.0 / n, "us");
 

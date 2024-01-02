@@ -9,14 +9,14 @@ io_event::~io_event() {
     if (_added) xx::gSched->del_io_event(_fd, _ev);
 }
 
-bool io_event::wait(uint32 ms) {
+bool io_event::wait(uint32_t ms) {
     auto sched = xx::gSched;
     if (!_added) {
         _added = sched->add_io_event(_fd, _ev);
         if (!_added) return false;
     }
 
-    if (ms != (uint32)-1) {
+    if (ms != (uint32_t)-1) {
         sched->add_timer(ms);
         sched->yield();
         if (!sched->timeout()) return true;
@@ -88,7 +88,7 @@ io_event::~io_event() {
     xx::gSched->running()->waitx = 0;
 }
 
-bool io_event::wait(uint32 ms) {
+bool io_event::wait(uint32_t ms) {
     int r, e;
     const auto sched = xx::gSched;
     if (_info->state != xx::st_wait) _info->state = xx::st_wait;
@@ -115,7 +115,7 @@ bool io_event::wait(uint32 ms) {
         }
     }
 
-    if (ms != (uint32)-1) {
+    if (ms != (uint32_t)-1) {
         sched->add_timer(ms);
         sched->yield();
         _timeout = sched->timeout();
@@ -139,7 +139,7 @@ wait_for_connect : {
     sched->running()->waitx = 0;
 
     // check if the socket is connected every x ms
-    uint32 x = 1;
+    uint32_t x = 1;
     int r, sec = 0, len = sizeof(int);
     while (true) {
         r = co::getsockopt(_fd, SOL_SOCKET, SO_CONNECT_TIME, &sec, &len);
@@ -151,7 +151,7 @@ wait_for_connect : {
             return false;
         }
         sched->sleep(ms > x ? x : ms);
-        if (ms != (uint32)-1) ms = (ms > x ? ms - x : 0);
+        if (ms != (uint32_t)-1) ms = (ms > x ? ms - x : 0);
         if (x < 16) x <<= 1;
     }
 }

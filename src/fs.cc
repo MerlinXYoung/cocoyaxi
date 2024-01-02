@@ -25,12 +25,12 @@ bool isdir(const char* path) {
     return ::lstat(path, &attr) == 0 && S_ISDIR(attr.st_mode);
 }
 
-int64 mtime(const char* path) {
+int64_t mtime(const char* path) {
     struct stat attr;
     return ::lstat(path, &attr) == 0 ? attr.st_mtime : -1;
 }
 
-int64 fsize(const char* path) {
+int64_t fsize(const char* path) {
     struct stat attr;
     return ::lstat(path, &attr) == 0 ? attr.st_size : -1;
 }
@@ -148,7 +148,7 @@ int open(const char* path, char mode) {
 }  // namespace xx
 
 struct fctx {
-    uint32 n;
+    uint32_t n;
     int fd;
 };
 
@@ -157,7 +157,7 @@ file::file(size_t n) : _p(0) {
     _p = ::malloc(x);
     assert(_p);
     fctx* p = (fctx*)_p;
-    p->n = (uint32)x;
+    p->n = (uint32_t)x;
     p->fd = nullfd;
     *(char*)(p + 1) = '\0';
 }
@@ -181,8 +181,8 @@ bool file::open(const char* path, char mode) {
     this->close();
     if (!path || !*path) return false;
 
-    const uint32 n = (uint32)strlen(path) + 1;
-    const uint32 x = n + sizeof(fctx);
+    const uint32_t n = (uint32_t)strlen(path) + 1;
+    const uint32_t x = n + sizeof(fctx);
     fctx* p = (fctx*)_p;
 
     if (!p || p->n < x) {
@@ -209,7 +209,7 @@ void file::close() {
 
 static int g_seekfrom[3] = {SEEK_SET, SEEK_CUR, SEEK_END};
 
-void file::seek(int64 off, int whence) {
+void file::seek(int64_t off, int whence) {
     fctx* p = (fctx*)_p;
     if (p && p->fd != nullfd) {
         ::lseek(p->fd, off, g_seekfrom[whence]);

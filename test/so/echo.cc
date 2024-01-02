@@ -1,5 +1,7 @@
 #include <atomic>
+
 #include "co/all.h"
+
 
 DEF_string(h, "127.0.0.1", "server ip");
 DEF_int32(p, 9988, "server port");
@@ -31,8 +33,8 @@ void conn_cb(tcp::Connection conn) {
 
 std::atomic_bool g_stop{false};
 struct Count {
-    uint32 r;
-    uint32 s;
+    uint32_t r;
+    uint32_t s;
     char x[56];
 };
 Count* g_count;

@@ -6,9 +6,8 @@
 #include <vector>
 
 #include "co/cout.h"
-#include "co/time.h"
 #include "co/os.h"
-
+#include "co/time.h"
 
 DEF_bool(perf, false, "performance testing");
 
@@ -36,10 +35,10 @@ int main(int argc, char** argv) {
         for (int k = 0; k < 1000000; k++) {
             LOG << "hello world " << 3;
         }
-        int64 write_to_cache = t.us();
+        int64_t write_to_cache = t.us();
 
         log::exit();
-        int64 write_to_file = t.us();
+        int64_t write_to_file = t.us();
 
         co::print("All logs written to cache in ", write_to_cache, " us");
         co::print("All logs written to file in ", write_to_file, " us");

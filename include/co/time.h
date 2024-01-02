@@ -16,72 +16,60 @@ struct __coapi Initializer {
 
 static Initializer g_initializer;
 
-} // xx
+}  // namespace xx
 #endif
 
 // monotonic timestamp in nanoseconds
-__coapi int64 ns();
+__coapi int64_t ns();
 
 // monotonic timestamp in microseconds
-__coapi int64 us();
+__coapi int64_t us();
 
 // monotonic timestamp in milliseconds
-__coapi int64 ms();
+__coapi int64_t ms();
 
 // "%Y-%m-%d %H:%M:%S" ==> 2023-01-07 18:01:23
 __coapi fastring str(const char* fm = "%Y-%m-%d %H:%M:%S");
 
-} // now
+}  // namespace now
 
 namespace epoch {
 
 // microseconds since epoch
-__coapi int64 us();
+__coapi int64_t us();
 
 // milliseconds since epoch
-__coapi int64 ms();
+__coapi int64_t ms();
 
-} // epoch
+}  // namespace epoch
 
 class __coapi Timer {
   public:
-    Timer() {
-        _start = now::ns();
-    }
+    Timer() { _start = now::ns(); }
 
-    void restart() {
-        _start = now::ns();
-    }
+    void restart() { _start = now::ns(); }
 
-    int64 ns() const {
-        return now::ns() - _start;
-    }
+    int64_t ns() const { return now::ns() - _start; }
 
-    int64 us() const {
-        return this->ns() / 1000;
-    }
+    int64_t us() const { return this->ns() / 1000; }
 
-    int64 ms() const {
-        return this->ns() / 1000000;
-    }
+    int64_t ms() const { return this->ns() / 1000000; }
 
   private:
-    int64 _start;
+    int64_t _start;
 };
 
-} // co
+}  // namespace co
 
 namespace now = co::now;
 namespace epoch = co::epoch;
 
-namespace _xx {
-namespace sleep {
+namespace _xx { namespace sleep {
 
-__coapi void ms(uint32 n);
+__coapi void ms(uint32_t n);
 
-__coapi void sec(uint32 n);
+__coapi void sec(uint32_t n);
 
-} // sleep
-} // _xx
+}}  // namespace _xx::sleep
 
 using namespace _xx;

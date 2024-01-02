@@ -27,14 +27,14 @@ DEC_uint32(http_max_header_size);
 namespace rpc {
 
 struct Header {
-    uint16 flags;  // reserved, 0
-    uint16 magic;  // 0x7777
-    uint32 len;    // body len
-};                 // 8 bytes
+    uint16_t flags;  // reserved, 0
+    uint16_t magic;  // 0x7777
+    uint32_t len;    // body len
+};                   // 8 bytes
 
-static const uint16 kMagic = 0x7777;
+static const uint16_t kMagic = 0x7777;
 
-inline void set_header(const void* header, uint32 msg_len) {
+inline void set_header(const void* header, uint32_t msg_len) {
     ((Header*)header)->flags = 0;
     ((Header*)header)->magic = kMagic;
     ((Header*)header)->len = hton32(msg_len);
@@ -161,7 +161,7 @@ void ServerImpl::on_connection(tcp::Connection conn) {
         buf.reserve(4096);
 
         // if the first 4 bytes is "POST", it is a HTTP request, otherwise it is a RPC request
-        if (*(uint32*)&header != *(uint32*)"POST") goto rpc;
+        if (*(uint32_t*)&header != *(uint32_t*)"POST") goto rpc;
         goto http;
 
     rpc:
@@ -206,7 +206,7 @@ void ServerImpl::on_connection(tcp::Connection conn) {
 
             buf.resize(sizeof(Header));
             res.str(buf);
-            set_header(buf.data(), (uint32)(buf.size() - sizeof(Header)));
+            set_header(buf.data(), (uint32_t)(buf.size() - sizeof(Header)));
 
             r = conn.send(buf.data(), (int)buf.size(), FLG_rpc_send_timeout);
             if (unlikely(r <= 0)) goto send_err;
@@ -286,7 +286,7 @@ void ServerImpl::on_connection(tcp::Connection conn) {
             }
 
             // try to recv the remain part of http body
-            preq->body = (uint32)(pos + 4);  // beginning of http body
+            preq->body = (uint32_t)(pos + 4);  // beginning of http body
             total_len = pos + 4 + preq->body_size;
             if (preq->body_size > 0) {
                 if (buf.size() < total_len) {
@@ -439,7 +439,7 @@ void ClientImpl::call(const json::Json& req, json::Json& res) {
     do {
         _fs.resize(sizeof(Header));
         req.str(_fs);
-        set_header((void*)_fs.data(), (uint32)(_fs.size() - sizeof(Header)));
+        set_header((void*)_fs.data(), (uint32_t)(_fs.size() - sizeof(Header)));
 
         r = _tcp_cli.send(_fs.data(), (int)_fs.size(), FLG_rpc_send_timeout);
         if (unlikely(r <= 0)) goto send_err;

@@ -114,9 +114,9 @@ class LogTime {
 
     LogTime() : _start(0) {
         for (int i = 0; i < 60; ++i) {
-            const auto p = (uint8*)&_tb[i];
-            p[0] = (uint8)('0' + i / 10);
-            p[1] = (uint8)('0' + i % 10);
+            const auto p = (uint8_t*)&_tb[i];
+            p[0] = (uint8_t)('0' + i / 10);
+            p[1] = (uint8_t)('0' + i % 10);
         }
         memset(_buf, 0, sizeof(_buf));
         this->update();
@@ -124,18 +124,18 @@ class LogTime {
 
     void update();
     const char* get() const { return _buf; }
-    uint32 day() const { return *(uint32*)_buf; }
-    int64 sec() const { return _start; }
+    uint32_t day() const { return *(uint32_t*)_buf; }
+    int64_t sec() const { return _start; }
 
   private:
     time_t _start;
     struct tm _tm;
-    int16 _tb[64];
+    int16_t _tb[64];
     char _buf[24];  // save the time string
 };
 
 void LogTime::update() {
-    const int64 now_ms = epoch::ms();
+    const int64_t now_ms = epoch::ms();
     const time_t now_sec = now_ms / 1000;
     const int dt = (int)(now_sec - _start);
     if (dt == 0) goto set_ms;
@@ -147,7 +147,7 @@ void LogTime::update() {
         if (_tm.tm_sec >= 60) {
             _tm.tm_min++;
             _tm.tm_sec -= 60;
-            *(uint16*)(_buf + t_min) = _tb[_tm.tm_min];
+            *(uint16_t*)(_buf + t_min) = _tb[_tm.tm_min];
         }
         const auto p = (char*)(_tb + _tm.tm_sec);
         _buf[t_sec] = p[0];
@@ -167,8 +167,8 @@ reset : {
 
 set_ms : {
     const auto p = _buf + t_ms;
-    uint32 ms = (uint32)(now_ms - _start * 1000);
-    uint32 x = ms / 100;
+    uint32_t ms = (uint32_t)(now_ms - _start * 1000);
+    uint32_t x = ms / 100;
     p[0] = (char)('0' + x);
     ms -= x * 100;
     x = ms / 10;
@@ -195,7 +195,7 @@ class LogFile {
     fastring _path;
     fastring _path_base;             // prefix of the log path: log_dir/log_file_name
     co::deque<fastring> _old_paths;  // paths of old log files
-    uint32 _day;
+    uint32_t _day;
     bool _checked;
 };
 
@@ -244,8 +244,8 @@ bool LogFile::check_config(const char* topic, int level) {
 }
 
 // get day from xx_0808_15_30_08.123.log
-inline uint32 get_day_from_path(const fastring& path) {
-    uint32 x = 0;
+inline uint32_t get_day_from_path(const fastring& path) {
+    uint32_t x = 0;
     const int n = LogTime::t_len + 4;
     if (path.size() > n) god::copy<4>(&x, path.data() + path.size() - n);
     return x;
@@ -341,7 +341,7 @@ fs::file& LogFile::open(const char* topic, int level) {
 void LogFile::write(const char* p, size_t n) {
     auto& m = mod();
     if (FLG_log_daily) {
-        const uint32 day = m.log_time->day();
+        const uint32_t day = m.log_time->day();
         if (_day != day) {
             _day = day;
             _file.close();
@@ -350,15 +350,15 @@ void LogFile::write(const char* p, size_t n) {
 
     if (_file || this->open(nullptr, 0)) {
         _file.write(p, n);
-        const uint64 size = _file.size();  // -1 if not exists
-        if (size >= (uint64)FLG_max_log_file_size) _file.close();
+        const uint64_t size = _file.size();  // -1 if not exists
+        if (size >= (uint64_t)FLG_max_log_file_size) _file.close();
     }
 }
 
 void LogFile::write(const char* topic, const char* p, size_t n) {
     auto& m = mod();
     if (FLG_log_daily) {
-        const uint32 day = m.log_time->day();
+        const uint32_t day = m.log_time->day();
         if (_day != day) {
             _day = day;
             _file.close();
@@ -366,14 +366,14 @@ void LogFile::write(const char* topic, const char* p, size_t n) {
     }
     if (_file || this->open(topic, 0)) {
         _file.write(p, n);
-        const uint64 size = _file.size();  // -1 if not exists
-        if (size >= (uint64)FLG_max_log_file_size) _file.close();
+        const uint64_t size = _file.size();  // -1 if not exists
+        if (size >= (uint64_t)FLG_max_log_file_size) _file.close();
     }
 }
 
 class Logger {
   public:
-    static const uint32 N = 128 * 1024;
+    static const uint32_t N = 128 * 1024;
     static const int A = 8;  // array size
 
     Logger(LogTime* t, LogFile* f);
@@ -406,7 +406,7 @@ class Logger {
         };
         X x;
         fastream buf;  // to swap out logs
-        int64 sec;
+        int64_t sec;
         size_t bytes;
         std::function<void(const void*, size_t)> write_cb;
         int write_flags;
@@ -415,7 +415,7 @@ class Logger {
     struct PerTopic {
         PerTopic() : file(), sec(0), bytes(0) {}
         LogFile file;
-        int64 sec;
+        int64_t sec;
         size_t bytes;  // write bytes
     };
 
@@ -465,7 +465,7 @@ bool Logger::start() {
         do {
             // ensure max_log_buffer_size >= 1M, max_log_size >= 256
             auto& bs = FLG_max_log_buffer_size;
-            auto& ls = *(uint32*)&FLG_max_log_size;
+            auto& ls = *(uint32_t*)&FLG_max_log_size;
             if (bs < (1 << 20)) bs = 1 << 20;
             if (ls < 256) ls = 256;
             if (ls > (bs >> 2)) ls = bs >> 2;
@@ -650,7 +650,7 @@ void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size
 
 void Logger::thread_fun() {
     bool signaled;
-    int64 sec;
+    int64_t sec;
     // while (co::atomic_load(&g_init_done, co::mo_acquire) != true) _log_event.wait(8);
     while (g_init_done.load(std::memory_order_acquire) != true) _log_event.wait(8);
     while (!_stop) {

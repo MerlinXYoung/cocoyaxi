@@ -105,16 +105,16 @@ fastring Flag::set_value(const fastring& v) {
             *static_cast<bool*>(this->addr) = str::to_bool(v);
             break;
         case 'i':
-            *static_cast<int32*>(this->addr) = str::to_int32(v);
+            *static_cast<int32_t*>(this->addr) = str::to_int32(v);
             break;
         case 'u':
-            *static_cast<uint32*>(this->addr) = str::to_uint32(v);
+            *static_cast<uint32_t*>(this->addr) = str::to_uint32(v);
             break;
         case 'I':
-            *static_cast<int64*>(this->addr) = str::to_int64(v);
+            *static_cast<int64_t*>(this->addr) = str::to_int64(v);
             break;
         case 'U':
-            *static_cast<uint64*>(this->addr) = str::to_uint64(v);
+            *static_cast<uint64_t*>(this->addr) = str::to_uint64(v);
             break;
         case 'd':
             *static_cast<double*>(this->addr) = str::to_double(v);
@@ -155,13 +155,13 @@ fastring Flag::get_value() const {
         case 'b':
             return str::from(*static_cast<bool*>(this->addr));
         case 'i':
-            return int2str(*static_cast<int32*>(this->addr));
+            return int2str(*static_cast<int32_t*>(this->addr));
         case 'u':
-            return int2str(*static_cast<uint32*>(this->addr));
+            return int2str(*static_cast<uint32_t*>(this->addr));
         case 'I':
-            return int2str(*static_cast<int64*>(this->addr));
+            return int2str(*static_cast<int64_t*>(this->addr));
         case 'U':
-            return int2str(*static_cast<uint64*>(this->addr));
+            return int2str(*static_cast<uint64_t*>(this->addr));
         case 'd':
             return str::from(*static_cast<double*>(this->addr));
         default:
@@ -176,13 +176,13 @@ inline const char* Flag::type() const {
         case 'b':
             return "bool";
         case 'i':
-            return "int32";
+            return "int32_t";
         case 'u':
-            return "uint32";
+            return "uint32_t";
         case 'I':
-            return "int64";
+            return "int64_t";
         case 'U':
-            return "uint64";
+            return "uint64_t";
         case 'd':
             return "double";
         default:

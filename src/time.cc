@@ -1,8 +1,9 @@
 #ifndef _WIN32
 
 #include "co/time.h"
-#include <time.h>
+
 #include <sys/time.h>
+#include <time.h>
 
 namespace co {
 namespace now {
@@ -10,22 +11,22 @@ namespace xx {
 
 #ifdef CLOCK_MONOTONIC
 
-inline int64 ns() {
+inline int64_t ns() {
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return static_cast<int64>(t.tv_sec) * 1000000000 + t.tv_nsec;
+    return static_cast<int64_t>(t.tv_sec) * 1000000000 + t.tv_nsec;
 }
 
-inline int64 us() {
+inline int64_t us() {
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return static_cast<int64>(t.tv_sec) * 1000000 + t.tv_nsec / 1000;
+    return static_cast<int64_t>(t.tv_sec) * 1000000 + t.tv_nsec / 1000;
 }
 
-inline int64 ms() {
+inline int64_t ms() {
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return static_cast<int64>(t.tv_sec) * 1000 + t.tv_nsec / 1000000;
+    return static_cast<int64_t>(t.tv_sec) * 1000 + t.tv_nsec / 1000000;
 }
 
 #else
@@ -33,27 +34,21 @@ inline int64 ms() {
 // WARNING:
 //   If you are from the year 2262 or later, DO NOT use this,
 //   as nanoseconds since epoth (1970/1/1) may overflow then.
-inline int64 ns() { return epoch::us() * 1000; }
+inline int64_t ns() { return epoch::us() * 1000; }
 
-inline int64 us() { return epoch::us(); }
+inline int64_t us() { return epoch::us(); }
 
-inline int64 ms() { return epoch::ms(); }
+inline int64_t ms() { return epoch::ms(); }
 
 #endif
 
-} // xx
+}  // namespace xx
 
-int64 ns() {
-    return xx::ns();
-}
+int64_t ns() { return xx::ns(); }
 
-int64 us() {
-    return xx::us();
-}
+int64_t us() { return xx::us(); }
 
-int64 ms() {
-    return xx::ms();
-}
+int64_t ms() { return xx::ms(); }
 
 fastring str(const char* fm) {
     time_t x = time(0);
@@ -65,43 +60,43 @@ fastring str(const char* fm) {
     return fastring(buf, r);
 }
 
-} // now
+}  // namespace now
 
 namespace epoch {
 
-int64 us() {
+int64_t us() {
     struct timeval t;
     gettimeofday(&t, 0);
-    return static_cast<int64>(t.tv_sec) * 1000000 + t.tv_usec;
+    return static_cast<int64_t>(t.tv_sec) * 1000000 + t.tv_usec;
 }
 
-int64 ms() {
+int64_t ms() {
     struct timeval t;
     gettimeofday(&t, 0);
-    return static_cast<int64>(t.tv_sec) * 1000 + t.tv_usec / 1000;
+    return static_cast<int64_t>(t.tv_sec) * 1000 + t.tv_usec / 1000;
 }
 
-} // epoch
-} // co
+}  // namespace epoch
+}  // namespace co
 
-namespace _xx {
-namespace sleep {
+namespace _xx { namespace sleep {
 
-void ms(uint32 n) {
+void ms(uint32_t n) {
     struct timespec ts;
     ts.tv_sec = n / 1000;
     ts.tv_nsec = n % 1000 * 1000000;
-    while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
+        ;
 }
 
-void sec(uint32 n) {
+void sec(uint32_t n) {
     struct timespec ts;
     ts.tv_sec = n;
     ts.tv_nsec = 0;
-    while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
+        ;
 }
 
-} // sleep
-} // _xx
+}}  // namespace _xx::sleep
 
 #endif

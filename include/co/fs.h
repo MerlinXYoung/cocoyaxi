@@ -1,9 +1,10 @@
 #pragma once
 
 #include "def.h"
-#include "fastring.h"
 #include "fastream.h"
+#include "fastring.h"
 #include "stl.h"
+
 
 namespace fs {
 
@@ -12,10 +13,10 @@ __coapi bool exists(const char* path);
 __coapi bool isdir(const char* path);
 
 // modify time
-__coapi int64 mtime(const char* path);
+__coapi int64_t mtime(const char* path);
 
 // file size
-__coapi int64 fsize(const char* path);
+__coapi int64_t fsize(const char* path);
 
 // p = false  ->  mkdir
 // p = true   ->  mkdir -p
@@ -37,53 +38,29 @@ __coapi bool rename(const char* from, const char* to);
 // administrator privileges required on windows
 __coapi bool symlink(const char* dst, const char* lnk);
 
-inline bool exists(const fastring& path) {
-    return fs::exists(path.c_str());
-}
+inline bool exists(const fastring& path) { return fs::exists(path.c_str()); }
 
-inline bool exists(const std::string& path) {
-    return fs::exists(path.c_str());
-}
+inline bool exists(const std::string& path) { return fs::exists(path.c_str()); }
 
-inline bool isdir(const fastring& path) {
-    return fs::isdir(path.c_str());
-}
+inline bool isdir(const fastring& path) { return fs::isdir(path.c_str()); }
 
-inline bool isdir(const std::string& path) {
-    return fs::isdir(path.c_str());
-}
+inline bool isdir(const std::string& path) { return fs::isdir(path.c_str()); }
 
-inline int64 mtime(const fastring& path) {
-    return fs::mtime(path.c_str());
-}
+inline int64_t mtime(const fastring& path) { return fs::mtime(path.c_str()); }
 
-inline int64 mtime(const std::string& path) {
-    return fs::mtime(path.c_str());
-}
+inline int64_t mtime(const std::string& path) { return fs::mtime(path.c_str()); }
 
-inline int64 fsize(const fastring& path) {
-    return fs::fsize(path.c_str());
-}
+inline int64_t fsize(const fastring& path) { return fs::fsize(path.c_str()); }
 
-inline int64 fsize(const std::string& path) {
-    return fs::fsize(path.c_str());
-}
+inline int64_t fsize(const std::string& path) { return fs::fsize(path.c_str()); }
 
-inline bool mkdir(const fastring& path, bool p=false) {
-    return fs::mkdir(path.c_str(), p);
-}
+inline bool mkdir(const fastring& path, bool p = false) { return fs::mkdir(path.c_str(), p); }
 
-inline bool mkdir(const std::string& path, bool p=false) {
-    return fs::mkdir(path.c_str(), p);
-}
+inline bool mkdir(const std::string& path, bool p = false) { return fs::mkdir(path.c_str(), p); }
 
-inline bool remove(const fastring& path, bool r=false) {
-    return fs::remove(path.c_str(), r);
-}
+inline bool remove(const fastring& path, bool r = false) { return fs::remove(path.c_str(), r); }
 
-inline bool remove(const std::string& path, bool r=false) {
-    return fs::remove(path.c_str(), r);
-}
+inline bool remove(const std::string& path, bool r = false) { return fs::remove(path.c_str(), r); }
 
 inline bool mv(const fastring& from, const fastring& to) {
     return fs::mv(from.c_str(), to.c_str());
@@ -127,45 +104,35 @@ class __coapi file {
     // @n: reserve n bytes of memory for the path
     explicit file(size_t n);
 
-    file(const char* path, char mode) : _p(0) {
-        this->open(path, mode);
-    }
+    file(const char* path, char mode) : _p(0) { this->open(path, mode); }
 
-    file(const fastring& path, char mode)    : file(path.c_str(), mode) {}
+    file(const fastring& path, char mode) : file(path.c_str(), mode) {}
     file(const std::string& path, char mode) : file(path.c_str(), mode) {}
 
-    file(file&& f) : _p(f._p) {
-        f._p = 0;
-    }
+    file(file&& f) : _p(f._p) { f._p = 0; }
 
     file(const file& x) = delete;
     void operator=(const file& x) = delete;
     void operator=(file&& x) = delete;
 
     explicit operator bool() const;
-    
-    bool operator!() const {
-        return !(bool)(*this);
-    }
+
+    bool operator!() const { return !(bool)(*this); }
 
     const char* path() const;
 
-    int64 size()  const { return fs::fsize (this->path()); }
+    int64_t size() const { return fs::fsize(this->path()); }
     bool exists() const { return fs::exists(this->path()); }
 
     bool open(const char* path, char mode);
 
-    bool open(const fastring& path, char mode) {
-        return this->open(path.c_str(), mode);
-    }
+    bool open(const fastring& path, char mode) { return this->open(path.c_str(), mode); }
 
-    bool open(const std::string& path, char mode) {
-        return this->open(path.c_str(), mode);
-    }
+    bool open(const std::string& path, char mode) { return this->open(path.c_str(), mode); }
 
     void close();
 
-    void seek(int64 off, int whence=seek_beg);
+    void seek(int64_t off, int whence = seek_beg);
 
     size_t read(void* buf, size_t n);
 
@@ -173,21 +140,13 @@ class __coapi file {
 
     size_t write(const void* s, size_t n);
 
-    size_t write(const char* s) {
-        return this->write(s, strlen(s));
-    }
+    size_t write(const char* s) { return this->write(s, strlen(s)); }
 
-    size_t write(const fastring& s) {
-        return this->write(s.data(), s.size());
-    }
+    size_t write(const fastring& s) { return this->write(s.data(), s.size()); }
 
-    size_t write(const std::string& s) {
-        return this->write(s.data(), s.size());
-    }
+    size_t write(const std::string& s) { return this->write(s.data(), s.size()); }
 
-    size_t write(char c) {
-        return this->write(&c, 1);
-    }
+    size_t write(char c) { return this->write(&c, 1); }
 
   private:
     void* _p;
@@ -201,46 +160,31 @@ class __coapi fstream {
     fstream() : _s(8192) {}
     explicit fstream(size_t cap) : _s(cap) {}
 
-    fstream(const char* path, char mode, size_t cap=8192)
-        : _s(cap), _f(path, mode == 'w' ? 'w' : 'a') {
-    }
+    fstream(const char* path, char mode, size_t cap = 8192)
+        : _s(cap), _f(path, mode == 'w' ? 'w' : 'a') {}
 
-    fstream(const fastring& path, char mode, size_t cap=8192)
-        : fstream(path.c_str(), mode, cap) {
-    }
+    fstream(const fastring& path, char mode, size_t cap = 8192)
+        : fstream(path.c_str(), mode, cap) {}
 
-    fstream(const std::string& path, char mode, size_t cap=8192)
-        : fstream(path.c_str(), mode, cap) {
-    }
+    fstream(const std::string& path, char mode, size_t cap = 8192)
+        : fstream(path.c_str(), mode, cap) {}
 
-    fstream(fstream&& fs)
-        : _s(std::move(fs._s)), _f(std::move(fs._f)) {
-    }
+    fstream(fstream&& fs) : _s(std::move(fs._s)), _f(std::move(fs._f)) {}
 
-    ~fstream() {
-        this->close();
-    }
+    ~fstream() { this->close(); }
 
-    explicit operator bool() const {
-        return (bool)_f;
-    }
+    explicit operator bool() const { return (bool)_f; }
 
-    bool operator!() const {
-        return !(bool)_f;
-    }
+    bool operator!() const { return !(bool)_f; }
 
     bool open(const char* path, char mode) {
         this->close();
         return _f.open(path, mode == 'w' ? 'w' : 'a');
     }
 
-    bool open(const fastring& path, char mode) {
-        return this->open(path.c_str(), mode);
-    }
+    bool open(const fastring& path, char mode) { return this->open(path.c_str(), mode); }
 
-    bool open(const std::string& path, char mode) {
-        return this->open(path.c_str(), mode);
-    }
+    bool open(const std::string& path, char mode) { return this->open(path.c_str(), mode); }
 
     void reserve(size_t n) { _s.reserve(n); }
 
@@ -265,23 +209,15 @@ class __coapi fstream {
         return *this;
     }
 
-    fstream& operator<<(const char* s) {
-        return this->append(s, strlen(s));
-    }
+    fstream& operator<<(const char* s) { return this->append(s, strlen(s)); }
 
-    fstream& operator<<(const fastring& s) {
-        return this->append(s.data(), s.size());
-    }
+    fstream& operator<<(const fastring& s) { return this->append(s.data(), s.size()); }
 
-    fstream& operator<<(const std::string& s) {
-        return this->append(s.data(), s.size());
-    }
+    fstream& operator<<(const std::string& s) { return this->append(s.data(), s.size()); }
 
-    fstream& operator<<(const fastream& s) {
-        return this->append(s.data(), s.size());
-    }
+    fstream& operator<<(const fastream& s) { return this->append(s.data(), s.size()); }
 
-    template<typename T>
+    template <typename T>
     fstream& operator<<(T v) {
         if (_s.capacity() < _s.size() + 24) this->flush();
         _s << v;
@@ -300,9 +236,7 @@ class __coapi dir {
     dir() : _p(0) {}
     ~dir();
 
-    explicit dir(const char* path) : _p(0) {
-        this->open(path);
-    }
+    explicit dir(const char* path) : _p(0) { this->open(path); }
 
     explicit dir(const fastring& path) : dir(path.c_str()) {}
     explicit dir(const std::string& path) : dir(path.c_str()) {}
@@ -332,13 +266,9 @@ class __coapi dir {
         fastring operator*() const;
         iterator& operator++();
 
-        bool operator==(const iterator& it) const {
-            return _p == it._p;
-        }
+        bool operator==(const iterator& it) const { return _p == it._p; }
 
-        bool operator!=(const iterator& it) const {
-            return !this->operator==(it);
-        }
+        bool operator!=(const iterator& it) const { return !this->operator==(it); }
 
       private:
         void* _p;
@@ -351,4 +281,4 @@ class __coapi dir {
     void* _p;
 };
 
-} // fs
+}  // namespace fs

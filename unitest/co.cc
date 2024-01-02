@@ -38,8 +38,8 @@ struct queue {
     static const int N = 12;
     struct _memb : co::clink {
         size_t size;
-        uint8 rx;
-        uint8 wx;
+        uint8_t rx;
+        uint8_t wx;
         void* q[];
     };
 
@@ -100,8 +100,8 @@ struct queue {
 
 struct Buffer {
     struct H {
-        uint32 cap;
-        uint32 size;
+        uint32_t cap;
+        uint32_t size;
         char p[];
     };
 
@@ -109,8 +109,8 @@ struct Buffer {
     ~Buffer() { this->reset(); }
 
     const char* data() const noexcept { return _h ? _h->p : 0; }
-    uint32 size() const noexcept { return _h ? _h->size : 0; }
-    uint32 capacity() const noexcept { return _h ? _h->cap : 0; }
+    uint32_t size() const noexcept { return _h ? _h->size : 0; }
+    uint32_t capacity() const noexcept { return _h ? _h->cap : 0; }
     void clear() noexcept {
         if (_h) _h->size = 0;
     }
@@ -123,7 +123,7 @@ struct Buffer {
     }
 
     void append(const void* p, size_t size) {
-        const uint32 n = (uint32)size;
+        const uint32_t n = (uint32_t)size;
         if (!_h) {
             _h = (H*)::malloc(size + 8);
             assert(_h);
@@ -133,7 +133,7 @@ struct Buffer {
         }
 
         if (_h->cap < _h->size + n) {
-            const uint32 o = _h->cap;
+            const uint32_t o = _h->cap;
             _h->cap += (o >> 1) + n;
             _h = (H*)::realloc(_h, _h->cap + 8);
             assert(_h);
@@ -152,8 +152,8 @@ struct Coroutine {
     Coroutine() { memset(this, 0, sizeof(*this)); }
     ~Coroutine() { buf.~Buffer(); }
 
-    uint32 id;  // coroutine id
-    void* ctx;  // coroutine context, points to the stack bottom
+    uint32_t id;  // coroutine id
+    void* ctx;    // coroutine context, points to the stack bottom
     union {
         Buffer buf;  // for saving stack data of this coroutine
         void* pbuf;
@@ -329,7 +329,7 @@ DEF_test(co) {
         EXPECT_EQ(b.size(), 10);
         EXPECT_EQ(fastring(b.data(), b.size()), "helloworld");
 
-        const uint32 c = b.capacity();
+        const uint32_t c = b.capacity();
         b.clear();
         EXPECT_EQ(b.size(), 0);
         EXPECT_EQ(b.capacity(), c);

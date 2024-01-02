@@ -3,7 +3,6 @@
 
 #include "../close.h"
 
-
 namespace co {
 
 Kqueue::Kqueue(int sched_id) : _signaled(0) {
@@ -118,7 +117,7 @@ void Kqueue::close() {
 }
 
 void Kqueue::handle_ev_pipe() {
-    int32 dummy;
+    int32_t dummy;
     while (true) {
         int r = __sys_api(read)(_pipe_fds[0], &dummy, 4);
         if (r != -1) {

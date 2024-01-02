@@ -56,8 +56,8 @@ class HookCtx {
 
     // TODO: handle timeout > 65535
     // if the timeout is greater than 65535 ms, we truncate it to 65535.
-    void set_send_timeout(uint32 ms) { _s.send_timeout = ms <= 65535 ? (uint16)ms : 65535; }
-    void set_recv_timeout(uint32 ms) { _s.recv_timeout = ms <= 65535 ? (uint16)ms : 65535; }
+    void set_send_timeout(uint32_t ms) { _s.send_timeout = ms <= 65535 ? (uint16_t)ms : 65535; }
+    void set_recv_timeout(uint32_t ms) { _s.recv_timeout = ms <= 65535 ? (uint16_t)ms : 65535; }
 
     int send_timeout() const { return _s.send_timeout == 0 ? -1 : _s.send_timeout; }
     int recv_timeout() const { return _s.recv_timeout == 0 ? -1 : _s.recv_timeout; }
@@ -86,14 +86,14 @@ class HookCtx {
 
   private:
     union {
-        uint64 _v;
+        uint64_t _v;
         struct {
-            uint8 nb;       // non_blocking
-            uint8 so;       // socket or pipe fd
-            uint8 nb_mark;  // non_blocking mark
-            uint8 flags;    //
-            uint16 recv_timeout;
-            uint16 send_timeout;
+            uint8_t nb;       // non_blocking
+            uint8_t so;       // socket or pipe fd
+            uint8_t nb_mark;  // non_blocking mark
+            uint8_t flags;    //
+            uint16_t recv_timeout;
+            uint16_t send_timeout;
         } _s;
     };
 };
@@ -407,7 +407,7 @@ int _hook(setsockopt)(int fd, int level, int optname, const void* optval, sockle
     int r = __sys_api(setsockopt)(fd, level, optname, optval, optlen);
     if (r == 0 && level == SOL_SOCKET && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO)) {
         auto tv = (const struct timeval*)optval;
-        const int64 us = (int64)tv->tv_sec * 1000000 + tv->tv_usec;
+        const int64_t us = (int64_t)tv->tv_sec * 1000000 + tv->tv_usec;
         const int ms = (us <= 0 ? 0 : (us > 1000 ? (int)(us / 1000) : 1));
         if (optname == SO_RCVTIMEO) {
             HOOKLOG << "hook setsockopt, sock: " << fd << ", recv timeout: " << ms;
@@ -791,7 +791,7 @@ int _hook(poll)(struct pollfd* fds, nfds_t nfds, int ms) {
 
     const auto sched = co::xx::gSched;
     int r = 0, fd = nfds > 0 ? fds[0].fd : -1;
-    uint32 t = ms < 0 ? -1 : ms, x = 1;
+    uint32_t t = ms < 0 ? -1 : ms, x = 1;
     if (!sched || ms == 0) {
         r = __sys_api(poll)(fds, nfds, ms);
         goto end;
@@ -847,17 +847,17 @@ int _hook(select)(int nfds, fd_set* rs, fd_set* ws, fd_set* es, struct timeval* 
     _hook_api(select);
 
     const auto sched = co::xx::gSched;
-    const int64 max_ms = ((uint32)-1) >> 1;
+    const int64_t max_ms = ((uint32_t)-1) >> 1;
     int r, ms = -1;
-    uint32 t, x = 1;
-    int64 sec, us;
+    uint32_t t, x = 1;
+    int64_t sec, us;
 
     if (tv) {
         sec = tv->tv_sec;
         us = tv->tv_usec;
         if (sec >= 0 && us >= 0) {
             if (sec < max_ms / 1000 && us < max_ms * 1000) {
-                const int64 u = sec * 1000000 + us;
+                const int64_t u = sec * 1000000 + us;
                 ms = u <= 1000 ? !!u : (u < max_ms * 1000 ? u / 1000 : max_ms);
             } else {
                 ms = (int)max_ms;
@@ -958,10 +958,10 @@ int _hook(nanosleep)(const struct timespec* req, struct timespec* rem) {
             goto end;
         }
 
-        const int64 max_ms = ((uint32)-1) >> 1;
-        const int64 sec = req->tv_sec;
+        const int64_t max_ms = ((uint32_t)-1) >> 1;
+        const int64_t sec = req->tv_sec;
         if (sec < max_ms / 1000) {
-            const int64 n = sec * 1000000000 + req->tv_nsec;
+            const int64_t n = sec * 1000000000 + req->tv_nsec;
             ms = n <= 1000000 ? !!n : (n < max_ms * 1000000 ? n / 1000000 : max_ms);
         } else {
             ms = (int)max_ms;
@@ -1126,10 +1126,10 @@ int _hook(kevent)(int kq, const struct kevent* c, int nc, struct kevent* e, int 
 
     {
         if (ts) {
-            const int64 max_ms = ((uint32)-1) >> 1;
-            const int64 sec = ts->tv_sec;
+            const int64_t max_ms = ((uint32_t)-1) >> 1;
+            const int64_t sec = ts->tv_sec;
             if (sec < max_ms / 1000) {
-                const int64 n = sec * 1000000000 + ts->tv_nsec;
+                const int64_t n = sec * 1000000000 + ts->tv_nsec;
                 ms = n <= 1000000 ? !!n : (n < max_ms * 1000000 ? n / 1000000 : max_ms);
             } else {
                 ms = (int)max_ms;

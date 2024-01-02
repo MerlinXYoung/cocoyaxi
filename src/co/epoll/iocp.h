@@ -48,7 +48,7 @@ class Iocp {
         ULONG n = 0;
         const BOOL r = __sys_api(GetQueuedCompletionStatusEx)(_iocp, _ev, 1024, &n, ms, false);
         if (r == TRUE) return (int)n;
-        const uint32 e = ::GetLastError();
+        const uint32_t e = ::GetLastError();
         return e == WAIT_TIMEOUT ? 0 : -1;
     }
 
@@ -57,7 +57,7 @@ class Iocp {
                             std::memory_order_acquire)) {
             const BOOL r = PostQueuedCompletionStatus(_iocp, 0, 0, 0);
             if (!r) {
-                const uint32 e = ::GetLastError();
+                const uint32_t e = ::GetLastError();
                 ELOG << "PostQueuedCompletionStatus error: " << co::strerror(e);
             }
         }

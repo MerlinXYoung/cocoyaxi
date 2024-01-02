@@ -83,12 +83,12 @@ class Value {
     type_t type() const { return _type; }
 
     bool get_bool() const { return _b; }
-    int64 get_integer() const { return _i; }
+    int64_t get_integer() const { return _i; }
     double get_double() const { return _d; }
     char* get_string() const { return _s; }
 
     void set_bool(bool x) { _type = type_bool; _b = x; }
-    void set_integer(int64 x) { _type = type_int64; _i = x; }
+    void set_integer(int64_t x) { _type = type_int64; _i = x; }
     void set_double(double x) { _type = type_double; _d = x; }
     void set_string(char* s) { _type = type_string; _s = s; }
 
@@ -96,7 +96,7 @@ class Value {
     type_t _type;
     union {
         bool _b;
-        int64 _i;
+        int64_t _i;
         double _d;
         char* _s;
     };

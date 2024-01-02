@@ -81,19 +81,19 @@ bool exists(const char* path) { return _getattr(widen(path)) != g_bad_attr; }
 
 bool isdir(const char* path) { return _isdir(widen(path)); }
 
-int64 mtime(const char* path) {
+int64_t mtime(const char* path) {
     WIN32_FILE_ATTRIBUTE_DATA info;
     BOOL r = GetFileAttributesExW(widen(path), GetFileExInfoStandard, &info);
     if (!r) return -1;
     const FILETIME& wt = info.ftLastWriteTime;
-    return ((int64)wt.dwHighDateTime << 32) | wt.dwLowDateTime;
+    return ((int64_t)wt.dwHighDateTime << 32) | wt.dwLowDateTime;
 }
 
-int64 fsize(const char* path) {
+int64_t fsize(const char* path) {
     WIN32_FILE_ATTRIBUTE_DATA info;
     BOOL r = GetFileAttributesExW(widen(path), GetFileExInfoStandard, &info);
     if (!r) return -1;
-    return ((int64)info.nFileSizeHigh << 32) | info.nFileSizeLow;
+    return ((int64_t)info.nFileSizeHigh << 32) | info.nFileSizeLow;
 }
 
 bool mkdir(const char* path, bool p) {
@@ -265,7 +265,7 @@ HANDLE open(const char* path, char mode) {
 
 struct fctx {
     union {
-        uint32 n;
+        uint32_t n;
         HANDLE _;
     };
     HANDLE fd;
@@ -276,7 +276,7 @@ file::file(size_t n) : _p(0) {
     _p = ::malloc(x);
     assert(_p);
     fctx* p = (fctx*)_p;
-    p->n = (uint32)x;
+    p->n = (uint32_t)x;
     p->fd = nullfd;
     *(char*)(p + 1) = '\0';
 }
@@ -300,8 +300,8 @@ bool file::open(const char* path, char mode) {
     this->close();
     if (!path || !*path) return false;
 
-    const uint32 n = (uint32)strlen(path) + 1;
-    const uint32 x = n + sizeof(fctx);
+    const uint32_t n = (uint32_t)strlen(path) + 1;
+    const uint32_t x = n + sizeof(fctx);
     fctx* p = (fctx*)_p;
 
     if (!p || p->n < x) {
@@ -328,7 +328,7 @@ void file::close() {
 
 static int g_seekfrom[3] = {FILE_BEGIN, FILE_CURRENT, FILE_END};
 
-void file::seek(int64 off, int whence) {
+void file::seek(int64_t off, int whence) {
     fctx* p = (fctx*)_p;
     if (p && p->fd != nullfd) {
         if (off < (1LL << 31)) {

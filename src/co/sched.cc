@@ -3,7 +3,6 @@
 #include <atomic>
 #include <mutex>
 
-
 #include "co/os.h"
 #include "co/rand.h"
 
@@ -30,7 +29,7 @@ namespace xx {
 
 thread_local Sched* gSched{nullptr};
 
-Sched::Sched(uint32 id, uint32 sched_num, uint32 stack_num, uint32 stack_size)
+Sched::Sched(uint32_t id, uint32_t sched_num, uint32_t stack_num, uint32_t stack_size)
     : _cputime(0),
       _task_mgr(),
       _timer_mgr(),
@@ -199,7 +198,7 @@ void Sched::loop() {
                 co::free(info, info->mlen);
             }
 #elif defined(__linux__)
-            int32 rco = 0, wco = 0;
+            int32_t rco = 0, wco = 0;
             auto& ctx = co::get_sock_ctx(_x.epoll->user_data(ev));
             if ((ev.events & EPOLLIN) || !(ev.events & EPOLLOUT)) rco = ctx.get_ev_read(this->id());
             if ((ev.events & EPOLLOUT) || !(ev.events & EPOLLIN))
@@ -264,10 +263,10 @@ void Sched::loop() {
     _x.ev.signal();
 }
 
-uint32 TimerManager::check_timeout(co::vector<Coroutine*>& res) {
-    if (_timer.empty()) return (uint32)-1;
+uint32_t TimerManager::check_timeout(co::vector<Coroutine*>& res) {
+    if (_timer.empty()) return (uint32_t)-1;
 
-    int64 now_ms = now::ms();
+    int64_t now_ms = now::ms();
     auto it = _timer.begin();
     for (; it != _timer.end(); ++it) {
         if (it->first > now_ms) break;
@@ -293,13 +292,13 @@ uint32 TimerManager::check_timeout(co::vector<Coroutine*>& res) {
         _timer.erase(_timer.begin(), it);
     }
 
-    return _timer.empty() ? (uint32)-1 : (uint32)(_timer.begin()->first - now_ms);
+    return _timer.empty() ? (uint32_t)-1 : (uint32_t)(_timer.begin()->first - now_ms);
 }
 
 struct SchedInfo {
     SchedInfo() : cputime(co::sched_num(), 0), seed(co::rand()) {}
-    co::vector<int64> cputime;
-    uint32 seed;
+    co::vector<int64_t> cputime;
+    uint32_t seed;
 };
 
 inline SchedInfo& sched_info() {
@@ -313,7 +312,7 @@ static bool g_main_thread_as_sched;
 SchedManager::SchedManager() {
     co::init_sock();
 
-    const uint32 ncpu = os::cpunum();
+    const uint32_t ncpu = os::cpunum();
     auto& n = FLG_co_sched_num;
     auto& m = FLG_co_stack_num;
     auto& s = FLG_co_stack_size;
@@ -325,29 +324,29 @@ SchedManager::SchedManager() {
         if ((n & (n - 1)) == 0) {
             _next = [](const co::vector<Sched*>& v) {
                 if (g_nco < v.size()) {
-                    const uint32 i = g_nco++;
+                    const uint32_t i = g_nco++;
                     if (i < v.size()) return v[i];
                 }
                 auto& si = sched_info();
-                const uint32 x = god::cast<uint32>(v.size() - 1);
-                const uint32 i = co::rand(si.seed) & x;
-                const uint32 k = i != x ? i + 1 : 0;
-                const int64 ti = v[i]->cputime();
-                const int64 tk = v[k]->cputime();
+                const uint32_t x = god::cast<uint32_t>(v.size() - 1);
+                const uint32_t i = co::rand(si.seed) & x;
+                const uint32_t k = i != x ? i + 1 : 0;
+                const int64_t ti = v[i]->cputime();
+                const int64_t tk = v[k]->cputime();
                 return (si.cputime[k] == tk || ti <= (si.cputime[k] = tk)) ? v[i] : v[k];
             };
         } else {
             _next = [](const co::vector<Sched*>& v) {
                 if (g_nco < v.size()) {
-                    const uint32 i = g_nco.fetch_add(1);
+                    const uint32_t i = g_nco.fetch_add(1);
                     if (i < v.size()) return v[i];
                 }
                 auto& si = sched_info();
-                const uint32 x = god::cast<uint32>(v.size());
-                const uint32 i = co::rand(si.seed) % x;
-                const uint32 k = i != x - 1 ? i + 1 : 0;
-                const int64 ti = v[i]->cputime();
-                const int64 tk = v[k]->cputime();
+                const uint32_t x = god::cast<uint32_t>(v.size());
+                const uint32_t i = co::rand(si.seed) % x;
+                const uint32_t k = i != x - 1 ? i + 1 : 0;
+                const int64_t ti = v[i]->cputime();
+                const int64_t tk = v[k]->cputime();
                 return (si.cputime[k] == tk || ti <= (si.cputime[k] = tk)) ? v[i] : v[k];
             };
         }
@@ -355,7 +354,7 @@ SchedManager::SchedManager() {
         _next = [](const co::vector<Sched*>& v) { return v[0]; };
     }
 
-    for (uint32 i = 0; i < n; ++i) {
+    for (uint32_t i = 0; i < n; ++i) {
         Sched* sched = new Sched(i, n, m, s);
         if (i != 0 || !g_main_thread_as_sched) sched->start();
         _scheds.push_back(sched);
@@ -423,7 +422,7 @@ int coroutine_id() {
     return (s && s->running()) ? s->coroutine_id() : -1;
 }
 
-void add_timer(uint32 ms) {
+void add_timer(uint32_t ms) {
     const auto s = xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->add_timer(ms);
@@ -458,7 +457,7 @@ void resume(void* p) {
     co->sched->add_ready_task(co);
 }
 
-void sleep(uint32 ms) {
+void sleep(uint32_t ms) {
     const auto s = xx::gSched;
     s ? s->sleep(ms) : sleep::ms(ms);
 }

@@ -3,7 +3,6 @@
 #include "../close.h"
 #include "epoll.h"
 
-
 namespace co {
 
 Epoll::Epoll(int sched_id) : _signaled(false), _sched_id(sched_id) {
@@ -30,7 +29,7 @@ Epoll::~Epoll() {
     }
 }
 
-bool Epoll::add_ev_read(int fd, int32 co_id) {
+bool Epoll::add_ev_read(int fd, int32_t co_id) {
     if (fd < 0) return false;
     auto& ctx = co::get_sock_ctx(fd);
     if (ctx.has_ev_read()) return true;  // already exists
@@ -51,7 +50,7 @@ bool Epoll::add_ev_read(int fd, int32 co_id) {
     }
 }
 
-bool Epoll::add_ev_write(int fd, int32 co_id) {
+bool Epoll::add_ev_write(int fd, int32_t co_id) {
     if (fd < 0) return false;
     auto& ctx = co::get_sock_ctx(fd);
     if (ctx.has_ev_write()) return true;  // already exists
@@ -138,7 +137,7 @@ void Epoll::close() {
 }
 
 void Epoll::handle_ev_pipe() {
-    int32 dummy;
+    int32_t dummy;
     while (true) {
         int r = __sys_api(read)(_pipe_fds[0], &dummy, 4);
         if (r != -1) {

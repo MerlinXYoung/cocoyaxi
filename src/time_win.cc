@@ -1,7 +1,8 @@
 #ifdef _WIN32
 
-#include "co/time.h"
 #include <time.h>
+
+#include "co/time.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -13,7 +14,7 @@ namespace now {
 namespace xx {
 
 static int g_nifty_counter;
-static int64 g_freq;
+static int64_t g_freq;
 
 Initializer::Initializer() {
     if (g_nifty_counter++ == 0) {
@@ -23,43 +24,37 @@ Initializer::Initializer() {
     }
 }
 
-inline int64 _query_counts() {
+inline int64_t _query_counts() {
     LARGE_INTEGER x;
     QueryPerformanceCounter(&x);
     return x.QuadPart;
 }
 
-inline int64 ns() {
-    const int64 count = _query_counts();
-    return (int64)(static_cast<double>(count) * 1000000000 / g_freq);
+inline int64_t ns() {
+    const int64_t count = _query_counts();
+    return (int64_t)(static_cast<double>(count) * 1000000000 / g_freq);
 }
 
-inline int64 us() {
-    const int64 count = _query_counts();
-    return (int64)(static_cast<double>(count) * 1000000 / g_freq);
+inline int64_t us() {
+    const int64_t count = _query_counts();
+    return (int64_t)(static_cast<double>(count) * 1000000 / g_freq);
 }
 
-inline int64 ms() {
-    const int64 count = _query_counts();
-    return (int64)(static_cast<double>(count) * 1000 / g_freq);
+inline int64_t ms() {
+    const int64_t count = _query_counts();
+    return (int64_t)(static_cast<double>(count) * 1000 / g_freq);
 }
 
-} // xx
+}  // namespace xx
 
-int64 ns() {
-    return xx::ns();
-}
+int64_t ns() { return xx::ns(); }
 
-int64 us() {
-    return xx::us();
-}
+int64_t us() { return xx::us(); }
 
-int64 ms() {
-    return xx::ms();
-}
+int64_t ms() { return xx::ms(); }
 
 fastring str(const char* fm) {
-    int64 x = time(0);
+    int64_t x = time(0);
     struct tm t;
     _localtime64_s(&t, &x);
 
@@ -68,11 +63,11 @@ fastring str(const char* fm) {
     return fastring(buf, r);
 }
 
-} // now
+}  // namespace now
 
 namespace epoch {
 
-inline int64 filetime() {
+inline int64_t filetime() {
     FILETIME ft;
     LARGE_INTEGER x;
     GetSystemTimeAsFileTime(&ft);
@@ -81,29 +76,19 @@ inline int64 filetime() {
     return x.QuadPart - 116444736000000000ULL;
 }
 
-int64 ms() {
-    return filetime() / 10000;
-}
+int64_t ms() { return filetime() / 10000; }
 
-int64 us() {
-    return filetime() / 10;
-}
+int64_t us() { return filetime() / 10; }
 
-} // epoch
-} // co
+}  // namespace epoch
+}  // namespace co
 
-namespace _xx {
-namespace sleep {
+namespace _xx { namespace sleep {
 
-void ms(uint32 n) {
-    ::Sleep(n);
-}
+void ms(uint32_t n) { ::Sleep(n); }
 
-void sec(uint32 n) {
-    ::Sleep(n * 1000);
-}
+void sec(uint32_t n) { ::Sleep(n * 1000); }
 
-} // sleep
-} // _xx
+}}  // namespace _xx::sleep
 
 #endif

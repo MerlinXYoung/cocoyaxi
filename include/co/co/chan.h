@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../def.h"
 #include <functional>
+
+#include "../def.h"
+
 
 namespace co {
 namespace xx {
@@ -11,12 +13,10 @@ class __coapi pipe {
     typedef std::function<void(void*, void*, int)> C;
     typedef std::function<void(void*)> D;
 
-    pipe(uint32 buf_size, uint32 blk_size, uint32 ms, C&& c, D&& d);
+    pipe(uint32_t buf_size, uint32_t blk_size, uint32_t ms, C&& c, D&& d);
     ~pipe();
 
-    pipe(pipe&& p) noexcept : _p(p._p) {
-        p._p = 0;
-    }
+    pipe(pipe&& p) noexcept : _p(p._p) { p._p = 0; }
 
     pipe(const pipe& p);
 
@@ -27,38 +27,36 @@ class __coapi pipe {
     void close() const;
     bool is_closed() const;
     bool done() const;
-  
+
   private:
     void* _p;
 };
 
-} // xx
+}  // namespace xx
 
 // Implement of channel in golang, it was improved a lot since v3.0.1:
 //   - `T` can be non-POD types (std::string, e.g.).
 //   - It can be used in coroutines and/or non-coroutines.
 //   - Channel can be closed (write disabled, read ok if not empty).
-template<typename T>
+template <typename T>
 class chan {
   public:
     // @cap  max capacity of the queue, 1 by default.
     // @ms   timeout in milliseconds, -1 by default.
-    explicit chan(uint32 cap=1, uint32 ms=(uint32)-1)
-        : _p(cap * sizeof(T), sizeof(T), ms,
-          [](void* dst, void* src, int o) {
-              switch (o) {
-                case 0:
-                  new (dst) T(*static_cast<const T*>(src));
-                  break;
-                case 1:
-                  new (dst) T(std::move(*static_cast<T*>(src)));
-                  break;
-              }
-          },
-          [](void* p){
-              static_cast<T*>(p)->~T();
-          }) {
-    }
+    explicit chan(uint32_t cap = 1, uint32_t ms = (uint32_t)-1)
+        : _p(
+              cap * sizeof(T), sizeof(T), ms,
+              [](void* dst, void* src, int o) {
+                  switch (o) {
+                      case 0:
+                          new (dst) T(*static_cast<const T*>(src));
+                          break;
+                      case 1:
+                          new (dst) T(std::move(*static_cast<T*>(src)));
+                          break;
+                  }
+              },
+              [](void* p) { static_cast<T*>(p)->~T(); }) {}
 
     ~chan() = default;
 
@@ -98,7 +96,7 @@ class chan {
     xx::pipe _p;
 };
 
-template<typename T>
+template <typename T>
 using Chan = chan<T>;
 
-} // co
+}  // namespace co

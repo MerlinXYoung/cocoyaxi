@@ -34,9 +34,9 @@ namespace co { namespace xx {
 
 class Sched;
 struct Coroutine;
-typedef co::multimap<int64, Coroutine*>::iterator timer_id_t;
+typedef co::multimap<int64_t, Coroutine*>::iterator timer_id_t;
 
-enum state_t : uint8 {
+enum state_t : uint8_t {
     st_wait = 0,     // wait for an event, do not modify
     st_ready = 1,    // ready to resume
     st_timeout = 2,  // timeout
@@ -68,8 +68,8 @@ struct Stack {
 
 struct Buffer {
     struct H {
-        uint32 cap;
-        uint32 size;
+        uint32_t cap;
+        uint32_t size;
         char p[];
     };
 
@@ -77,8 +77,8 @@ struct Buffer {
     ~Buffer() = delete;
 
     const char* data() const noexcept { return _h ? _h->p : 0; }
-    uint32 size() const noexcept { return _h ? _h->size : 0; }
-    uint32 capacity() const noexcept { return _h ? _h->cap : 0; }
+    uint32_t size() const noexcept { return _h ? _h->size : 0; }
+    uint32_t capacity() const noexcept { return _h ? _h->cap : 0; }
     void clear() noexcept {
         if (_h) _h->size = 0;
     }
@@ -91,7 +91,7 @@ struct Buffer {
     }
 
     void append(const void* p, size_t size) {
-        const uint32 n = (uint32)size;
+        const uint32_t n = (uint32_t)size;
         if (!_h) {
             _h = (H*)::malloc(size + 8);
             assert(_h);
@@ -101,7 +101,7 @@ struct Buffer {
         }
 
         if (_h->cap < _h->size + n) {
-            const uint32 o = _h->cap;
+            const uint32_t o = _h->cap;
             _h->cap += (o >> 1) + n;
             _h = (H*)::realloc(_h, _h->cap + 8);
             assert(_h);
@@ -120,7 +120,7 @@ struct Coroutine {
     Coroutine() = delete;
     ~Coroutine() = delete;
 
-    uint32 id;         // coroutine id
+    uint32_t id;       // coroutine id
     tb_context_t ctx;  // coroutine context, points to the stack bottom
     Closure* cb;       // coroutine function
     Sched* sched;      // scheduler this coroutine runs in
@@ -279,7 +279,7 @@ class TimerManager {
     TimerManager() : _timer(), _it(_timer.end()) {}
     ~TimerManager() = default;
 
-    timer_id_t add_timer(uint32 ms, Coroutine* co) {
+    timer_id_t add_timer(uint32_t ms, Coroutine* co) {
         return _it = _timer.emplace_hint(_it, now::ms() + ms, co);
     }
 
@@ -291,21 +291,21 @@ class TimerManager {
     timer_id_t end() { return _timer.end(); }
 
     // get timedout coroutines, return time(ms) to wait for the next timeout
-    uint32 check_timeout(co::vector<Coroutine*>& res);
+    uint32_t check_timeout(co::vector<Coroutine*>& res);
 
   private:
-    co::multimap<int64, Coroutine*> _timer;         // timed-wait tasks: <time_ms, co>
-    co::multimap<int64, Coroutine*>::iterator _it;  // make insert faster with this hint
+    co::multimap<int64_t, Coroutine*> _timer;         // timed-wait tasks: <time_ms, co>
+    co::multimap<int64_t, Coroutine*>::iterator _it;  // make insert faster with this hint
 };
 
 // coroutine scheduler, loop in a single thread
 class Sched {
   public:
-    Sched(uint32 id, uint32 sched_num, uint32 stack_num, uint32 stack_size);
+    Sched(uint32_t id, uint32_t sched_num, uint32_t stack_num, uint32_t stack_size);
     ~Sched();
 
     // id of this scheduler
-    uint32 id() const { return _id; }
+    uint32_t id() const { return _id; }
 
     // the current running coroutine
     Coroutine* running() const { return _running; }
@@ -338,14 +338,14 @@ class Sched {
     }
 
     // sleep for milliseconds in the current coroutine
-    void sleep(uint32 ms) {
+    void sleep(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
         (void)_timer_mgr.add_timer(ms, _running);
         this->yield();
     }
 
     // add a timer for the current coroutine
-    void add_timer(uint32 ms) {
+    void add_timer(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
         _running->it = _timer_mgr.add_timer(ms, _running);
         SCHEDLOG << "co(" << _running << ") add timer " << _running->it << " (" << ms << " ms)";
@@ -382,7 +382,7 @@ class Sched {
     }
 
     // cputime of this scheduler (us)
-    int64 cputime() { return _cputime.load(std::memory_order_relaxed); }
+    int64_t cputime() { return _cputime.load(std::memory_order_relaxed); }
 
     // start the scheduler thread
     void start() { std::thread(&Sched::loop, this).detach(); }
@@ -449,17 +449,17 @@ class Sched {
     TaskManager _task_mgr;
 
     TimerManager _timer_mgr;
-    uint32 _wait_ms;  // time the epoll to wait for
+    uint32_t _wait_ms;  // time the epoll to wait for
     bool _timeout;
     co::vector<void*> _bufs;
     CoroutinePool _co_pool;
-    Coroutine* _running;  // the current running coroutine
-    Coroutine* _main_co;  // save the main context
-    uint32 _id;           // scheduler id
-    uint32 _sched_num;    // number of schedulers
-    uint32 _stack_num;    // number of stacks per scheduler
-    uint32 _stack_size;   // size of the stack
-    Stack* _stack;        // stack array
+    Coroutine* _running;   // the current running coroutine
+    Coroutine* _main_co;   // save the main context
+    uint32_t _id;          // scheduler id
+    uint32_t _sched_num;   // number of schedulers
+    uint32_t _stack_num;   // number of stacks per scheduler
+    uint32_t _stack_size;  // size of the stack
+    Stack* _stack;         // stack array
 };
 
 class SchedManager {

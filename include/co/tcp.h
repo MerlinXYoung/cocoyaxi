@@ -113,7 +113,7 @@ class __coapi Server final {
     Server& on_exit(std::function<void()>&& cb);
 
     // return number of connections
-    uint32 conn_num() const;
+    uint32_t conn_num() const;
 
     /**
      * start the server
@@ -248,7 +248,7 @@ class __coapi Client final {
 
   private:
     union {
-        uint32* _u;
+        uint32_t* _u;
         char* _p;   // _p+8: port, _p+16: ip
         void** _s;  // _s[-1]: ssl, _s[-2]: ssl_ctx
     };

@@ -7,7 +7,6 @@
 #include "def.h"
 #include "god.h"
 
-
 namespace dp {
 
 struct _fpt {
@@ -52,53 +51,53 @@ static Initializer g_initializer;
 inline int dtoa(double v, char* buf, int mdp = 324) { return milo::dtoa(v, buf, mdp); }
 
 // unsigned integer to hex string (e.g. 255 -> 0xff), return length of the result
-__coapi int u32toh(uint32 v, char* buf);
-__coapi int u64toh(uint64 v, char* buf);
+__coapi int u32toh(uint32_t v, char* buf);
+__coapi int u64toh(uint64_t v, char* buf);
 
 // integer to ascii string, return length of the result
-__coapi int u32toa(uint32 v, char* buf);
-__coapi int u64toa(uint64 v, char* buf);
+__coapi int u32toa(uint32_t v, char* buf);
+__coapi int u64toa(uint64_t v, char* buf);
 
-inline int i32toa(int32 v, char* buf) {
-    if (v >= 0) return u32toa((uint32)v, buf);
+inline int i32toa(int32_t v, char* buf) {
+    if (v >= 0) return u32toa((uint32_t)v, buf);
     *buf = '-';
-    return u32toa((uint32)(-v), buf + 1) + 1;
+    return u32toa((uint32_t)(-v), buf + 1) + 1;
 }
 
-inline int i64toa(int64 v, char* buf) {
-    if (v >= 0) return u64toa((uint64)v, buf);
+inline int i64toa(int64_t v, char* buf) {
+    if (v >= 0) return u64toa((uint64_t)v, buf);
     *buf = '-';
-    return u64toa((uint64)(-v), buf + 1) + 1;
+    return u64toa((uint64_t)(-v), buf + 1) + 1;
 }
 
 // signed integer to ascii string
-template <typename V, god::if_t<sizeof(V) <= sizeof(int32), int> = 0>
+template <typename V, god::if_t<sizeof(V) <= sizeof(int32_t), int> = 0>
 inline int itoa(V v, char* buf) {
-    return i32toa((int32)v, buf);
+    return i32toa((int32_t)v, buf);
 }
 
-template <typename V, god::if_t<(sizeof(V) == sizeof(int64)), int> = 0>
+template <typename V, god::if_t<(sizeof(V) == sizeof(int64_t)), int> = 0>
 inline int itoa(V v, char* buf) {
-    return i64toa((int64)v, buf);
+    return i64toa((int64_t)v, buf);
 }
 
 // unsigned integer to ascii string
-template <typename V, god::if_t<sizeof(V) <= sizeof(int32), int> = 0>
+template <typename V, god::if_t<sizeof(V) <= sizeof(int32_t), int> = 0>
 inline int utoa(V v, char* buf) {
-    return u32toa((uint32)v, buf);
+    return u32toa((uint32_t)v, buf);
 }
 
-template <typename V, god::if_t<(sizeof(V) == sizeof(int64)), int> = 0>
+template <typename V, god::if_t<(sizeof(V) == sizeof(int64_t)), int> = 0>
 inline int utoa(V v, char* buf) {
-    return u64toa((uint64)v, buf);
+    return u64toa((uint64_t)v, buf);
 }
 
 #if __arch64
 // pointer to hex string
-inline int ptoh(const void* p, char* buf) { return u64toh((uint64)(size_t)p, buf); }
+inline int ptoh(const void* p, char* buf) { return u64toh((uint64_t)(size_t)p, buf); }
 
 #else
-inline int ptoh(const void* p, char* buf) { return u32toh((uint32)(size_t)p, buf); }
+inline int ptoh(const void* p, char* buf) { return u32toh((uint32_t)(size_t)p, buf); }
 #endif
 
 class __coapi stream {
@@ -289,14 +288,14 @@ class __coapi stream {
     }
 
     stream& operator<<(long long v) {
-        static_assert(sizeof(v) <= sizeof(int64), "");
+        static_assert(sizeof(v) <= sizeof(int64_t), "");
         this->ensure(sizeof(v) * 3);
         _size += fast::itoa(v, _p + _size);
         return *this;
     }
 
     stream& operator<<(unsigned long long v) {
-        static_assert(sizeof(v) <= sizeof(uint64), "");
+        static_assert(sizeof(v) <= sizeof(uint64_t), "");
         this->ensure(sizeof(v) * 3);
         _size += fast::utoa(v, _p + _size);
         return *this;

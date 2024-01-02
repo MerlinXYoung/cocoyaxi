@@ -21,13 +21,13 @@ struct Group {
     const char* bm;
     void (*f)(Group&);
     int iters;
-    int64 ns;
+    int64_t ns;
     co::Timer timer;
     co::vector<Result> res;
 };
 
 bool add_group(const char* name, void (*f)(Group&));
-int calc_iters(int64 ns);
+int calc_iters(int64_t ns);
 void use(void* p, int n);
 
 }  // namespace xx

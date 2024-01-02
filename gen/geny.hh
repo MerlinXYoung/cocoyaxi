@@ -27,7 +27,7 @@ typedef union YYSTYPE {
     char* iden;
     char* keyword;
     bool bconst;
-    int64 iconst;
+    int64_t iconst;
     double dconst;
     Service* tservice;
     Field* tfield;

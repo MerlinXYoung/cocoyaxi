@@ -7,17 +7,17 @@ namespace xx {
 
 class Alloc {
   public:
-    static const uint32 R = Array::R;
-    static const uint32 N = 8192;
+    static const uint32_t R = Array::R;
+    static const uint32_t N = 8192;
     Alloc() : _stack(), _ustack(32), _fs(256) {}
 
     void* alloc() { return !_a[0].empty() ? (void*)_a[0].pop_back() : ::malloc(16); }
 
     void free(void* p) { _a[0].size() < (8 * (N - R)) ? _a[0].push_back(p) : ::free(p); }
 
-    void* alloc(uint32 n) {
+    void* alloc(uint32_t n) {
         void* p;
-        const uint32 x = (n - 1) >> 4;
+        const uint32_t x = (n - 1) >> 4;
         switch (x) {
             case 0:
                 p = !_a[0].empty() ? (void*)_a[0].pop_back() : ::malloc(16);
@@ -41,8 +41,8 @@ class Alloc {
         return p;
     }
 
-    void free(void* p, uint32 n) {
-        const uint32 x = (n - 1) >> 4;
+    void free(void* p, uint32_t n) {
+        const uint32_t x = (n - 1) >> 4;
         switch (x) {
             case 0:
                 _a[0].size() < (8 * (N - R)) ? _a[0].push_back(p) : ::free(p);
@@ -92,13 +92,13 @@ inline Alloc& jalloc() {
 void* alloc() { return jalloc().alloc(); }
 
 char* alloc_string(const void* p, size_t n) {
-    char* s = (char*)jalloc().alloc((uint32)n + 1);
+    char* s = (char*)jalloc().alloc((uint32_t)n + 1);
     memcpy(s, p, n);
     s[n] = '\0';
     return s;
 }
 
-inline void* alloc_array(void** p, uint32 n) {
+inline void* alloc_array(void** p, uint32_t n) {
     auto h = (Array::_H*)::malloc(sizeof(Array::_H) + sizeof(void*) * n);
     h->cap = n;
     h->size = n;
@@ -116,7 +116,7 @@ inline S find_quote(S b, S e) { return (S)memchr(b, '"', e - b); }
 inline S find_slash(S b, S e) { return (S)memchr(b, '\\', e - b); }
 
 inline char* make_key(_A& a, const void* p, size_t n) {
-    char* s = (char*)a.alloc((uint32)n + 1);
+    char* s = (char*)a.alloc((uint32_t)n + 1);
     memcpy(s, p, n);
     s[n] = '\0';
     return s;
@@ -127,7 +127,7 @@ inline char* make_key(_A& a, const char* p) { return make_key(a, p, strlen(p)); 
 inline _H* make_string(_A& a, const void* p, size_t n) { return new (a.alloc()) _H(p, n); }
 
 inline _H* make_bool(_A& a, bool v) { return new (a.alloc()) _H(v); }
-inline _H* make_int(_A& a, int64 v) { return new (a.alloc()) _H(v); }
+inline _H* make_int(_A& a, int64_t v) { return new (a.alloc()) _H(v); }
 inline _H* make_double(_A& a, double v) { return new (a.alloc()) _H(v); }
 inline _H* make_object(_A& a) { return new (a.alloc()) _H(Json::_obj_t()); }
 inline _H* make_array(_A& a) { return new (a.alloc()) _H(Json::_arr_t()); }
@@ -262,11 +262,11 @@ inline bool is_white_space(char c) { return (c == ' ' || c == '\n' || c == '\r' 
 // stack: |prev size|prev state|val|....
 bool Parser::parse(S b, S e, void_ptr_t& val) {
     union {
-        uint32 state;
+        uint32_t state;
         void* pstate;
     };
     union {
-        uint32 size;
+        uint32_t size;
         void* psize;
     };
     void_ptr_t key;
@@ -453,28 +453,28 @@ namespace xx {
 
 Initializer::Initializer() {
     if (g_nifty_counter++ == 0) {
-        g_s2e_tb[(uint8)'r'] = '\r';
-        g_s2e_tb[(uint8)'n'] = '\n';
-        g_s2e_tb[(uint8)'t'] = '\t';
-        g_s2e_tb[(uint8)'b'] = '\b';
-        g_s2e_tb[(uint8)'f'] = '\f';
-        g_s2e_tb[(uint8)'"'] = '"';
-        g_s2e_tb[(uint8)'\\'] = '\\';
-        g_s2e_tb[(uint8)'/'] = '/';
-        g_s2e_tb[(uint8)'u'] = 'u';
+        g_s2e_tb[(uint8_t)'r'] = '\r';
+        g_s2e_tb[(uint8_t)'n'] = '\n';
+        g_s2e_tb[(uint8_t)'t'] = '\t';
+        g_s2e_tb[(uint8_t)'b'] = '\b';
+        g_s2e_tb[(uint8_t)'f'] = '\f';
+        g_s2e_tb[(uint8_t)'"'] = '"';
+        g_s2e_tb[(uint8_t)'\\'] = '\\';
+        g_s2e_tb[(uint8_t)'/'] = '/';
+        g_s2e_tb[(uint8_t)'u'] = 'u';
 
-        g_e2s_tb[(uint8)'\r'] = 'r';
-        g_e2s_tb[(uint8)'\n'] = 'n';
-        g_e2s_tb[(uint8)'\t'] = 't';
-        g_e2s_tb[(uint8)'\b'] = 'b';
-        g_e2s_tb[(uint8)'\f'] = 'f';
-        g_e2s_tb[(uint8)'\"'] = '"';
-        g_e2s_tb[(uint8)'\\'] = '\\';
+        g_e2s_tb[(uint8_t)'\r'] = 'r';
+        g_e2s_tb[(uint8_t)'\n'] = 'n';
+        g_e2s_tb[(uint8_t)'\t'] = 't';
+        g_e2s_tb[(uint8_t)'\b'] = 'b';
+        g_e2s_tb[(uint8_t)'\f'] = 'f';
+        g_e2s_tb[(uint8_t)'\"'] = '"';
+        g_e2s_tb[(uint8_t)'\\'] = '\\';
 
         memset(g_hex_tb, 16, 256);
-        for (char c = '0'; c <= '9'; ++c) g_hex_tb[(uint8)c] = c - '0';
-        for (char c = 'A'; c <= 'F'; ++c) g_hex_tb[(uint8)c] = c - 'A' + 10;
-        for (char c = 'a'; c <= 'f'; ++c) g_hex_tb[(uint8)c] = c - 'a' + 10;
+        for (char c = '0'; c <= '9'; ++c) g_hex_tb[(uint8_t)c] = c - '0';
+        for (char c = 'A'; c <= 'F'; ++c) g_hex_tb[(uint8_t)c] = c - 'A' + 10;
+        for (char c = 'a'; c <= 'f'; ++c) g_hex_tb[(uint8_t)c] = c - 'a' + 10;
     }
 }
 
@@ -494,7 +494,7 @@ S Parser::parse_string(S b, S e, void_ptr_t& v) {
         s.append(b, q - b);
         if (++q == e) return 0;
 
-        char c = g_s2e_tb[(uint8)*q];
+        char c = g_s2e_tb[(uint8_t)*q];
         if (c == 0) return 0;  // invalid escape
 
         if (*q != 'u') {
@@ -519,13 +519,13 @@ S Parser::parse_string(S b, S e, void_ptr_t& v) {
     } while (true);
 }
 
-inline const char* parse_hex(const char* b, const char* e, uint32& u) {
-    uint32 u0, u1, u2, u3;
+inline const char* parse_hex(const char* b, const char* e, uint32_t& u) {
+    uint32_t u0, u1, u2, u3;
     if (b + 4 <= e) {
-        u0 = g_hex_tb[(uint8)b[0]];
-        u1 = g_hex_tb[(uint8)b[1]];
-        u2 = g_hex_tb[(uint8)b[2]];
-        u3 = g_hex_tb[(uint8)b[3]];
+        u0 = g_hex_tb[(uint8_t)b[0]];
+        u1 = g_hex_tb[(uint8_t)b[1]];
+        u2 = g_hex_tb[(uint8_t)b[2]];
+        u3 = g_hex_tb[(uint8_t)b[3]];
         if (u0 == 16 || u1 == 16 || u2 == 16 || u3 == 16) return 0;
         u = (u0 << 12) | (u1 << 8) | (u2 << 4) | u3;
         return b + 3;
@@ -544,7 +544,7 @@ inline const char* parse_hex(const char* b, const char* e, uint32& u) {
 //   D800 <= XXXX <= DBFF
 //   DC00 <= XXXX <= DFFF
 S Parser::parse_unicode(S b, S e, fastream& s) {
-    uint32 u = 0;
+    uint32_t u = 0;
     b = parse_hex(b, e, u);
     if (b == 0) return 0;
 
@@ -552,7 +552,7 @@ S Parser::parse_unicode(S b, S e, fastream& s) {
         if (e - b < 3) return 0;
         if (b[1] != '\\' || b[2] != 'u') return 0;
 
-        uint32 v = 0;
+        uint32_t v = 0;
         b = parse_hex(b + 3, e, v);
         if (b == 0) return 0;
         if (v < 0xDC00 || v > 0xDFFF) return 0;
@@ -581,12 +581,12 @@ S Parser::parse_unicode(S b, S e, fastream& s) {
     return b;
 }
 
-inline int64 str2int(S b, S e) {
-    uint64 v = 0;
+inline int64_t str2int(S b, S e) {
+    uint64_t v = 0;
     S p = b;
     if (*p == '-') ++p;
     for (; p < e; ++p) v = v * 10 + *p - '0';
-    return *b != '-' ? v : -(int64)v;
+    return *b != '-' ? v : -(int64_t)v;
 }
 
 inline bool str2double(S b, double& d) {
@@ -636,12 +636,12 @@ digit_end : {
     if (n < 20) goto to_int;
 }
     {
-        // compare with MAX_UINT64, MIN_INT64
-        // if value > MAX_UINT64 or value < MIN_INT64, we parse it as a double
+        // compare with UINT64_MAX, INT64_MIN
+        // if value > UINT64_MAX or value < INT64_MIN, we parse it as a double
         int m = ::memcmp(b, (*b != '-' ? "18446744073709551615" : "-9223372036854775808"), 20);
         if (m < 0) goto to_int;
         if (m > 0) goto to_dbl;
-        v = make_int(_a, *b != '-' ? MAX_UINT64 : MIN_INT64);
+        v = make_int(_a, *b != '-' ? UINT64_MAX : INT64_MIN);
         return p - 1;
     }
 
@@ -676,68 +676,68 @@ inline const char* find_escapse(const char* b, const char* e, char& c) {
     char c0, c1, c2, c3, c4, c5, c6, c7;
     for (;;) {
         if (b + 8 <= e) {
-            if ((c0 = g_e2s_tb[(uint8)b[0]])) {
+            if ((c0 = g_e2s_tb[(uint8_t)b[0]])) {
                 c = c0;
                 return b;
             }
-            if ((c1 = g_e2s_tb[(uint8)b[1]])) {
+            if ((c1 = g_e2s_tb[(uint8_t)b[1]])) {
                 c = c1;
                 return b + 1;
             }
-            if ((c2 = g_e2s_tb[(uint8)b[2]])) {
+            if ((c2 = g_e2s_tb[(uint8_t)b[2]])) {
                 c = c2;
                 return b + 2;
             }
-            if ((c3 = g_e2s_tb[(uint8)b[3]])) {
+            if ((c3 = g_e2s_tb[(uint8_t)b[3]])) {
                 c = c3;
                 return b + 3;
             }
-            if ((c4 = g_e2s_tb[(uint8)b[4]])) {
+            if ((c4 = g_e2s_tb[(uint8_t)b[4]])) {
                 c = c4;
                 return b + 4;
             }
-            if ((c5 = g_e2s_tb[(uint8)b[5]])) {
+            if ((c5 = g_e2s_tb[(uint8_t)b[5]])) {
                 c = c5;
                 return b + 5;
             }
-            if ((c6 = g_e2s_tb[(uint8)b[6]])) {
+            if ((c6 = g_e2s_tb[(uint8_t)b[6]])) {
                 c = c6;
                 return b + 6;
             }
-            if ((c7 = g_e2s_tb[(uint8)b[7]])) {
+            if ((c7 = g_e2s_tb[(uint8_t)b[7]])) {
                 c = c7;
                 return b + 7;
             }
             b += 8;
         } else {
             if (b + 4 <= e) {
-                if ((c0 = g_e2s_tb[(uint8)b[0]])) {
+                if ((c0 = g_e2s_tb[(uint8_t)b[0]])) {
                     c = c0;
                     return b;
                 }
-                if ((c1 = g_e2s_tb[(uint8)b[1]])) {
+                if ((c1 = g_e2s_tb[(uint8_t)b[1]])) {
                     c = c1;
                     return b + 1;
                 }
-                if ((c2 = g_e2s_tb[(uint8)b[2]])) {
+                if ((c2 = g_e2s_tb[(uint8_t)b[2]])) {
                     c = c2;
                     return b + 2;
                 }
-                if ((c3 = g_e2s_tb[(uint8)b[3]])) {
+                if ((c3 = g_e2s_tb[(uint8_t)b[3]])) {
                     c = c3;
                     return b + 3;
                 }
                 b += 4;
             }
             for (; b < e; ++b) {
-                if ((c = g_e2s_tb[(uint8)*b])) return b;
+                if ((c = g_e2s_tb[(uint8_t)*b])) return b;
             }
             return e;
         }
     }
 #else
     for (const char* p = b; p < e; ++p) {
-        if ((c = g_e2s_tb[(uint8)*p])) return p;
+        if ((c = g_e2s_tb[(uint8_t)*p])) return p;
     }
     return e;
 #endif
@@ -749,7 +749,7 @@ fastream& Json::_json2str(fastream& fs, bool debug, int mdp) const {
     switch (_h->type) {
         case t_string: {
             fs << '"';
-            const uint32 len = _h->size;
+            const uint32_t len = _h->size;
             const bool trunc = debug && len > 512;
             S s = _h->s;
             S e = trunc ? s + 32 : s + len;
@@ -770,7 +770,7 @@ fastream& Json::_json2str(fastream& fs, bool debug, int mdp) const {
             fs << '{';
             if (_h->p) {
                 auto& a = *(xx::Array*)&_h->p;
-                for (uint32 i = 0; i < a.size(); i += 2) {
+                for (uint32_t i = 0; i < a.size(); i += 2) {
                     fs << '"' << (S)a[i] << '"' << ':';
                     ((Json*)&a[i + 1])->_json2str(fs, debug, mdp) << ',';
                 }
@@ -783,7 +783,7 @@ fastream& Json::_json2str(fastream& fs, bool debug, int mdp) const {
             fs << '[';
             if (_h->p) {
                 auto& a = *(xx::Array*)&_h->p;
-                for (uint32 i = 0; i < a.size(); ++i) {
+                for (uint32_t i = 0; i < a.size(); ++i) {
                     ((Json*)&a[i])->_json2str(fs, debug, mdp) << ',';
                 }
             }
@@ -815,7 +815,7 @@ fastream& Json::_json2pretty(fastream& fs, int indent, int n, int mdp) const {
             fs << '{';
             if (_h->p) {
                 auto& a = *(xx::Array*)&_h->p;
-                for (uint32 i = 0; i < a.size(); i += 2) {
+                for (uint32_t i = 0; i < a.size(); i += 2) {
                     fs.append('\n').append(n, ' ');
                     fs << '"' << (S)a[i] << '"' << ": ";
                     ((Json*)&a[i + 1])->_json2pretty(fs, indent, n + indent, mdp) << ',';
@@ -833,7 +833,7 @@ fastream& Json::_json2pretty(fastream& fs, int indent, int n, int mdp) const {
             fs << '[';
             if (_h->p) {
                 auto& a = *(xx::Array*)&_h->p;
-                for (uint32 i = 0; i < a.size(); ++i) {
+                for (uint32_t i = 0; i < a.size(); ++i) {
                     fs.append('\n').append(n, ' ');
                     ((Json*)&a[i])->_json2pretty(fs, indent, n + indent, mdp) << ',';
                 }
@@ -880,7 +880,7 @@ Json& Json::operator[](const char* key) const {
     return *(Json*)&a.back();
 }
 
-Json& Json::get(uint32 i) const {
+Json& Json::get(uint32_t i) const {
     if (this->is_array() && _array().size() > i) {
         return *(Json*)&_array()[i];
     }
@@ -898,13 +898,13 @@ Json& Json::get(const char* key) const {
 
 void Json::remove(const char* key) {
     if (this->is_object()) {
-        const uint32 n = _h->p ? _array().size() : 0;
+        const uint32_t n = _h->p ? _array().size() : 0;
         if (n > 0) {
             auto& a = _array();
-            for (uint32 i = 0; i < n; i += 2) {
+            for (uint32_t i = 0; i < n; i += 2) {
                 const auto s = (const char*)a[i];
                 if (strcmp(key, s) == 0) {
-                    xx::jalloc().free((void*)s, (uint32)strlen(s) + 1);
+                    xx::jalloc().free((void*)s, (uint32_t)strlen(s) + 1);
                     ((Json&)a[i + 1]).reset();
                     a.remove_pair(i);
                     return;
@@ -916,13 +916,13 @@ void Json::remove(const char* key) {
 
 void Json::erase(const char* key) {
     if (this->is_object()) {
-        const uint32 n = _h->p ? _array().size() : 0;
+        const uint32_t n = _h->p ? _array().size() : 0;
         if (n > 0) {
             auto& a = _array();
-            for (uint32 i = 0; i < n; i += 2) {
+            for (uint32_t i = 0; i < n; i += 2) {
                 const auto s = (const char*)a[i];
                 if (strcmp(key, s) == 0) {
-                    xx::jalloc().free((void*)s, (uint32)strlen(s) + 1);
+                    xx::jalloc().free((void*)s, (uint32_t)strlen(s) + 1);
                     ((Json&)a[i + 1]).reset();
                     a.erase_pair(i);
                     return;
@@ -932,10 +932,10 @@ void Json::erase(const char* key) {
     }
 }
 
-Json& Json::_set(uint32 i) {
+Json& Json::_set(uint32_t i) {
 beg:
     if (this->is_null()) {
-        for (uint32 k = 0; k < i; ++k) {
+        for (uint32_t k = 0; k < i; ++k) {
             this->push_back(Json());
         }
         this->push_back(Json());
@@ -951,7 +951,7 @@ beg:
     if (i < a.size()) {
         return *(Json*)&a[i];
     } else {
-        for (uint32 k = a.size(); k < i; ++k) {
+        for (uint32_t k = a.size(); k < i; ++k) {
             this->push_back(Json());
         }
         this->push_back(Json());
@@ -985,7 +985,7 @@ void Json::reset() {
         switch (_h->type) {
             case t_object:
                 for (auto it = this->begin(); it != this->end(); ++it) {
-                    a.free((void*)it.key(), (uint32)strlen(it.key()) + 1);
+                    a.free((void*)it.key(), (uint32_t)strlen(it.key()) + 1);
                     it.value().reset();
                 }
                 if (_h->p) _array().~Array();
@@ -1049,7 +1049,7 @@ Json::Json(std::initializer_list<Json> v) {
 
     if (is_obj) {
         _h = make_object(xx::jalloc());
-        const uint32 n = (uint32)(v.size() << 1);
+        const uint32_t n = (uint32_t)(v.size() << 1);
         if (n > 0) {
             auto& a = *new (&_h->p) xx::Array(n);
             for (auto& x : v) {
@@ -1062,7 +1062,7 @@ Json::Json(std::initializer_list<Json> v) {
 
     } else {
         _h = make_array(xx::jalloc());
-        const uint32 n = (uint32)v.size();
+        const uint32_t n = (uint32_t)v.size();
         if (n > 0) {
             auto& a = *new (&_h->p) xx::Array(n);
             for (auto& x : v) {
@@ -1076,7 +1076,7 @@ Json::Json(std::initializer_list<Json> v) {
 Json array(std::initializer_list<Json> v) {
     Json r = json::array();
     _H* h = *(_H**)&r;
-    const uint32 n = (uint32)v.size();
+    const uint32_t n = (uint32_t)v.size();
     if (n > 0) {
         auto& a = *new (&h->p) xx::Array(n);
         for (auto& x : v) {
@@ -1090,7 +1090,7 @@ Json array(std::initializer_list<Json> v) {
 Json object(std::initializer_list<Json> v) {
     Json r = json::object();
     _H* h = *(_H**)&r;
-    const uint32 n = (uint32)(v.size() << 1);
+    const uint32_t n = (uint32_t)(v.size() << 1);
     if (n > 0) {
         auto& a = *new (&h->p) xx::Array(n);
         for (auto& x : v) {

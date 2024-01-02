@@ -2,12 +2,9 @@
 
 #include "unitest.h"
 
-
 namespace test {
 
 DEF_test(god) {
-    god::bless_no_bugs();
-
     DEF_case(cast) {
         EXPECT_EQ(god::cast<int>(false), 0);
         EXPECT_EQ(god::cast<int>(1.007), 1);
@@ -51,8 +48,8 @@ DEF_test(god) {
     DEF_case(eq) {
         const char p[] = "abcdxxxx";
         const char q[] = "abcdyyyy";
-        EXPECT(god::eq<uint32>(p, q));
-        EXPECT(!god::eq<uint64>(p, q));
+        EXPECT(god::eq<uint32_t>(p, q));
+        EXPECT(!god::eq<uint64_t>(p, q));
     }
 
     DEF_case(copy) {
@@ -90,8 +87,8 @@ DEF_test(god) {
         EXPECT_EQ((god::is_same<char, signed char>()), false);
         EXPECT_EQ((god::is_same<char, unsigned char>()), false);
         EXPECT_EQ((god::is_same<int, int&, const int&>()), false);
-        EXPECT_EQ((god::is_same<int, char, int, uint32>()), true);
-        EXPECT_EQ((god::is_same<int, char, uint32>()), false);
+        EXPECT_EQ((god::is_same<int, char, int, uint32_t>()), true);
+        EXPECT_EQ((god::is_same<int, char, uint32_t>()), false);
         EXPECT_EQ((god::is_same<void*, const void*>()), false);
         EXPECT_EQ((god::is_same<void*, const void*, void*>()), true);
         EXPECT_EQ((god::is_same<void*, const void*, void**>()), false);

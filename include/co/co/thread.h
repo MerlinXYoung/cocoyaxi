@@ -56,15 +56,15 @@ inline void tls_set(tls_key_t k, void* v) {
     assert(r == 0);
 }
 
-__coapi uint32 thread_id();
+__coapi uint32_t thread_id();
 #endif
 }  // namespace xx
 
 #ifdef _WIN32
-inline uint32 thread_id() { return GetCurrentThreadId(); }
+inline uint32_t thread_id() { return GetCurrentThreadId(); }
 #else
-inline uint32 thread_id() {
-    static thread_local uint32 _tid = xx::thread_id();
+inline uint32_t thread_id() {
+    static thread_local uint32_t _tid = xx::thread_id();
     return _tid;
     // return xx::g_tid != 0 ? xx::g_tid : (xx::g_tid = xx::thread_id());
 }
@@ -111,7 +111,7 @@ class __coapi sync_event {
     void signal();
     void reset();
     void wait();
-    bool wait(uint32 ms);
+    bool wait(uint32_t ms);
 
   private:
     void* _p;

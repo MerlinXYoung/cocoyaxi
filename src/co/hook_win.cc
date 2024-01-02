@@ -50,18 +50,18 @@ class HookCtx {
     bool has_nb_mark() const { return _s.nb_mark; }
 
     // if the timeout is greater than 65535 ms, we truncate it to 65535.
-    void set_send_timeout(uint32 ms) { _s.send_timeout = ms <= 65535 ? (uint16)ms : 65535; }
-    void set_recv_timeout(uint32 ms) { _s.recv_timeout = ms <= 65535 ? (uint16)ms : 65535; }
+    void set_send_timeout(uint32_t ms) { _s.send_timeout = ms <= 65535 ? (uint16_t)ms : 65535; }
+    void set_recv_timeout(uint32_t ms) { _s.recv_timeout = ms <= 65535 ? (uint16_t)ms : 65535; }
 
     int send_timeout() const { return _s.send_timeout == 0 ? -1 : _s.send_timeout; }
     int recv_timeout() const { return _s.recv_timeout == 0 ? -1 : _s.recv_timeout; }
 
     void clear() { _v = 0; }
 
-    static const uint8 f_shut_read = 1;
-    static const uint8 f_shut_write = 2;
-    static const uint8 f_skip_iocp = 4;
-    static const uint8 f_non_sock_stream = 8;
+    static const uint8_t f_shut_read = 1;
+    static const uint8_t f_shut_write = 2;
+    static const uint8_t f_skip_iocp = 4;
+    static const uint8_t f_non_sock_stream = 8;
 
     void set_shut_read() {
         if (atomic_or(&_s.flags, f_shut_read, std::memory_order_acq_rel) & f_shut_write)
@@ -80,14 +80,14 @@ class HookCtx {
 
   private:
     union {
-        uint64 _v;
+        uint64_t _v;
         struct {
-            uint8 nb;       // non-blocking
-            uint8 no;       // non-overlapped
-            uint8 nb_mark;  // non-blocking mark
-            uint8 flags;
-            uint16 recv_timeout;
-            uint16 send_timeout;
+            uint8_t nb;       // non-blocking
+            uint8_t no;       // non-overlapped
+            uint8_t nb_mark;  // non-blocking mark
+            uint8_t flags;
+            uint16_t recv_timeout;
+            uint16_t send_timeout;
         } _s;
     };
 };
@@ -404,7 +404,7 @@ int WINAPI hook_connect(SOCKET a0, CONST sockaddr* a1, int a2) {
         defer(set_non_blocking(a0, 0));
 
         int sec = 0, len = sizeof(sec);
-        uint32 t = ctx->send_timeout(), x = 1;
+        uint32_t t = ctx->send_timeout(), x = 1;
         r = __sys_api(connect)(a0, a1, a2);
         if (r == 0 || WSAGetLastError() != WSAEWOULDBLOCK) goto end;
 
@@ -418,7 +418,7 @@ int WINAPI hook_connect(SOCKET a0, CONST sockaddr* a1, int a2) {
                 goto end;
             }
             sched->sleep(t > x ? x : t);
-            if (t != (uint32)-1) t = (t > x ? t - x : 0);
+            if (t != (uint32_t)-1) t = (t > x ? t - x : 0);
             if (x < T) x <<= 1;
         }
     }
@@ -455,7 +455,7 @@ int WINAPI hook_WSAConnect(SOCKET a0, sockaddr* a1, int a2, LPWSABUF a3, LPWSABU
         defer(set_non_blocking(a0, 0));
 
         int sec = 0, len = sizeof(sec);
-        uint32 t = ctx->send_timeout(), x = 1;
+        uint32_t t = ctx->send_timeout(), x = 1;
         r = __sys_api(WSAConnect)(a0, a1, a2, a3, a4, a5, a6);
         if (r == 0 || WSAGetLastError() != WSAEWOULDBLOCK) goto end;
 
@@ -469,7 +469,7 @@ int WINAPI hook_WSAConnect(SOCKET a0, sockaddr* a1, int a2, LPWSABUF a3, LPWSABU
                 goto end;
             }
             sched->sleep(t > x ? x : t);
-            if (t != (uint32)-1) t = (t > x ? t - x : 0);
+            if (t != (uint32_t)-1) t = (t > x ? t - x : 0);
             if (x < T) x <<= 1;
         }
     }
@@ -491,7 +491,7 @@ end:
             set_non_blocking(_s, 1);                                     \
             _ctx->set_nb_mark();                                         \
         }                                                                \
-        uint32 t = _t, x = 1;                                            \
+        uint32_t t = _t, x = 1;                                          \
         while (true) {                                                   \
             r = _op;                                                     \
             if (r >= 0 || WSAGetLastError() != WSAEWOULDBLOCK) goto end; \
@@ -500,7 +500,7 @@ end:
                 goto end;                                                \
             }                                                            \
             sched->sleep(t > x ? x : t);                                 \
-            if (t != (uint32)-1) t = (t > x ? t - x : 0);                \
+            if (t != (uint32_t)-1) t = (t > x ? t - x : 0);              \
             if (x < _ms) x <<= 1;                                        \
         }                                                                \
     } while (0)
@@ -1019,9 +1019,9 @@ end:
 }
 
 int WINAPI hook_select(int a0, fd_set* a1, fd_set* a2, fd_set* a3, const timeval* a4) {
-    const int64 max_ms = ((uint32)-1) >> 1;
+    const int64_t max_ms = ((uint32_t)-1) >> 1;
     int r, ms = -1, t, x = 1;
-    int64 sec, us;
+    int64_t sec, us;
     const auto sched = co::xx::gSched;
 
     if (a4) {
@@ -1029,7 +1029,7 @@ int WINAPI hook_select(int a0, fd_set* a1, fd_set* a2, fd_set* a3, const timeval
         us = a4->tv_usec;
         if (sec >= 0 && us >= 0) {
             if (sec < max_ms / 1000 && us < max_ms * 1000) {
-                const int64 u = sec * 1000000 + us;
+                const int64_t u = sec * 1000000 + us;
                 ms = u <= 1000 ? !!u : (u < max_ms * 1000 ? u / 1000 : max_ms);
             } else {
                 ms = (int)max_ms;
@@ -1079,7 +1079,7 @@ int WINAPI hook_WSAPoll(LPWSAPOLLFD a0, ULONG a1, INT a2) {
     }
 
     {
-        uint32 t = a2 >= 0 ? a2 : -1, x = 1;
+        uint32_t t = a2 >= 0 ? a2 : -1, x = 1;
         while (true) {
             r = __sys_api(WSAPoll)(a0, a1, 0);
             if (r != 0 || t == 0) goto end;

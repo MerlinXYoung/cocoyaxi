@@ -2,7 +2,6 @@
 
 #include "unitest.h"
 
-
 namespace test {
 
 DEF_test(fast) {
@@ -110,7 +109,7 @@ DEF_test(fast) {
     DEF_case(ptoh) {
         EXPECT_EQ(fastring(buf, fast::ptoh((void*)0x123456, buf)), "0x123456");
         EXPECT_EQ(fastring(buf, fast::ptoh((void*)0x12345678, buf)), "0x12345678");
-        if (sizeof(void*) >= sizeof(uint64)) {
+        if (sizeof(void*) >= sizeof(uint64_t)) {
             EXPECT_EQ(fastring(buf, fast::ptoh((void*)(size_t)0x1234567890abcdefULL, buf)),
                       "0x1234567890abcdef");
         }

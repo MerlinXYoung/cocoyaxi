@@ -17,7 +17,7 @@
 //   time(0) > gettimeofday, now::ms(), now::us(), clock_gettime > now::str()
 
 BM_group(time) {
-    int64 v;
+    int64_t v;
     fastring s;
     BM_add(now::str())(s = now::str("%Y");) BM_use(s);
 

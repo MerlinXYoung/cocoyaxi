@@ -9,7 +9,6 @@
 #include "co/co.h"
 #include "co/log.h"
 
-
 namespace co {
 
 /**
@@ -29,8 +28,8 @@ class Epoll {
     Epoll(int sched_id);
     ~Epoll();
 
-    bool add_ev_read(int fd, int32 co_id);
-    bool add_ev_write(int fd, int32 co_id);
+    bool add_ev_read(int fd, int32_t co_id);
+    bool add_ev_write(int fd, int32_t co_id);
     void del_ev_read(int fd);
     void del_ev_write(int fd);
     void del_event(int fd);

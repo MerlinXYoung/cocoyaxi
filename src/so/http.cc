@@ -69,9 +69,9 @@ struct curl_ctx_t {
         }
     }
 
-    void add_header(uint32 k) {
+    void add_header(uint32_t k) {
         if (arr_cap < arr_size + 2) {
-            arr = (uint32*)::realloc(arr, (arr_cap + 32) << 2);
+            arr = (uint32_t*)::realloc(arr, (arr_cap + 32) << 2);
             arr_cap += 32;
             assert(arr);
         }
@@ -91,9 +91,9 @@ struct curl_ctx_t {
     fastream body;
     fastream header;
     fastream mutable_header;
-    uint32* arr;  // array of header index
-    uint32 arr_size;
-    uint32 arr_cap;
+    uint32_t* arr;  // array of header index
+    uint32_t arr_size;
+    uint32_t arr_cap;
     CURL* easy;
     struct curl_slist* l;
     fs::file upfile;  // for PUT, the file to upload
@@ -291,7 +291,7 @@ const char* Client::header(const char* key) {
     const char* header_begin = m.c_str();
     const char* b;
     const char* p;
-    for (uint32 i = 0; i < _ctx->arr_size; i += 2) {
+    for (uint32_t i = 0; i < _ctx->arr_size; i += 2) {
         b = header_begin + _ctx->arr[i];
         p = strchr(b, ':');
         if (p) {
@@ -304,7 +304,7 @@ const char* Client::header(const char* key) {
                         ;
                     p = strchr(b, '\r');
                     if (p) *(char*)p = '\0';
-                    _ctx->arr[i + 1] = (uint32)(b - header_begin);
+                    _ctx->arr[i + 1] = (uint32_t)(b - header_begin);
                     return b;
                 } else {
                     return header_begin + _ctx->arr[i + 1];
@@ -336,7 +336,7 @@ size_t easy_header_cb(char* p, size_t size, size_t nmemb, void* userp) {
     if (r != CURLE_OK || code == 100) return n;
 
     if (!h.empty()) {
-        if (n > 2) ctx->add_header((uint32)h.size());  // not "\r\n"
+        if (n > 2) ctx->add_header((uint32_t)h.size());  // not "\r\n"
         h.append(p, n);
     } else {
         h.append(p, n);  // start line
@@ -486,9 +486,9 @@ inline const char* status_str(int n) {
     };
 }
 
-inline void http_req_t::add_header(uint32 k, uint32 v) {
+inline void http_req_t::add_header(uint32_t k, uint32_t v) {
     if (arr_cap < arr_size + 2) {
-        arr = (uint32*)::realloc(arr, (arr_cap + 32) << 2);
+        arr = (uint32_t*)::realloc(arr, (arr_cap + 32) << 2);
         assert(arr);
         arr_cap += 32;
     }
@@ -501,7 +501,7 @@ const char* http_req_t::header(const char* key) const {
     fastring x(key);
     x.toupper();
 
-    for (uint32 i = 0; i < arr_size; i += 2) {
+    for (uint32_t i = 0; i < arr_size; i += 2) {
         s.clear();
         s.append(buf->data() + arr[i]).toupper();
         if (s == x) return buf->data() + arr[i + 1];
@@ -563,7 +563,7 @@ int parse_http_headers(fastring* buf, size_t size, size_t x, http_req_t* req) {
         m[v] = '\0';  // make key null-terminated
         while (m[++v] == ' ')
             ;
-        req->add_header((uint32)k, (uint32)v);
+        req->add_header((uint32_t)k, (uint32_t)v);
 
         x = p + 2;
     }
@@ -605,9 +605,9 @@ int parse_http_req(fastring* buf, size_t size, http_req_t* req) {
         s.clear();
         s.append(m.data() + q, x - q).toupper();
         if (s.size() != 8) return 505;
-        if (god::eq<uint64>(s.data(), "HTTP/1.1")) {
+        if (god::eq<uint64_t>(s.data(), "HTTP/1.1")) {
             req->version = kHTTP11;
-        } else if (god::eq<uint64>(s.data(), "HTTP/1.0")) {
+        } else if (god::eq<uint64_t>(s.data(), "HTTP/1.0")) {
             req->version = kHTTP10;
         } else {
             return 505;  // HTTP Version Not Supported
@@ -629,7 +629,7 @@ int parse_http_req(fastring* buf, size_t size, http_req_t* req) {
         } else {
             int n = atoi(v);
             if (n >= 0) {
-                if ((uint32)n > FLG_http_max_body_size) return 413;
+                if ((uint32_t)n > FLG_http_max_body_size) return 413;
                 req->body_size = n;
                 return 0;
             }
@@ -724,7 +724,6 @@ void ServerImpl::on_connection(tcp::Connection conn) {
     auto& preq = *(http_req_t**)&req;
     auto& pres = *(http_res_t**)&res;
 
-    god::bless_no_bugs();
     while (true) {
         { /* recv http header and body */
         recv_beg:
@@ -780,7 +779,7 @@ void ServerImpl::on_connection(tcp::Connection conn) {
             }
 
             // try to recv the remain part of http body
-            preq->body = (uint32)(pos + 4);  // beginning of http body
+            preq->body = (uint32_t)(pos + 4);  // beginning of http body
             if (preq->body_size > 0) {
                 total_len = pos + 4 + preq->body_size;
                 if (buf.size() < total_len) {
@@ -863,7 +862,7 @@ void ServerImpl::on_connection(tcp::Connection conn) {
                         if (buf.size() - hlen > FLG_http_max_body_size) goto body_too_long_err;
 
                     } else { /* n == 0, end of chunked data */
-                        preq->body_size = (uint32)(buf.size() - hlen);
+                        preq->body_size = (uint32_t)(buf.size() - hlen);
                         s.trim(x, 'l');
                         while ((x = s.find("\r\n\r\n")) == s.npos) {
                             s.reserve(s.size() + 32);
@@ -964,7 +963,7 @@ chunk_err:
 reset_conn:
     conn.reset(3000);
 end:
-    god::bless_no_bugs();
+    return;
 }
 
 }  // namespace http
@@ -977,7 +976,7 @@ void easy(const char* root_dir, const char* ip, int port) {
 
 void easy(const char* root_dir, const char* ip, int port, const char* key, const char* ca) {
     http::Server serv;
-    typedef co::lru_map<fastring, std::pair<fastring, int64>> Map;
+    typedef co::lru_map<fastring, std::pair<fastring, int64_t>> Map;
     co::vector<Map> contents(co::sched_num(), 0);
     fastring root(path::clean(root_dir));
 

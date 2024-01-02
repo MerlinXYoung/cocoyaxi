@@ -2,10 +2,10 @@
 
 #include <atomic>
 
-
 #include "co/co/thread.h"
 #include "co/time.h"
 #include "co/vector.h"
+
 
 namespace co {
 namespace xx {
@@ -74,7 +74,7 @@ void TaskedImpl::run_at(F&& f, int hour, int minute, int second, bool daily) {
 }
 
 void TaskedImpl::loop() {
-    int64 ms = 0;
+    int64_t ms = 0;
     int sec = 0;
     co::Timer timer;
     co::vector<Task> tmp(32);
@@ -112,17 +112,17 @@ void TaskedImpl::loop() {
         }
 
         _ev.wait(1000);
-        if(_stop.load(std::memory_order_relaxed))
-        if (_stop) {
-            atomic_store(&_stop, 2);
-            return;
-        }
+        if (_stop.load(std::memory_order_relaxed))
+            if (_stop) {
+                atomic_store(&_stop, 2);
+                return;
+            }
         ms += timer.ms();
     }
 }
 
 void TaskedImpl::stop() {
-    decltype(_stop)::value_type stop=0;
+    decltype(_stop)::value_type stop = 0;
     _stop.compare_exchange_strong(stop, 1, std::memory_order_seq_cst, std::memory_order_seq_cst);
     if (0 == stop) {
         _ev.signal();
@@ -130,7 +130,7 @@ void TaskedImpl::stop() {
         std::lock_guard<std::mutex> g(_mtx);
         _tasks.clear();
         _new_tasks.clear();
-    } else if (1== stop) {
+    } else if (1 == stop) {
         while (_stop.load(std::memory_order_relaxed) != 2) sleep::ms(1);
     }
 }

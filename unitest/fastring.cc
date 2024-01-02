@@ -2,7 +2,6 @@
 
 #include "unitest.h"
 
-
 namespace test {
 
 DEF_test(fastring) {
@@ -135,7 +134,7 @@ DEF_test(fastring) {
         s.append(x);
         EXPECT_EQ(s, "xxx");
 
-        uint8 u = 'x';
+        uint8_t u = 'x';
         s.append(u);
         EXPECT_EQ(s, "xxxx");
 

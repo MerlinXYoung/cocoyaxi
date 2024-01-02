@@ -159,8 +159,8 @@ class ServerImpl {
     void exit();
     bool started() const { return _started.load(std::memory_order_relaxed); }
 
-    uint32 conn_num() const { return _count.load(std::memory_order_relaxed) - 1; }
-    uint32 ref() { return _count.fetch_add(1, std::memory_order_relaxed) + 1; }
+    uint32_t conn_num() const { return _count.load(std::memory_order_relaxed) - 1; }
+    uint32_t ref() { return _count.fetch_add(1, std::memory_order_relaxed) + 1; }
 
     void unref() {
         if ((_count.fetch_sub(1) - 1) == 0) {
@@ -177,7 +177,7 @@ class ServerImpl {
 
   private:
     fastring _ip;
-    uint16 _port;
+    uint16_t _port;
     std::atomic_bool _started;
     std::atomic_uint32_t _count;  // refcount
     sock_t _fd;
@@ -197,7 +197,7 @@ class ServerImpl {
 void ServerImpl::start(const char* ip, int port, const char* key, const char* ca) {
     CHECK(_conn_cb != nullptr) << "connection callback not set..";
     _ip = (ip && *ip) ? ip : "0.0.0.0";
-    _port = (uint16)port;
+    _port = (uint16_t)port;
 
     if (key && *key && ca && *ca) {
         _ssl_ctx = ssl::new_server_ctx();
@@ -293,7 +293,7 @@ void ServerImpl::loop() {
             continue;
         }
 
-        const uint32 n = this->ref() - 1;
+        const uint32_t n = this->ref() - 1;
         DLOG << "server " << _ip << ':' << _port
              << " accept connection: " << co::addr2str(&_addr, _addrlen) << ", connfd: " << _connfd
              << ", conn num: " << n;
@@ -362,7 +362,7 @@ Server& Server::on_exit(std::function<void()>&& cb) {
     return *this;
 }
 
-uint32 Server::conn_num() const { return ((ServerImpl*)_p)->conn_num(); }
+uint32_t Server::conn_num() const { return ((ServerImpl*)_p)->conn_num(); }
 
 void Server::start(const char* ip, int port, const char* key, const char* ca) {
     ((ServerImpl*)_p)->start(ip, port, key, ca);
@@ -387,7 +387,7 @@ Client::Client(const char* ip, int port, bool use_ssl)
     }
     _u[0] = 1;
     memcpy(_p + 16, ip, n);
-    *(_p + 8 + fast::utoa((uint16)port, _p + 8)) = '\0';
+    *(_p + 8 + fast::utoa((uint16_t)port, _p + 8)) = '\0';
 }
 
 Client::Client(const Client& c) : _u(c._u), _fd(-1), _use_ssl(c._use_ssl), _connected(false) {

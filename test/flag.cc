@@ -1,16 +1,17 @@
 #include "co/flag.h"
+
 #include "co/cout.h"
 
 DEF_bool(boo, false, "bool flag");
 DEF_bool(x, false, "bool x");
 DEF_bool(y, false, "bool y");
 DEF_bool(z, false, "bool z");
-DEF_int32(n, 0, "int32");
+DEF_int32(n, 0, "int32_t");
 
-DEF_int32(i32, -32, "int32");
-DEF_int64(i64, -64, "int64");
-DEF_uint32(u32, 32, "uint32");
-DEF_uint64(u64, 64, "uint64");
+DEF_int32(i32, -32, "int32_t");
+DEF_int64(i64, -64, "int64_t");
+DEF_uint32(u32, 32, "uint32_t");
+DEF_uint64(u64, 64, "uint64_t");
 
 DEF_double(dbl, 3.14, "double");
 DEF_string(s, "hello world", "string");

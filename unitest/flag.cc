@@ -3,12 +3,11 @@
 #include "co/fs.h"
 #include "unitest.h"
 
-
 DEF_bool(ut_bool, false, "bool type");
-DEF_int32(ut_int32, -32, "int32 type");
-DEF_int64(ut_int64, -64, "int64 type");
-DEF_uint32(ut_uint32, 32, "uint32 type");
-DEF_uint64(ut_uint64, 64, "uint64 type");
+DEF_int32(ut_int32, -32, "int32_t type");
+DEF_int64(ut_int64, -64, "int64_t type");
+DEF_uint32(ut_uint32, 32, "uint32_t type");
+DEF_uint64(ut_uint64, 64, "uint64_t type");
 DEF_double(ut_double, 2.3, "double type");
 DEF_string(ut_string, "", "string type");
 

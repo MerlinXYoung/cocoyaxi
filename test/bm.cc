@@ -10,7 +10,6 @@ BM_group(atomic) {
 
     // BM_add(--)(::atomic_fetch_sub((::atomic_int*)&i, 1););
 
-    
     BM_add(++)(reinterpret_cast<std::atomic_int*>(&i)->fetch_add(1););
 
     BM_add(--)(reinterpret_cast<std::atomic_int*>(&i)->fetch_sub(1););
@@ -27,7 +26,7 @@ BM_group(rand) {
     BM_add(co::rand)(x = co::rand(););
     BM_use(x);
 
-    uint32 seed = co::rand();
+    uint32_t seed = co::rand();
     BM_add(co::rand(seed))(x = co::rand(seed););
     BM_use(x);
 }

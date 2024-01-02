@@ -3,7 +3,6 @@
 #include "co/str.h"
 #include "unitest.h"
 
-
 namespace test {
 
 DEF_test(json) {
@@ -65,9 +64,9 @@ DEF_test(json) {
         EXPECT_EQ(i.str(), "123");
         EXPECT_EQ(i.pretty(), "123");
 
-        co::Json x = (int64)12345;
+        co::Json x = (int64_t)12345;
         EXPECT(x.is_int());
-        EXPECT(x == (int64)12345);
+        EXPECT(x == (int64_t)12345);
         EXPECT_EQ(x.as_int64(), 12345);
         EXPECT_EQ(x.as_int64(), 12345);
         EXPECT_EQ(x.str(), "12345");
@@ -473,17 +472,17 @@ DEF_test(json) {
         v = json::parse("-32");
         EXPECT_EQ(v.as_int(), -32);
 
-        v = json::parse(str::from(MAX_UINT64));
+        v = json::parse(str::from(UINT64_MAX));
         EXPECT(v.is_int());
-        EXPECT_EQ(v.as_int64(), MAX_UINT64);
+        EXPECT_EQ(v.as_int64(), UINT64_MAX);
 
-        v = json::parse(str::from(MIN_INT64));
+        v = json::parse(str::from(INT64_MIN));
         EXPECT(v.is_int());
-        EXPECT_EQ(v.as_int64(), MIN_INT64);
+        EXPECT_EQ(v.as_int64(), INT64_MIN);
 
-        EXPECT_EQ(json::parse("18446744073709551614").as_int64(), MAX_UINT64 - 1);
+        EXPECT_EQ(json::parse("18446744073709551614").as_int64(), UINT64_MAX - 1);
         EXPECT_EQ(json::parse("1844674407370955161").as_int64(), 1844674407370955161ULL);
-        EXPECT_EQ(json::parse("-9223372036854775807").as_int64(), MIN_INT64 + 1);
+        EXPECT_EQ(json::parse("-9223372036854775807").as_int64(), INT64_MIN + 1);
 
         fastring s("12345678901234567890888");
         s.resize(3);
@@ -511,8 +510,8 @@ DEF_test(json) {
         EXPECT_EQ(json::parse("1.0000000000000002").as_double(), 1.0000000000000002);
         EXPECT_EQ(json::parse("4.9406564584124654e-324").as_double(), 4.9406564584124654e-324);
         EXPECT_EQ(json::parse("1.7976931348623157e+308").as_double(), 1.7976931348623157e+308);
-        EXPECT(json::parse("18446744073709551616").is_double());  // MAX_UINT64 + 1
-        EXPECT(json::parse("-9223372036854775809").is_double());  // MIN_INT64 - 1
+        EXPECT(json::parse("18446744073709551616").is_double());  // UINT64_MAX + 1
+        EXPECT(json::parse("-9223372036854775809").is_double());  // INT64_MIN - 1
 
         fastring s("1234.567");
         s.resize(6);
