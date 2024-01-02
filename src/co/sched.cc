@@ -1,11 +1,11 @@
 #include "sched.h"
 
+#include <atomic>
 #include <mutex>
 
-#include "co/atomic.h"
+
 #include "co/os.h"
 #include "co/rand.h"
-
 
 DEF_uint32(co_sched_num, os::cpunum(), ">>#1 number of coroutine schedulers");
 DEF_uint32(co_stack_num, 8, ">>#1 number of stacks per scheduler, must be power of 2");
@@ -63,13 +63,13 @@ Sched::~Sched() {
     ::free(_stack);
 }
 
-static atomic_int g_cnt = 0;
+static std::atomic_int g_cnt{0};
 
 void Sched::stop() {
-    const int n = atomic_inc(&g_cnt, mo_relaxed);
-    if (atomic_swap(&_x.stopped, true, mo_acq_rel) == false) {
+    if (!_x.stopped.exchange(true)) {
         _x.epoll->signal();
 #if defined(_WIN32) && defined(BUILDING_CO_SHARED)
+        const int n = g_cnt.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n == 1) {
             // the thread may not respond in dll, wait at most 64ms here
             co::Timer t;
@@ -187,7 +187,8 @@ void Sched::loop() {
 #if defined(_WIN32)
             auto info = xx::per_io_info(ev.lpOverlapped);
             auto co = (Coroutine*)info->co;
-            if (atomic_bool_cas(&info->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+            if (atomic_bool_cas(&info->state, st_wait, st_ready, std::memory_order_relaxed,
+                                std::memory_order_relaxed)) {
                 info->n = ev.dwNumberOfBytesTransferred;
                 if (co->sched == this) {
                     this->resume(co);
@@ -257,7 +258,7 @@ void Sched::loop() {
         } while (0);
 
         if (_running) _running = 0;
-        if (_sched_num > 1) atomic_add(&_cputime, timer.us(), mo_relaxed);
+        if (_sched_num > 1) _cputime.fetch_add(timer.us(), std::memory_order_relaxed);
     }
 
     _x.ev.signal();
@@ -276,8 +277,12 @@ uint32 TimerManager::check_timeout(co::vector<Coroutine*>& res) {
             res.push_back(co);
         } else {
             auto w = co->waitx;
-            // TODO: is mo_relaxed safe here?
-            if (atomic_bool_cas(&w->state, st_wait, st_timeout, mo_relaxed, mo_relaxed)) {
+            // TODO: is std::memory_order_relaxed safe here?
+            decltype(w->state)::value_type state{st_wait};
+            if (w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
+                // if (atomic_bool_cas(&w->state, st_wait, st_timeout, std::memory_order_relaxed,
+                // std::memory_order_relaxed)) {
                 res.push_back(co);
             }
         }
@@ -302,7 +307,7 @@ inline SchedInfo& sched_info() {
     return _si;
 }
 
-static uint32 g_nco = 0;
+static std::atomic_uint32_t g_nco{0};
 static bool g_main_thread_as_sched;
 
 SchedManager::SchedManager() {
@@ -320,7 +325,7 @@ SchedManager::SchedManager() {
         if ((n & (n - 1)) == 0) {
             _next = [](const co::vector<Sched*>& v) {
                 if (g_nco < v.size()) {
-                    const uint32 i = atomic_fetch_inc(&g_nco);
+                    const uint32 i = g_nco++;
                     if (i < v.size()) return v[i];
                 }
                 auto& si = sched_info();
@@ -334,7 +339,7 @@ SchedManager::SchedManager() {
         } else {
             _next = [](const co::vector<Sched*>& v) {
                 if (g_nco < v.size()) {
-                    const uint32 i = atomic_fetch_inc(&g_nco);
+                    const uint32 i = g_nco.fetch_add(1);
                     if (i < v.size()) return v[i];
                 }
                 auto& si = sched_info();
@@ -377,7 +382,7 @@ void SchedManager::stop() {
         delete _scheds[i];
     }
 
-    atomic_swap(&is_active(), false, mo_acq_rel);
+    is_active().exchange(false);
 }
 
 }  // namespace xx

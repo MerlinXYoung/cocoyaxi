@@ -1,31 +1,27 @@
 #include "co/co.h"
 #include "co/cout.h"
+#include <atomic>
 
-static int g_id;
+static std::atomic_int g_id{0};
 
 class S {
   public:
     S() { _v = this->get_id(); }
     ~S() = default;
 
-    void run() {
-        co::print("S: ", _v);
-    }
+    void run() { co::print("S: ", _v); }
 
   private:
     int _v;
 
-    int get_id() {
-        return co::atomic_inc(&g_id);
-    }
+    int get_id() { return g_id.fetch_add(1) + 1; }
 };
 
 // use DEF_main to make code in main() also run in coroutine.
 DEF_main(argc, argv) {
-    co::pool p(
-        []() { return (void*) new S(); }, // ccb
-        [](void* p) { delete (S*)p; },        // dcb
-        1024                                    // max capacity
+    co::pool p([]() { return (void*)new S(); },  // ccb
+               [](void* p) { delete (S*)p; },    // dcb
+               1024                              // max capacity
     );
 
     co::wait_group wg;
@@ -36,11 +32,11 @@ DEF_main(argc, argv) {
         for (int i = 0; i < 8; ++i) {
             co::print("go: ", i);
             go([p, wg]() { /* capture p and wg by value here, as they are on stack */
-                S* s = (S*)p.pop();
-                s->run();
-                p.push(s);
-                co::print("size: ", p.size());
-                wg.done();
+                           S* s = (S*)p.pop();
+                           s->run();
+                           p.push(s);
+                           co::print("size: ", p.size());
+                           wg.done();
             });
         }
         wg.wait();
@@ -52,12 +48,12 @@ DEF_main(argc, argv) {
         wg.add(8);
         for (int i = 0; i < 8; ++i) {
             go([p, wg]() { /* capture p and wg by value here, as they are on stack */
-                {
-                    co::pool_guard<S> s(p);
-                    s->run();
-                }
-                co::print("size: ", p.size());
-                wg.done();
+                           {
+                               co::pool_guard<S> s(p);
+                               s->run();
+                           }
+                           co::print("size: ", p.size());
+                           wg.done();
             });
         }
         wg.wait();

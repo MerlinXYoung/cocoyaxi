@@ -1,10 +1,11 @@
 #include "co/tasked.h"
 
-#include "co/atomic.h"
+#include <atomic>
+
+
 #include "co/co/thread.h"
 #include "co/time.h"
 #include "co/vector.h"
-
 
 namespace co {
 namespace xx {
@@ -45,7 +46,7 @@ class TaskedImpl {
     void loop();
 
   private:
-    int _stop;
+    std::atomic_int _stop;
     co::vector<Task> _tasks;
     co::vector<Task> _new_tasks;
     co::sync_event _ev;
@@ -78,7 +79,7 @@ void TaskedImpl::loop() {
     co::Timer timer;
     co::vector<Task> tmp(32);
 
-    while (!_stop) {
+    while (!_stop.load(std::memory_order_relaxed)) {
         timer.restart();
         {
             std::lock_guard<std::mutex> g(_mtx);
@@ -111,6 +112,7 @@ void TaskedImpl::loop() {
         }
 
         _ev.wait(1000);
+        if(_stop.load(std::memory_order_relaxed))
         if (_stop) {
             atomic_store(&_stop, 2);
             return;
@@ -120,15 +122,16 @@ void TaskedImpl::loop() {
 }
 
 void TaskedImpl::stop() {
-    int x = atomic_cas(&_stop, 0, 1);
-    if (x == 0) {
+    decltype(_stop)::value_type stop=0;
+    _stop.compare_exchange_strong(stop, 1, std::memory_order_seq_cst, std::memory_order_seq_cst);
+    if (0 == stop) {
         _ev.signal();
-        while (_stop != 2) sleep::ms(1);
+        while (_stop.load(std::memory_order_relaxed) != 2) sleep::ms(1);
         std::lock_guard<std::mutex> g(_mtx);
         _tasks.clear();
         _new_tasks.clear();
-    } else if (x == 1) {
-        while (_stop != 2) sleep::ms(1);
+    } else if (1== stop) {
+        while (_stop.load(std::memory_order_relaxed) != 2) sleep::ms(1);
     }
 }
 

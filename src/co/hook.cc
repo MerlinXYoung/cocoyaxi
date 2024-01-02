@@ -16,7 +16,8 @@ void hook_sleep(bool) {}
 #include <errno.h>
 #include <stdarg.h>
 
-#include "co/atomic.h"
+#include <atomic>
+// #include "co/atomic.h"
 #include "co/cout.h"
 #include "co/defer.h"
 #include "co/table.h"
@@ -63,15 +64,21 @@ class HookCtx {
 
     void clear() { _v = 0; }
 
-    static const uint8 f_shut_read = 1;
-    static const uint8 f_shut_write = 2;
+    static const uint8_t f_shut_read = 1;
+    static const uint8_t f_shut_write = 2;
 
     void set_shut_read() {
-        if (atomic_or(&_s.flags, f_shut_read, mo_acq_rel) & f_shut_write) this->clear();
+        if (std::atomic_fetch_or_explicit((std::atomic_uint8_t*)&_s.flags, f_shut_read,
+                                          std::memory_order_acq_rel) &
+            f_shut_write)
+            this->clear();
     }
 
     void set_shut_write() {
-        if (atomic_or(&_s.flags, f_shut_write, mo_acq_rel) & f_shut_read) this->clear();
+        if (std::atomic_fetch_or_explicit((std::atomic_uint8_t*)&_s.flags, f_shut_write,
+                                          std::memory_order_acq_rel) &
+            f_shut_read)
+            this->clear();
     }
 
     void set_sock_or_pipe() { _s.so = 1; }
@@ -84,7 +91,7 @@ class HookCtx {
             uint8 nb;       // non_blocking
             uint8 so;       // socket or pipe fd
             uint8 nb_mark;  // non_blocking mark
-            uint8 flags;    // atomic
+            uint8 flags;    //
             uint16 recv_timeout;
             uint16 send_timeout;
         } _s;
@@ -1344,7 +1351,7 @@ static bool init_hook() {
     return true;
 }
 static bool _dummy = _init_hook() && init_hook();
-void hook_sleep(bool x) { atomic_store(&g_hook.hook_sleep, x, mo_relaxed); }
+void hook_sleep(bool x) { std::atomic_store_explicit((std::atomic_bool*)&g_hook.hook_sleep, x, std::memory_order_relaxed); }
 
 // static int g_nifty_counter;
 // HookInitializer::HookInitializer() {

@@ -1,13 +1,19 @@
 #include "benchmark.h"
 #include "co/all.h"
-
+// #include <stdatomic.h>
+#include <atomic>
 
 BM_group(atomic) {
     int i = 0;
 
-    BM_add(++)(co::atomic_inc(&i););
+    // BM_add(++)(::atomic_fetch_add((::atomic_int*)&i, 1););
 
-    BM_add(--)(co::atomic_dec(&i););
+    // BM_add(--)(::atomic_fetch_sub((::atomic_int*)&i, 1););
+
+    
+    BM_add(++)(reinterpret_cast<std::atomic_int*>(&i)->fetch_add(1););
+
+    BM_add(--)(reinterpret_cast<std::atomic_int*>(&i)->fetch_sub(1););
 }
 
 BM_group(rand) {

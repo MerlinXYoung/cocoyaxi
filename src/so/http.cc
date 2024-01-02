@@ -1,5 +1,6 @@
 #include "./http.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <mutex>
 
@@ -650,15 +651,15 @@ class ServerImpl {
     void on_connection(tcp::Connection conn);
 
     void exit() {
-        co::atomic_store(&_stopped, true);
+        _stopped.store(true);
         _serv.exit();
     }
 
-    bool started() const { return _started; }
+    bool started() const { return _started.load(std::memory_order_relaxed); }
 
   private:
-    bool _started;
-    bool _stopped;
+    std::atomic_bool _started;
+    std::atomic_bool _stopped;
     tcp::Server _serv;
     std::function<void(const Req&, Res&)> _on_req;
 };
@@ -688,7 +689,7 @@ void Server::exit() { ((ServerImpl*)_p)->exit(); }
 
 void ServerImpl::start(const char* ip, int port, const char* key, const char* ca) {
     CHECK(_on_req != NULL) << "req callback not set..";
-    co::atomic_store(&_started, true, co::mo_relaxed);
+    _started.store(true);
     _serv.on_connection(&ServerImpl::on_connection, this);
     _serv.on_exit([this]() { delete this; });
     _serv.start(ip, port, key, ca);

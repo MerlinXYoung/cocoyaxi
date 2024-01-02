@@ -1,13 +1,14 @@
 #pragma once
 
-#include "def.h"
 #include <functional>
+
+#include "def.h"
 
 namespace tcp {
 
 /**
- * TCP connection for tcp::Server 
- *   - An object of tcp::Connection will be created by tcp::Server if a connection 
+ * TCP connection for tcp::Server
+ *   - An object of tcp::Connection will be created by tcp::Server if a connection
  *     was accepted. DO NOT create tcp::Connection by yourself.
  *   - If tcp::Server is a SSL server, data will be transfered by SSL.
  */
@@ -29,27 +30,27 @@ struct __coapi Connection final {
 
     /**
      * recv using co::recv or ssl::recv
-     * 
-     * @return  >0 on success, -1 on timeout or error, 0 will be returned if the 
+     *
+     * @return  >0 on success, -1 on timeout or error, 0 will be returned if the
      *          peer closed the connection.
      */
-    int recv(void* buf, int n, int ms=-1);
+    int recv(void* buf, int n, int ms = -1);
 
     /**
      * recv n bytes using co::recvn or ssl::recvn
-     * 
-     * @return  n on success, -1 on timeout or error, 0 will be returned if the 
+     *
+     * @return  n on success, -1 on timeout or error, 0 will be returned if the
      *          peer closed the connection.
      */
-    int recvn(void* buf, int n, int ms=-1);
+    int recvn(void* buf, int n, int ms = -1);
 
     /**
-     * send n bytes using co::send or ssl::send 
+     * send n bytes using co::send or ssl::send
      *   - If use SSL, this method may return 0 on error.
-     * 
+     *
      * @return  n on success, <=0 on timeout or error.
      */
-    int send(const void* buf, int n, int ms=-1);
+    int send(const void* buf, int n, int ms = -1);
 
     /**
      * close the connection
@@ -70,7 +71,7 @@ struct __coapi Connection final {
 
     /**
      * get error message of the last I/O operation
-     *   - If an error occured in send() or recv(), this method can be called to 
+     *   - If an error occured in send() or recv(), this method can be called to
      *     get the error message.
      */
     const char* strerror() const;
@@ -82,10 +83,10 @@ struct __coapi Connection final {
 };
 
 /**
- * TCP server based on coroutine 
- *   - Support both ipv4 and ipv6. 
+ * TCP server based on coroutine
+ *   - Support both ipv4 and ipv6.
  *   - Support ssl (openssl 1.1.0+ required).
- *   - One coroutine per connection. 
+ *   - One coroutine per connection.
  */
 class __coapi Server final {
   public:
@@ -103,7 +104,7 @@ class __coapi Server final {
      * @param f  a pointer to a method in class T.
      * @param o  a pointer to an object of class T.
      */
-    template<typename T>
+    template <typename T>
     Server& on_connection(void (T::*f)(Connection), T* o) {
         return this->on_connection(std::bind(f, o, std::placeholders::_1));
     }
@@ -127,13 +128,13 @@ class __coapi Server final {
      * @param key   path of ssl private key file.
      * @param ca    path of ssl certificate file.
      */
-    void start(const char* ip, int port, const char* key=0, const char* ca=0);
+    void start(const char* ip, int port, const char* key = 0, const char* ca = 0);
 
     /**
      * exit the server gracefully
-     *   - Once `exit()` was called, the listening socket will be closed, and new 
+     *   - Once `exit()` was called, the listening socket will be closed, and new
      *     connections will not be accepted.
-     *   - NOTE: The server will not close previously established connections. To 
+     *   - NOTE: The server will not close previously established connections. To
      *     close the connections, see the example in test/tcp2.cc.
      */
     void exit();
@@ -145,34 +146,34 @@ class __coapi Server final {
 };
 
 /**
- * TCP client based on coroutine 
- *   - Support both ipv4 and ipv6. 
+ * TCP client based on coroutine
+ *   - Support both ipv4 and ipv6.
  *   - Support ssl (openssl 1.1.0+ required).
- *   - One client corresponds to one connection. 
- * 
- *   - It MUST be used in a coroutine. 
- *   - It is NOT coroutine-safe, DO NOT use a same Client in different coroutines 
- *     at the same time. 
- * 
- *   - It is recommended to put tcp::Client in co::Pool, when lots of connections 
- *     may be established. 
+ *   - One client corresponds to one connection.
+ *
+ *   - It MUST be used in a coroutine.
+ *   - It is NOT coroutine-safe, DO NOT use a same Client in different coroutines
+ *     at the same time.
+ *
+ *   - It is recommended to put tcp::Client in co::Pool, when lots of connections
+ *     may be established.
  */
 class __coapi Client final {
   public:
     /**
      * the constructor
      *   - NOTE: It will not connect to the server immediately here.
-     * 
-     * @param ip       a domain name, or either an ipv4 or ipv6 address of the server. 
-     *                 if ip is NULL or empty, "127.0.0.1" will be used by default. 
-     * @param port     the server port. 
+     *
+     * @param ip       a domain name, or either an ipv4 or ipv6 address of the server.
+     *                 if ip is NULL or empty, "127.0.0.1" will be used by default.
+     * @param port     the server port.
      * @param use_ssl  use ssl if it is true.
      */
-    Client(const char* ip, int port, bool use_ssl=false);
+    Client(const char* ip, int port, bool use_ssl = false);
 
     /**
-     * copy constructor 
-     *   - Copy ip, port, use_ssl from another Client. 
+     * copy constructor
+     *   - Copy ip, port, use_ssl from another Client.
      */
     Client(const Client& c);
 
@@ -186,74 +187,74 @@ class __coapi Client final {
 
     /**
      * recv using co::recv or ssl::recv
-     * 
-     * @return  >0 on success, -1 on timeout or error, 0 will be returned if the 
+     *
+     * @return  >0 on success, -1 on timeout or error, 0 will be returned if the
      *          peer closed the connection.
      */
-    int recv(void* buf, int n, int ms=-1);
+    int recv(void* buf, int n, int ms = -1);
 
     /**
      * recv n bytes using co::recvn or ssl::recvn
-     * 
-     * @return  n on success, -1 on timeout or error, 0 will be returned if the 
+     *
+     * @return  n on success, -1 on timeout or error, 0 will be returned if the
      *          peer closed the connection.
      */
-    int recvn(void* buf, int n, int ms=-1);
+    int recvn(void* buf, int n, int ms = -1);
 
     /**
-     * send n bytes using co::send or ssl::send 
+     * send n bytes using co::send or ssl::send
      *   - If use SSL, this method may return 0 on error.
-     * 
+     *
      * @return  n on success, <=0 on timeout or error.
      */
-    int send(const void* buf, int n, int ms=-1);
+    int send(const void* buf, int n, int ms = -1);
 
     /**
      * @brief bind ip and port to the client socket
-     * 
+     *
      * @return true on success, false otherwise
      */
-    bool bind(const char* ip, int port=0);
+    bool bind(const char* ip, int port = 0);
 
     /**
-     * check whether the connection has been established 
+     * check whether the connection has been established
      */
     bool connected() const noexcept { return _connected; }
 
     /**
-     * connect to the server 
-     *   - It MUST be called in the thread that performed the IO operation. 
+     * connect to the server
+     *   - It MUST be called in the thread that performed the IO operation.
      *
      * @param ms  timeout in milliseconds, -1 for never timeout.
-     * 
+     *
      * @return    true on success, false on timeout or error.
      */
     bool connect(int ms);
 
     /**
-     * close the connection 
-     *   - It can be called anywhere since v2.0.1. 
+     * close the connection
+     *   - It can be called anywhere since v2.0.1.
      */
     void disconnect();
 
-    // close the connection, the same as disconnect 
+    // close the connection, the same as disconnect
     void close() { this->disconnect(); }
 
     // get error string
     const char* strerror() const;
 
-    // get the socket fd 
+    // get the socket fd
     int socket() const noexcept { return _fd; }
 
   private:
     union {
         uint32* _u;
-        char* _p;  // _p+8: port, _p+16: ip
-        void** _s; // _s[-1]: ssl, _s[-2]: ssl_ctx
+        char* _p;   // _p+8: port, _p+16: ip
+        void** _s;  // _s[-1]: ssl, _s[-2]: ssl_ctx
     };
     int _fd;
     bool _use_ssl;
     bool _connected;
 };
 
-} // tcp
+}  // namespace tcp

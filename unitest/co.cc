@@ -1,5 +1,7 @@
 #include "co/co.h"
 
+#include <atomic>
+
 #include "co/cout.h"
 #include "unitest.h"
 
@@ -9,18 +11,24 @@ int gc = 0;
 int gd = 0;
 
 struct TestChan {
-    explicit TestChan(int v = 0) : v(v) {co::atomic_inc(&gc, co::mo_relaxed); }
+    explicit TestChan(int v = 0) : v(v) {
+        reinterpret_cast<std::atomic_int*>(&gc)->fetch_add(1, std::memory_order_relaxed);
+    }
 
-    TestChan(const TestChan& c) : v(c.v) {co::atomic_inc(&gc, co::mo_relaxed); }
+    TestChan(const TestChan& c) : v(c.v) {
+        reinterpret_cast<std::atomic_int*>(&gc)->fetch_add(1, std::memory_order_relaxed);
+    }
 
     TestChan(TestChan&& c) : v(c.v) {
         c.v = 0;
-       co::atomic_inc(&gc, co::mo_relaxed);
+        // co::atomic_inc(&gc, co::mo_relaxed);
+        reinterpret_cast<std::atomic_int*>(&gc)->fetch_add(1, std::memory_order_relaxed);
     }
 
     ~TestChan() {
         if (v) v = 0;
-       co::atomic_inc(&gd, co::mo_relaxed);
+        // co::atomic_inc(&gd, co::mo_relaxed);
+        reinterpret_cast<std::atomic_int*>(&gd)->fetch_add(1, std::memory_order_relaxed);
     }
 
     int v;
@@ -268,13 +276,13 @@ DEF_test(co) {
         wg.add(8);
         for (int i = 0; i < 7; ++i) {
             go([wg, &v]() {
-               co::atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
             });
         }
 
         std::thread([wg, &v]() {
-           co::atomic_inc(&v);
+            reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
             wg.done();
         }).detach();
 
@@ -404,6 +412,7 @@ DEF_test(co) {
         for (int i = 0; i < 12; ++i) {
             go([wg, m, &v]() {
                 co::mutex_guard g(m);
+                DLOG << "a";
                 ++v;
                 wg.done();
             });
@@ -412,6 +421,7 @@ DEF_test(co) {
         for (int i = 0; i < 4; ++i) {
             std::thread([wg, m, &v]() {
                 co::mutex_guard g(m);
+                DLOG << "t";
                 ++v;
                 wg.done();
             }).detach();
@@ -469,16 +479,16 @@ DEF_test(co) {
             wg.add(8);
             for (int i = 0; i < 7; ++i) {
                 go([wg, ev, &v]() {
-                   co::atomic_inc(&v);
+                    reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                     ev.wait();
-                   co::atomic_dec(&v);
+                    reinterpret_cast<std::atomic_int*>(&v)->fetch_sub(1, std::memory_order_relaxed);
                     wg.done();
                 });
             }
             std::thread([wg, ev, &v]() {
-               co::atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 ev.wait();
-               co::atomic_dec(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_sub(1, std::memory_order_relaxed);
                 wg.done();
             }).detach();
 
@@ -491,17 +501,17 @@ DEF_test(co) {
 
             wg.add(2);
             go([wg, ev, &v]() {
-               co::atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 while (v < 2) co::sleep(1);
                 ev.wait(1);
-               co::atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
             });
             std::thread([wg, ev, &v]() {
-               co::atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 while (v < 2) co::sleep(1);
                 ev.wait(1);
-               co::atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
             }).detach();
 

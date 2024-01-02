@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "atomic.h"
+
 #include "fastream.h"
 #include "flag.h"
 

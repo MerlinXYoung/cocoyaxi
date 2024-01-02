@@ -1,7 +1,7 @@
 #pragma once
 
 #include "co/def.h"
-#include "co/atomic.h"
+#include <atomic>
 #include "co/table.h"
 
 namespace co {

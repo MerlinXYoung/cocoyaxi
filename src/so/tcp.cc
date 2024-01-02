@@ -1,5 +1,7 @@
 #include "co/tcp.h"
 
+#include <atomic>
+
 #include "co/co.h"
 #include "co/defer.h"
 #include "co/god.h"
@@ -7,7 +9,6 @@
 #include "co/ssl.h"
 #include "co/str.h"
 #include "co/time.h"
-
 
 DEF_int32(ssl_handshake_timeout, 3000, ">>#2 ssl handshake timeout in ms");
 
@@ -156,13 +157,13 @@ class ServerImpl {
 
     void start(const char* ip, int port, const char* key, const char* ca);
     void exit();
-    bool started() const { return _started; }
+    bool started() const { return _started.load(std::memory_order_relaxed); }
 
-    uint32 conn_num() const { return co::atomic_load(&_count, co::mo_relaxed) - 1; }
-    uint32 ref() { return co::atomic_inc(&_count, co::mo_relaxed); }
+    uint32 conn_num() const { return _count.load(std::memory_order_relaxed) - 1; }
+    uint32 ref() { return _count.fetch_add(1, std::memory_order_relaxed) + 1; }
 
     void unref() {
-        if (co::atomic_dec(&_count, co::mo_acq_rel) == 0) {
+        if ((_count.fetch_sub(1) - 1) == 0) {
             if (_exit_cb) _exit_cb();
             delete this;
         }
@@ -177,15 +178,15 @@ class ServerImpl {
   private:
     fastring _ip;
     uint16 _port;
-    bool _started;
-    uint32 _count;  // refcount
+    std::atomic_bool _started;
+    std::atomic_uint32_t _count;  // refcount
     sock_t _fd;
     sock_t _connfd;
     std::function<void(Connection)> _conn_cb;
     std::function<void()> _exit_cb;
     std::function<void(sock_t)> _on_sock;
     void* _ssl_ctx;
-    int _status;
+    std::atomic_int _status;
     int _addrlen;
     union {
         struct sockaddr_in v4;
@@ -214,18 +215,20 @@ void ServerImpl::start(const char* ip, int port, const char* key, const char* ca
 
         _on_sock = std::bind(&ServerImpl::on_ssl_connection, this, std::placeholders::_1);
         this->ref();
-        co::atomic_store(&_started, true, co::mo_relaxed);
+
+        _started.store(true, std::memory_order_relaxed);
         go(&ServerImpl::loop, this);
     } else {
         _on_sock = std::bind(&ServerImpl::on_tcp_connection, this, std::placeholders::_1);
         this->ref();
-        co::atomic_store(&_started, true, co::mo_relaxed);
+        _started.store(true, std::memory_order_relaxed);
         go(&ServerImpl::loop, this);
     }
 }
 
 void ServerImpl::exit() {
-    int status = co::atomic_cas(&_status, 0, 1);
+    int status = 0;  // co::atomic_cas(&_status, 0, 1);
+    _status.compare_exchange_strong(status, 1);
     if (status == 2) return;  // already stopped
 
     if (status == 0) {
@@ -233,7 +236,7 @@ void ServerImpl::exit() {
         if (status != 2) go(&ServerImpl::stop, this);
     }
 
-    while (_status != 2) sleep::ms(1);
+    while (_status.load(std::memory_order_relaxed) != 2) sleep::ms(1);
 }
 
 void ServerImpl::stop() {
@@ -280,7 +283,7 @@ void ServerImpl::loop() {
         _addrlen = sizeof(_addr);
         _connfd = co::accept(_fd, &_addr, &_addrlen);
 
-        if (unlikely(_status == 1)) {
+        if (unlikely(_status.load(std::memory_order_relaxed) == 1)) {
             co::reset_tcp_socket(_connfd);
             break;
         }
@@ -300,7 +303,7 @@ void ServerImpl::loop() {
     LOG << "server stopped: " << _ip << ':' << _port;
     co::close(_fd);
     _fd = (sock_t)-1;
-    co::atomic_store(&_status, 2);
+    _status.store(2);
     this->unref();
 }
 
@@ -388,12 +391,12 @@ Client::Client(const char* ip, int port, bool use_ssl)
 }
 
 Client::Client(const Client& c) : _u(c._u), _fd(-1), _use_ssl(c._use_ssl), _connected(false) {
-    if (_u) co::atomic_inc(_u, co::mo_relaxed);
+    if (_u) std::atomic_fetch_add_explicit((std::atomic_uint32_t*)_u, 1, std::memory_order_relaxed);
 }
 
 Client::~Client() {
     this->close();
-    if (_u && co::atomic_dec(_u, co::mo_acq_rel) == 0) {
+    if (_u && std::atomic_fetch_sub_explicit((std::atomic_uint32_t*)_u,1, std::memory_order_acq_rel) == 1) {
         ::free(!_use_ssl ? _p : _p - sizeof(void*) * 2);
         _u = 0;
     }

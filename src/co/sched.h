@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #ifdef _MSC_VER
 #pragma warning(disable : 4127)
 #endif
@@ -13,7 +14,6 @@
 #include "co/stl.h"
 #include "co/time.h"
 #include "context/context.h"
-
 
 #if defined(_WIN32)
 #include "epoll/iocp.h"
@@ -46,7 +46,7 @@ enum state_t : uint8 {
 struct waitx_t : co::clink {
     Coroutine* co;
     union {
-        uint8 state;
+        std::atomic_uint8_t state;
         void* dummy;
     };
 };
@@ -382,7 +382,7 @@ class Sched {
     }
 
     // cputime of this scheduler (us)
-    int64 cputime() { return atomic_load(&_cputime, mo_relaxed); }
+    int64 cputime() { return _cputime.load(std::memory_order_relaxed); }
 
     // start the scheduler thread
     void start() { std::thread(&Sched::loop, this).detach(); }
@@ -435,14 +435,14 @@ class Sched {
 
   private:
     union {
-        int64 _cputime;
+        std::atomic_int64_t _cputime;
         char _c0[L1_CACHE_LINE_SIZE];
     };
     union {
         struct {
             co::sync_event ev;
             Epoll* epoll;
-            bool stopped;
+            std::atomic_bool stopped;
         } _x;
         char _c1[L1_CACHE_LINE_SIZE];
     };
@@ -478,8 +478,10 @@ class SchedManager {
     co::vector<Sched*> _scheds;
 };
 
-static bool g_is_active;
-inline bool& is_active() { return g_is_active; }
+inline std::atomic_bool& is_active() {
+    static std::atomic_bool _is_active;
+    return _is_active;
+}
 
 extern __thread Sched* gSched;
 

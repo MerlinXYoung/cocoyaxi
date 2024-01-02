@@ -1,5 +1,7 @@
 #include "co/rpc.h"
 
+#include <atomic>
+
 #include "./http.h"
 #include "co/co.h"
 #include "co/fastream.h"
@@ -66,7 +68,7 @@ class ServerImpl {
 
     void start(const char* ip, int port, const char* url, const char* key, const char* ca) {
         _url = url;
-        co::atomic_store(&_started, true, co::mo_relaxed);
+        _started.store(true, std::memory_order_relaxed);
         _tcp_serv.on_connection(&ServerImpl::on_connection, this);
         _tcp_serv.on_exit([this]() { delete this; });
         _tcp_serv.start(ip, port, key, ca);
@@ -75,7 +77,7 @@ class ServerImpl {
     bool started() const { return _started; }
 
     void exit() {
-        co::atomic_store(&_stopped, true, co::mo_relaxed);
+        _stopped.store(true, std::memory_order_relaxed);
         _tcp_serv.exit();
     }
 
@@ -83,8 +85,8 @@ class ServerImpl {
 
   private:
     tcp::Server _tcp_serv;
-    bool _started;
-    bool _stopped;
+    std::atomic_bool _started;
+    std::atomic_bool _stopped;
     co::hash_map<const char*, std::shared_ptr<Service>> _services;
     co::hash_map<const char*, Service::Fun> _methods;
     fastring _url;
@@ -409,9 +411,7 @@ class ClientImpl {
     bool connect();
 };
 
-Client::Client(const char* ip, int port, bool use_ssl) {
-    _p = new ClientImpl(ip, port, use_ssl);
-}
+Client::Client(const char* ip, int port, bool use_ssl) { _p = new ClientImpl(ip, port, use_ssl); }
 
 Client::Client(const Client& c) { _p = new ClientImpl(*(ClientImpl*)c._p); }
 

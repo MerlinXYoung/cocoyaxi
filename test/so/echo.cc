@@ -1,3 +1,4 @@
+#include <atomic>
 #include "co/all.h"
 
 DEF_string(h, "127.0.0.1", "server ip");
@@ -28,7 +29,7 @@ void conn_cb(tcp::Connection conn) {
     }
 }
 
-bool g_stop = false;
+std::atomic_bool g_stop{false};
 struct Count {
     uint32 r;
     uint32 s;
@@ -48,7 +49,7 @@ void client_fun(int i) {
     fastring buf(FLG_l, '\0');
     auto& count = g_count[i];
 
-    while (!g_stop) {
+    while (!g_stop.load(std::memory_order_relaxed)) {
         int r = c.send(buf.data(), FLG_l);
         if (r <= 0) {
             break;
@@ -81,7 +82,8 @@ int main(int argc, char** argv) {
         g_wg.add(FLG_c);
         go([]() {
             co::sleep(FLG_t * 1000);
-            co::atomic_store(&g_stop, true);
+            // co::atomic_store(&g_stop, true);
+            g_stop.store(true);
         });
         for (int i = 0; i < FLG_c; ++i) {
             go(client_fun, i);

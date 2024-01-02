@@ -1,5 +1,7 @@
 #include "co/log.h"
 
+#include <atomic>
+
 #include "../co/hook.h"
 #include "co/co.h"
 #include "co/fs.h"
@@ -44,9 +46,10 @@ DEF_bool(log_compress, false, ">>#0 if true, compress rotated log files with xz"
 
 // When this value is true, the above flags should have been initialized,
 // and we are safe to start the logging thread.
-static bool g_init_done;
+static std::atomic_bool g_init_done;
 static bool g_dummy = []() {
-    co::atomic_store(&g_init_done, true, co::mo_release);
+    // co::atomic_store(&g_init_done, true, co::mo_release);
+    g_init_done.store(true, std::memory_order_release);
     return false;
 }();
 
@@ -68,7 +71,7 @@ struct Mod {
     LogFile* log_fatal;
     Logger* logger;
     ExceptHandler* except_handler;
-    bool check_failed;
+    std::atomic_bool check_failed;
 };
 
 inline Mod& mod() {
@@ -442,7 +445,7 @@ class Logger {
     co::sync_event _log_event;
     LogTime& _time;
     LogFile& _file;
-    int _stop;  // -2: init, -1: starting, 0: running, 1: stopping, 2: stopped, 3: final
+    std::atomic_int _stop;  // -2: init, -1: starting, 0: running, 1: stopping, 2: stopped, 3: final
 };
 
 Logger::Logger(LogTime* t, LogFile* f)
@@ -455,7 +458,10 @@ Logger::Logger(LogTime* t, LogFile* f)
 }
 
 bool Logger::start() {
-    if (co::atomic_bool_cas(&_stop, -2, -1)) {
+    // if (co::atomic_bool_cas(&_stop, -2, -1)) {
+    decltype(_stop)::value_type stop = -2;
+    if (_stop.compare_exchange_strong(stop, -1, std::memory_order_seq_cst,
+                                      std::memory_order_seq_cst)) {
         do {
             // ensure max_log_buffer_size >= 1M, max_log_size >= 256
             auto& bs = FLG_max_log_buffer_size;
@@ -476,10 +482,10 @@ bool Logger::start() {
             }
         } while (0);
 
-        co::atomic_store(&_stop, 0);
+        _stop.store(0);
         std::thread(&Logger::thread_fun, this).detach();
     } else {
-        while (atomic_load(&_stop, co::mo_relaxed) < 0) {
+        while (_stop.load(std::memory_order_relaxed) < 0) {
             sleep::ms(1);
         }
     }
@@ -489,16 +495,18 @@ bool Logger::start() {
 // if signal_safe is true, try to call only async-signal-safe api in this function
 // according to:  http://man7.org/linux/man-pages/man7/signal-safety.7.html
 void Logger::stop(bool signal_safe) {
-    int s = co::atomic_cas(&_stop, 0, 1);
-    if (s < 0) return;  // thread not started
-    if (s == 0) {
+    decltype(_stop)::value_type stop = 0;
+    _stop.compare_exchange_strong(stop, 1);
+    // int s = co::atomic_cas(&_stop, 0, 1);
+    if (stop < 0) return;  // thread not started
+    if (stop == 0) {
         if (!signal_safe) _log_event.signal();
 #if defined(_WIN32) && defined(BUILDING_CO_SHARED)
         // the thread may not respond in dll, wait at most 64ms here
         co::Timer t;
-        while (_stop != 2 && t.ms() < 64) signal_safe_sleep(1);
+        while (_stop.load(std::memory_order_relaxed) != 2 && t.ms() < 64) signal_safe_sleep(1);
 #else
-        while (_stop != 2) signal_safe_sleep(1);
+        while (_stop.load(std::memory_order_relaxed) != 2) signal_safe_sleep(1);
 #endif
 
         do {
@@ -530,20 +538,21 @@ void Logger::stop(bool signal_safe) {
             }
         }
 
-        co::atomic_swap(&_stop, 3);
+        // co::atomic_swap(&_stop, 3);
+        _stop.exchange(3);
     } else {
         while (_stop != 3) signal_safe_sleep(1);
     }
 }
 
 std::once_flag g_flag;
-static bool g_thread_started;
+static std::atomic_bool g_thread_started;
 
 void Logger::push_level_log(char* s, size_t n) {
     if (unlikely(!g_thread_started)) {
         std::call_once(g_flag, [this]() {
             this->start();
-            co::atomic_store(&g_thread_started, true);
+            g_thread_started.store(true);
         });
     }
     if (unlikely(n > FLG_max_log_size)) {
@@ -578,7 +587,7 @@ void Logger::push_topic_log(const char* topic, char* s, size_t n) {
     if (unlikely(!g_thread_started)) {
         std::call_once(g_flag, [this]() {
             this->start();
-            co::atomic_store(&g_thread_started, true);
+            g_thread_started.store(true);
         });
     }
     if (unlikely(n > FLG_max_log_size)) {
@@ -619,7 +628,7 @@ void Logger::push_fatal_log(char* s, size_t n) {
     if (!FLG_cout) fwrite(s, 1, n, stderr);
     if (_file.open(NULL, fatal)) _file.write(s, n);
 
-    co::atomic_store(&mod().check_failed, true);
+    mod().check_failed.store(true);
     abort();
 }
 
@@ -642,7 +651,8 @@ void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size
 void Logger::thread_fun() {
     bool signaled;
     int64 sec;
-    while (co::atomic_load(&g_init_done, co::mo_acquire) != true) _log_event.wait(8);
+    // while (co::atomic_load(&g_init_done, co::mo_acquire) != true) _log_event.wait(8);
+    while (g_init_done.load(std::memory_order_acquire) != true) _log_event.wait(8);
     while (!_stop) {
         signaled = _log_event.wait(FLG_log_flush_ms);
         if (_stop) break;
@@ -716,7 +726,8 @@ void Logger::thread_fun() {
         if (signaled) _log_event.reset();
     }
 
-    co::atomic_swap(&_stop, 2);
+    // co::atomic_swap(&_stop, 2);
+    _stop.exchange(2);
 }
 
 #ifdef _WIN32
@@ -925,13 +936,13 @@ void ExceptHandler::handle_signal(int sig) {
     auto f = &ExceptHandler::write_fatal_message;
     auto& s = *m.stream;
     s.clear();
-    if (!m.check_failed) {
+    if (!m.check_failed.load(std::memory_order_relaxed)) {
         s << 'F' << m.log_time->get() << "] ";
     }
 
     switch (sig) {
         case SIGABRT:
-            if (!m.check_failed) s << "SIGABRT: aborted\n";
+            if (!m.check_failed.load(std::memory_order_relaxed)) s << "SIGABRT: aborted\n";
             break;
 #ifndef _WIN32
         case SIGSEGV:
@@ -958,7 +969,9 @@ void ExceptHandler::handle_signal(int sig) {
     }
 
     if (_stack_trace)
-        _stack_trace->dump_stack((void*)f, m.check_failed ? 7 : (sig == SIGABRT ? 4 : 3));
+        _stack_trace->dump_stack((void*)f, m.check_failed.load(std::memory_order_relaxed)
+                                               ? 7
+                                               : (sig == SIGABRT ? 4 : 3));
 
     os::signal(sig, _old_handlers[sig]);
     raise(sig);

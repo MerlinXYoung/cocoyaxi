@@ -1,10 +1,11 @@
+#include <atomic>
 #ifdef __linux__
 #include "epoll.h"
 #include "../close.h"
 
 namespace co {
 
-Epoll::Epoll(int sched_id) : _signaled(0), _sched_id(sched_id) {
+Epoll::Epoll(int sched_id) : _signaled(false), _sched_id(sched_id) {
     _ep = epoll_create(1024);
     CHECK_NE(_ep, -1) << "epoll create error: " << co::strerror();
     co::set_cloexec(_ep);
@@ -144,7 +145,8 @@ void Epoll::handle_ev_pipe() {
             break;
         }
     }
-    atomic_store(&_signaled, 0, mo_release);
+    // atomic_store(&_signaled, 0, mo_release);
+    _signaled.store(true, std::memory_order_release);
 }
 
 } // co

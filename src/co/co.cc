@@ -1,7 +1,7 @@
-#include "co/atomic.h"
+#include <atomic>
+
 #include "co/stl.h"
 #include "sched.h"
-
 
 #ifndef _WIN32
 #ifdef __linux__
@@ -162,8 +162,8 @@ class mutex_impl {
         static const int N = 12;
         struct _memb : co::clink {
             size_t size;
-            uint8 rx;
             uint8 wx;
+            uint8 rx;
             void* q[];
         };
 
@@ -232,14 +232,14 @@ class mutex_impl {
     void unlock();
     bool try_lock();
 
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
+    void ref() { _refn.fetch_add(1, std::memory_order_relaxed); }
+    uint32 unref() { return --_refn; }
 
   private:
     xx::mutex _m;
     xx::cv_t _cv;
     queue _wq;
-    atomic_uint32_t _refn;
+    std::atomic_uint32_t _refn;
     uint8 _lock;
     bool _has_cv;
 };
@@ -314,9 +314,9 @@ class event_impl {
     void signal();
     void reset();
 
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
-    atomic_uint32_t* wg() noexcept { return &_wg; }
+    inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
+    inline uint32 unref() noexcept { return --_refn; }
+    inline std::atomic_uint32_t& wg() noexcept { return _wg; }
 
   private:
     xx::mutex _m;
@@ -324,8 +324,8 @@ class event_impl {
     co::clist _wc;
     uint32 _wt;
     uint32 _sn;
-    atomic_uint32_t _refn;
-    atomic_uint32_t _wg;  // for wait group
+    std::atomic_uint32_t _refn;
+    std::atomic_uint32_t _wg;  // for wait group
     bool _signaled;
     const bool _manual_reset;
     bool _has_cv;
@@ -406,7 +406,9 @@ void event_impl::signal() {
                 do {
                     waitx_t* const w = (waitx_t*)h;
                     h = h->next;
-                    if (atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+                    decltype(w->state)::value_type state(st_wait);
+                    if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                         std::memory_order_relaxed)) {
                         has_wc = true;
                         w->co->sched->add_ready_task(w->co);
                         break;
@@ -431,7 +433,9 @@ void event_impl::signal() {
     while (h) {
         waitx_t* const w = (waitx_t*)h;
         h = h->next;
-        if (atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+        decltype(w->state)::value_type state(st_wait);
+        if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                             std::memory_order_relaxed)) {
             w->co->sched->add_ready_task(w->co);
         } else { /* timeout */
             ::free(w);
@@ -534,17 +538,20 @@ class pipe_impl {
     void write(void* p, int v);
     bool done() const { return g_done; }
     void close();
-    bool is_closed() const { return atomic_load(&_closed, mo_relaxed); }
+    bool is_closed() const { return _closed.load(std::memory_order_relaxed); }
 
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
+    void ref() { _refn.fetch_add(1, std::memory_order_relaxed); }
+    uint32 unref() {
+        return --_refn;  //_refn.fetch_sub(1, std::memory_order_acq_rel)-1; atomic_dec(&_refn,
+                         // std::memory_order_acq_rel);
+    }
 
     struct waitx : co::clink {
         Coroutine* co;
         union {
-            atomic_uint8_t state;
+            std::atomic_uint8_t state;
             struct {
-                atomic_uint8_t state;
+                std::atomic_uint8_t state;
                 uint8 done;  // 1: ok, 2: channel closed
                 uint8 v;     // 0: cp, 1: mv, 2: need destruct the object in buf
             } x;
@@ -589,9 +596,9 @@ class pipe_impl {
     co::clist _wq;
     uint32 _rx;  // read pos
     uint32 _wx;  // write pos
-    atomic_uint32_t _refn;
+    std::atomic_uint32_t _refn;
     uint8 _full;
-    atomic_uint8_t _closed;
+    std::atomic_uint8_t _closed;
 };
 
 inline void pipe_impl::_read_block(void* p) {
@@ -625,8 +632,10 @@ void pipe_impl::read(void* p) {
 
         while (!_wq.empty()) {
             waitx* w = (waitx*)_wq.pop_front();  // wait for write
+            decltype(w->state)::value_type state(st_wait);
             if (_ms == (uint32)-1 ||
-                atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+                w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
                 this->_write_block(w->buf, w->x.v & 1);
                 if (w->x.v & 2) _d(w->buf);
                 w->x.done = 1;
@@ -699,7 +708,9 @@ void pipe_impl::read(void* p) {
             } else {
                 r = xx::cv_wait(&_cv, _m.native_handle(), _ms);
             }
-            if (r || !atomic_bool_cas(&w->state, st_wait, st_timeout, mo_relaxed, mo_relaxed)) {
+            decltype(w->state)::value_type state(st_wait);
+            if (r || !w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                       std::memory_order_relaxed)) {
                 const auto x = w->x.done;
                 if (x) {
                     _m.unlock();
@@ -741,8 +752,10 @@ void pipe_impl::write(void* p, int v) {
     if (!_full) {
         while (!_wq.empty()) {
             waitx* w = (waitx*)_wq.pop_front();  // wait for read
+            decltype(w->state)::value_type state(st_wait);
             if (_ms == (uint32)-1 ||
-                atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+                w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
                 w->x.done = 1;
                 if (w->co) {
                     if (w->x.v & 2) _d(w->buf);
@@ -808,7 +821,9 @@ void pipe_impl::write(void* p, int v) {
             } else {
                 r = xx::cv_wait(&_cv, _m.native_handle(), _ms);
             }
-            if (r || !atomic_bool_cas(&w->state, st_wait, st_timeout, mo_relaxed, mo_relaxed)) {
+            decltype(w->state)::value_type state(st_wait);
+            if (r || !w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                       std::memory_order_relaxed)) {
                 if (w->x.done) {
                     assert(w->x.done == 1);
                     _m.unlock();
@@ -830,13 +845,19 @@ done:
 }
 
 void pipe_impl::close() {
-    const auto x = atomic_cas(&_closed, 0, 1, mo_relaxed, mo_relaxed);
-    if (x == 0) {
+    decltype(_closed)::value_type closed{0};
+    _closed.compare_exchange_strong(closed, 1, std::memory_order_relaxed,
+                                    std::memory_order_relaxed);
+    // const auto x = atomic_cas(&_closed, 0, 1, std::memory_order_relaxed,
+    // std::memory_order_relaxed);
+    if (closed == 0) {
         xx::mutex_guard g(_m);
         if (_rx == _wx && !_full) { /* empty */
             while (!_wq.empty()) {
                 waitx* w = (waitx*)_wq.pop_front();  // wait for read
-                if (atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+                decltype(w->state)::value_type state(st_wait);
+                if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
                     w->x.done = 2;  // channel closed
                     if (w->co) {
                         w->co->sched->add_ready_task(w->co);
@@ -848,10 +869,10 @@ void pipe_impl::close() {
                 }
             }
         }
-        atomic_store(&_closed, 2, mo_relaxed);
+        _closed.store(2, std::memory_order_relaxed);
 
-    } else if (x == 1) {
-        while (atomic_load(&_closed, mo_relaxed) != 2) co::sleep(1);
+    } else if (closed == 1) {
+        while (_closed.load(std::memory_order_relaxed) != 2) co::sleep(1);
     }
 }
 
@@ -915,14 +936,14 @@ class pool_impl {
         ::free(_pools);
     }
 
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
+    inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
+    inline uint32 unref() noexcept { --_refn; }
 
   private:
     V* _pools;
     size_t _size;
     size_t _maxcap;
-    atomic_uint32_t _refn;
+    std::atomic_uint32_t _refn;
     std::function<void*()> _ccb;
     std::function<void(void*)> _dcb;
 };
@@ -1069,12 +1090,14 @@ wait_group::~wait_group() {
 }
 
 void wait_group::add(uint32 n) const {
-    atomic_add(god::cast<xx::event_impl*>(_p)->wg(), n, mo_relaxed);
+    god::cast<xx::event_impl*>(_p)->wg().fetch_add(n /*, std::memory_order_relaxed*/);
+    DLOG << "load:" << god::cast<xx::event_impl*>(_p)->wg().load();
 }
 
 void wait_group::done() const {
     const auto e = god::cast<xx::event_impl*>(_p);
-    const uint32 x = atomic_dec(e->wg(), mo_acq_rel);
+    const uint32 x = --e->wg();
+    DLOG << "x:" << x;
     CHECK(x != (uint32)-1);
     if (x == 0) e->signal();
 }

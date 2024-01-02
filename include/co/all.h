@@ -1,6 +1,5 @@
 #pragma once
 
-#include "atomic.h"
 #include "byte_order.h"
 #include "closure.h"
 #include "co.h"
