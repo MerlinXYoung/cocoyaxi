@@ -61,9 +61,9 @@ Sched::~Sched() {
     _bufs.clear();
     ::free(_stack);
 }
-
+#if defined(_WIN32) && defined(BUILDING_CO_SHARED)
 static std::atomic_int g_cnt{0};
-
+#endif
 void Sched::stop() {
     if (!_x.stopped.exchange(true)) {
         _x.epoll->signal();

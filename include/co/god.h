@@ -106,49 +106,6 @@ inline void copy(void* dst, const void* src) {
 template <>
 inline void copy<0>(void*, const void*) {}
 
-// x = *p; *p = v; return x;
-template <typename T, typename V>
-inline T swap(T* p, V v) {
-    const T x = *p;
-    *p = (T)v;
-    return x;
-}
-
-template <typename T, typename V>
-inline T fetch_add(T* p, V v) {
-    const T x = *p;
-    *p += v;
-    return x;
-}
-
-template <typename T, typename V>
-inline T fetch_sub(T* p, V v) {
-    const T x = *p;
-    *p -= v;
-    return x;
-}
-
-template <typename T, typename V>
-inline T fetch_and(T* p, V v) {
-    const T x = *p;
-    *p &= (T)v;
-    return x;
-}
-
-template <typename T, typename V>
-inline T fetch_or(T* p, V v) {
-    const T x = *p;
-    *p |= (T)v;
-    return x;
-}
-
-template <typename T, typename V>
-inline T fetch_xor(T* p, V v) {
-    const T x = *p;
-    *p ^= (T)v;
-    return x;
-}
-
 template <bool C, typename T = void>
 using if_t = typename std::enable_if<C, T>::type;
 
@@ -216,17 +173,10 @@ constexpr bool is_scalar() {
     return std::is_scalar<T>::value;
 }
 
-#if defined(__GNUC__) && __GNUC__ < 5
-template <typename T>
-constexpr bool is_trivially_copyable() {
-    return __has_trivial_copy(T);
-}
-#else
 template <typename T>
 constexpr bool is_trivially_copyable() {
     return std::is_trivially_copyable<T>::value;
 }
-#endif
 
 template <typename T>
 constexpr bool is_trivially_destructible() {

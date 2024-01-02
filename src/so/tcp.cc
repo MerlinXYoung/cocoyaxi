@@ -26,8 +26,8 @@ class Conn {
     virtual int close(int ms) = 0;
     virtual int reset(int ms) = 0;
 
-    virtual int socket() = 0;
-    virtual const char* strerror() = 0;
+    virtual int socket() const noexcept = 0;
+    virtual const char* strerror() const noexcept = 0;
 };
 
 class TcpConn : public Conn {
@@ -42,18 +42,22 @@ class TcpConn : public Conn {
     virtual int send(const void* buf, int n, int ms) { return co::send(_sock, buf, n, ms); }
 
     virtual int close(int ms) {
-        const int sock = god::swap(&_sock, -1);
+        // const int sock = god::swap(&_sock, -1);
+        const int sock = _sock;
+        _sock = -1;
         return sock != -1 ? co::close(sock, ms) : 0;
     }
 
     virtual int reset(int ms) {
-        const int sock = god::swap(&_sock, -1);
+        // const int sock = god::swap(&_sock, -1);
+        const int sock = _sock;
+        _sock = -1;
         return sock != -1 ? co::reset_tcp_socket(sock, ms) : 0;
     }
 
-    virtual int socket() { return _sock; }
+    virtual int socket() const noexcept { return _sock; }
 
-    virtual const char* strerror() { return co::strerror(); }
+    virtual const char* strerror() const noexcept { return co::strerror(); }
 
   private:
     int _sock;
@@ -71,7 +75,8 @@ class SSLConn : public Conn {
     virtual int send(const void* buf, int n, int ms) { return ssl::send(_s, buf, n, ms); }
 
     virtual int close(int ms) {
-        ssl::S* s = god::swap(&_s, nullptr);
+        ssl::S* s = _s;
+        _s = nullptr;
         if (s) {
             int fd = ssl::get_fd(s);
             ssl::shutdown(s);
@@ -82,7 +87,8 @@ class SSLConn : public Conn {
     }
 
     virtual int reset(int ms) {
-        ssl::S* s = god::swap(&_s, nullptr);
+        ssl::S* s = _s;
+        _s = nullptr;
         if (s) {
             int fd = ssl::get_fd(s);
             ssl::free_ssl(s);
@@ -91,9 +97,9 @@ class SSLConn : public Conn {
         return 0;
     }
 
-    virtual int socket() { return _s ? ssl::get_fd(_s) : -1; }
+    virtual int socket() const noexcept { return _s ? ssl::get_fd(_s) : -1; }
 
-    virtual const char* strerror() { return ssl::strerror(_s); }
+    virtual const char* strerror() const noexcept { return ssl::strerror(_s); }
 
   private:
     ssl::S* _s;
@@ -112,7 +118,8 @@ int Connection::recvn(void* buf, int n, int ms) { return ((Conn*)_p)->recvn(buf,
 int Connection::send(const void* buf, int n, int ms) { return ((Conn*)_p)->send(buf, n, ms); }
 
 int Connection::close(int ms) {
-    Conn* p = (Conn*)god::swap(&_p, nullptr);
+    Conn* p = (Conn*)_p;
+    _p = nullptr;
     if (p) {
         int r = p->close(ms);
         delete p;  // this is ok, sizeof TcpConn, SSLConn: < 4k
@@ -122,7 +129,8 @@ int Connection::close(int ms) {
 }
 
 int Connection::reset(int ms) {
-    Conn* p = (Conn*)god::swap(&_p, nullptr);
+    Conn* p = (Conn*)_p;
+    _p = nullptr;
     if (p) {
         int r = p->reset(ms);
         delete p;
@@ -227,7 +235,7 @@ void ServerImpl::start(const char* ip, int port, const char* key, const char* ca
 }
 
 void ServerImpl::exit() {
-    int status = 0;  // co::atomic_cas(&_status, 0, 1);
+    int status = 0;
     _status.compare_exchange_strong(status, 1);
     if (status == 2) return;  // already stopped
 
