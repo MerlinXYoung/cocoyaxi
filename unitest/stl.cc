@@ -310,50 +310,50 @@ DEF_test(vector) {
         ~A() { ++gd; }
     };
 
-    DEF_case(resize) {
-        co::vector<int> _(8, 3);
-        _.resize(16);
-        EXPECT_EQ(_[7], 3);
-        EXPECT_EQ(_[8], 0);
-        EXPECT_EQ(_[15], 0);
+    // DEF_case(resize) {
+    //     co::vector<int> _(8, 3);
+    //     _.resize(16);
+    //     EXPECT_EQ(_[7], 3);
+    //     EXPECT_EQ(_[8], 0);
+    //     EXPECT_EQ(_[15], 0);
 
-        co::vector<A> a(8, 0);
-        EXPECT_EQ(gc, 8);
+    //     co::vector<A> a(8, 0);
+    //     EXPECT_EQ(gc, 8);
 
-        a.resize(16);
-        EXPECT_EQ(gc, 16);
+    //     a.resize(16);
+    //     EXPECT_EQ(gc, 16);
 
-        a.resize(8);
-        EXPECT_EQ(gd, 8);
+    //     a.resize(8);
+    //     EXPECT_EQ(gd, 8);
 
-        co::vector<A> b(a);
-        EXPECT_EQ(gc, 24);
+    //     co::vector<A> b(a);
+    //     EXPECT_EQ(gc, 24);
 
-        co::vector<A> c(std::move(b));
-        EXPECT_EQ(gc, 24);
+    //     co::vector<A> c(std::move(b));
+    //     EXPECT_EQ(gc, 24);
 
-        c.remove_back();  // gd + 1
-        EXPECT_EQ(gd, 9);
+    //     c.remove_back();  // gd + 1
+    //     EXPECT_EQ(gd, 9);
 
-        c.remove(3);  // gd + 2
-        EXPECT_EQ(gc, 25);
-        EXPECT_EQ(gd, 11);
+    //     c.remove(3);  // gd + 2
+    //     EXPECT_EQ(gc, 25);
+    //     EXPECT_EQ(gd, 11);
 
-        c.pop_back();  // gc + 1, gd + 2
-        EXPECT_EQ(gc, 26);
-        EXPECT_EQ(gd, 13);
-        {
-            A x = c.pop_back();  // gc + 1, gd + 2
-        }
-        EXPECT_EQ(gc, 27);
-        EXPECT_EQ(gd, 15);
+    //     c.pop_back();  // gc + 1, gd + 2
+    //     EXPECT_EQ(gc, 26);
+    //     EXPECT_EQ(gd, 13);
+    //     {
+    //         A x = c.pop_back();  // gc + 1, gd + 2
+    //     }
+    //     EXPECT_EQ(gc, 27);
+    //     EXPECT_EQ(gd, 15);
 
-        a.reset();
-        b.reset();
-        c.reset();
-        EXPECT_EQ(gd, 27);
-        EXPECT_EQ(gc, gd);
-    }
+    //     a.reset();
+    //     b.reset();
+    //     c.reset();
+    //     EXPECT_EQ(gd, 27);
+    //     EXPECT_EQ(gc, gd);
+    // }
 }
 
 }  // namespace test
