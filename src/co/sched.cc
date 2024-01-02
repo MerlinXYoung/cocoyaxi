@@ -28,7 +28,7 @@ inline void cleanup_sock() {}
 
 namespace xx {
 
-__thread Sched* gSched = 0;
+thread_local Sched* gSched{nullptr};
 
 Sched::Sched(uint32 id, uint32 sched_num, uint32 stack_num, uint32 stack_size)
     : _cputime(0),

@@ -103,7 +103,7 @@ class Hook {
     Hook() : tb(14, 17), hook_sleep(true) {}
     ~Hook() = default;
 
-    HookCtx* get_hook_ctx(int s) { return s >= 0 ? &tb[s] : NULL; }
+    HookCtx* get_hook_ctx(int s) { return s >= 0 ? &tb[s] : nullptr; }
 
     co::table<HookCtx> tb;
     bool hook_sleep;
@@ -1351,7 +1351,9 @@ static bool init_hook() {
     return true;
 }
 static bool _dummy = _init_hook() && init_hook();
-void hook_sleep(bool x) { std::atomic_store_explicit((std::atomic_bool*)&g_hook.hook_sleep, x, std::memory_order_relaxed); }
+void hook_sleep(bool x) {
+    std::atomic_store_explicit((std::atomic_bool*)&g_hook.hook_sleep, x, std::memory_order_relaxed);
+}
 
 // static int g_nifty_counter;
 // HookInitializer::HookInitializer() {

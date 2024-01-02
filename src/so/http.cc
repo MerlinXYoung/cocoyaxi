@@ -242,7 +242,7 @@ void Client::del(const char* url, const char* data, size_t size) {
     curl_easy_setopt(_ctx->easy, CURLOPT_POSTFIELDS, data);
     curl_easy_setopt(_ctx->easy, CURLOPT_POSTFIELDSIZE, (long)size);
     this->perform();
-    curl_easy_setopt(_ctx->easy, CURLOPT_CUSTOMREQUEST, NULL);
+    curl_easy_setopt(_ctx->easy, CURLOPT_CUSTOMREQUEST, nullptr);
 }
 
 void Client::put(const char* url, const char* path) {
@@ -679,7 +679,9 @@ Server& Server::on_req(std::function<void(const Req&, Res&)>&& f) {
     return *this;
 }
 
-void Server::start(const char* ip, int port) { ((ServerImpl*)_p)->start(ip, port, NULL, NULL); }
+void Server::start(const char* ip, int port) {
+    ((ServerImpl*)_p)->start(ip, port, nullptr, nullptr);
+}
 
 void Server::start(const char* ip, int port, const char* key, const char* ca) {
     ((ServerImpl*)_p)->start(ip, port, key, ca);
@@ -688,7 +690,7 @@ void Server::start(const char* ip, int port, const char* key, const char* ca) {
 void Server::exit() { ((ServerImpl*)_p)->exit(); }
 
 void ServerImpl::start(const char* ip, int port, const char* key, const char* ca) {
-    CHECK(_on_req != NULL) << "req callback not set..";
+    CHECK(_on_req != nullptr) << "req callback not set..";
     _started.store(true);
     _serv.on_connection(&ServerImpl::on_connection, this);
     _serv.on_exit([this]() { delete this; });
@@ -970,7 +972,7 @@ end:
 namespace so {
 
 void easy(const char* root_dir, const char* ip, int port) {
-    return so::easy(root_dir, ip, port, NULL, NULL);
+    return so::easy(root_dir, ip, port, nullptr, nullptr);
 }
 
 void easy(const char* root_dir, const char* ip, int port, const char* key, const char* ca) {

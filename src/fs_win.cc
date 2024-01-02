@@ -19,7 +19,7 @@ inline fastring& cache() {
 const int W = sizeof(wchar_t);
 typedef wchar_t* PWC;
 
-inline int nwc(const char* p) { return MultiByteToWideChar(CP_UTF8, 0, p, -1, NULL, 0); }
+inline int nwc(const char* p) { return MultiByteToWideChar(CP_UTF8, 0, p, -1, nullptr, 0); }
 
 inline void utf82wc(const char* p, wchar_t* w, int n) {
     MultiByteToWideChar(CP_UTF8, 0, p, -1, w, n);
@@ -55,10 +55,10 @@ static void widen(const char* p, const char* q, PWC* x, PWC* y) {
 
 static fastring narrow(const wchar_t* p) {
     fastring s;
-    int n = WideCharToMultiByte(CP_UTF8, 0, p, -1, NULL, 0, NULL, NULL);
+    int n = WideCharToMultiByte(CP_UTF8, 0, p, -1, nullptr, 0, nullptr, nullptr);
     if (n > 0) {
         s.reserve(n);
-        WideCharToMultiByte(CP_UTF8, 0, p, -1, (char*)s.data(), n, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, p, -1, (char*)s.data(), n, nullptr, nullptr);
         s.resize(n - 1);
     }
     return s;
@@ -475,7 +475,7 @@ dir::iterator& dir::iterator::operator++() {
         while ((x = ::FindNextFileW(d->d, &d->e))) {
             if (!is_dot_or_dotdot(d->e.cFileName)) break;
         }
-        if (!x) _p = NULL;
+        if (!x) _p = nullptr;
     }
     return *this;
 }
@@ -489,7 +489,7 @@ dir::iterator dir::begin() const {
         } while ((x = ::FindNextFileW(d->d, &d->e)));
         if (x) return dir::iterator(_p);
     }
-    return dir::iterator(NULL);
+    return dir::iterator(nullptr);
 }
 
 }  // namespace fs

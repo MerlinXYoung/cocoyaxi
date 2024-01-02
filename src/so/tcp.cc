@@ -195,13 +195,13 @@ class ServerImpl {
 };
 
 void ServerImpl::start(const char* ip, int port, const char* key, const char* ca) {
-    CHECK(_conn_cb != NULL) << "connection callback not set..";
+    CHECK(_conn_cb != nullptr) << "connection callback not set..";
     _ip = (ip && *ip) ? ip : "0.0.0.0";
     _port = (uint16)port;
 
     if (key && *key && ca && *ca) {
         _ssl_ctx = ssl::new_server_ctx();
-        CHECK(_ssl_ctx != NULL) << "ssl new server contex error: " << ssl::strerror();
+        CHECK(_ssl_ctx != nullptr) << "ssl new server contex error: " << ssl::strerror();
 
         int r;
         r = ssl::use_private_key_file(_ssl_ctx, key);
@@ -255,9 +255,9 @@ void ServerImpl::loop() {
     do {
         fastring port = str::from(_port);
         struct addrinfo* info = 0;
-        int r = getaddrinfo(_ip.c_str(), port.c_str(), NULL, &info);
+        int r = getaddrinfo(_ip.c_str(), port.c_str(), nullptr, &info);
         CHECK_EQ(r, 0) << "invalid ip address: " << _ip << ':' << _port;
-        CHECK(info != NULL);
+        CHECK(info != nullptr);
 
         _fd = co::tcp_socket(info->ai_family);
         CHECK_NE(_fd, (sock_t)-1) << "create socket error: " << co::strerror();
@@ -319,7 +319,7 @@ void ServerImpl::on_ssl_connection(sock_t fd) {
     co::set_tcp_nodelay(fd);
 
     ssl::S* s = ssl::new_ssl((ssl::C*)_ssl_ctx);
-    if (s == NULL) goto new_ssl_err;
+    if (s == nullptr) goto new_ssl_err;
     if (ssl::set_fd(s, (int)fd) != 1) goto set_fd_err;
     if (ssl::accept(s, FLG_ssl_handshake_timeout) <= 0) goto accept_err;
 
@@ -396,7 +396,8 @@ Client::Client(const Client& c) : _u(c._u), _fd(-1), _use_ssl(c._use_ssl), _conn
 
 Client::~Client() {
     this->close();
-    if (_u && std::atomic_fetch_sub_explicit((std::atomic_uint32_t*)_u,1, std::memory_order_acq_rel) == 1) {
+    if (_u && std::atomic_fetch_sub_explicit((std::atomic_uint32_t*)_u, 1,
+                                             std::memory_order_acq_rel) == 1) {
         ::free(!_use_ssl ? _p : _p - sizeof(void*) * 2);
         _u = 0;
     }
@@ -422,7 +423,7 @@ bool Client::bind(const char* ip, int port) {
     struct addrinfo *srv = 0, *cli = 0;
     defer(if (srv) freeaddrinfo(srv); if (cli) freeaddrinfo(cli););
 
-    int r = getaddrinfo(serv_ip, serv_port, NULL, &srv);
+    int r = getaddrinfo(serv_ip, serv_port, nullptr, &srv);
     if (r != 0) goto err;
 
     CHECK_NOTNULL(srv);
@@ -436,7 +437,7 @@ bool Client::bind(const char* ip, int port) {
 
     {
         fastring s = str::from(port);
-        r = getaddrinfo(ip, s.c_str(), NULL, &cli);
+        r = getaddrinfo(ip, s.c_str(), nullptr, &cli);
         if (r != 0) goto err;
         CHECK_NOTNULL(cli);
         if (co::bind(_fd, cli->ai_addr, (int)cli->ai_addrlen) != 0) goto err;
@@ -456,7 +457,7 @@ bool Client::connect(int ms) {
     struct addrinfo* info = 0;
     defer(if (info) freeaddrinfo(info));
 
-    int r = getaddrinfo(ip, port, NULL, &info);
+    int r = getaddrinfo(ip, port, nullptr, &info);
     if (r != 0) goto end;
 
     CHECK_NOTNULL(info);
@@ -476,8 +477,8 @@ bool Client::connect(int ms) {
 
     co::set_tcp_nodelay(_fd);
     if (_use_ssl) {
-        if ((_s[-2] = ssl::new_client_ctx()) == NULL) goto new_ctx_err;
-        if ((_s[-1] = ssl::new_ssl(_s[-2])) == NULL) goto new_ssl_err;
+        if ((_s[-2] = ssl::new_client_ctx()) == nullptr) goto new_ctx_err;
+        if ((_s[-1] = ssl::new_ssl(_s[-2])) == nullptr) goto new_ssl_err;
         if (ssl::set_fd(_s[-1], _fd) != 1) goto set_fd_err;
         if (ssl::connect(_s[-1], ms) != 1) goto connect_err;
     }

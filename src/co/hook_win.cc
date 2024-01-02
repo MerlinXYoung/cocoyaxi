@@ -98,7 +98,7 @@ class Hook {
     Hook() : tb(14, 17), hook_sleep(true) {}
     ~Hook() = default;
 
-    HookCtx* get_hook_ctx(sock_t s) { return s != INVALID_SOCKET ? &tb[(size_t)s] : NULL; }
+    HookCtx* get_hook_ctx(sock_t s) { return s != INVALID_SOCKET ? &tb[(size_t)s] : nullptr; }
 
     co::table<HookCtx> tb;
     bool hook_sleep;
@@ -933,8 +933,8 @@ int WINAPI hook_WSARecvMsg(SOCKET a0, LPWSAMSG a1, LPDWORD a2, LPWSAOVERLAPPED a
     auto ctx = g_hook.get_hook_ctx(a0);
     const auto sched = co::xx::gSched;
     if (!sched || !ctx || ctx->is_non_blocking() || (ctx->is_overlapped() && (a3 || !a2)) || !a1 ||
-        (a1->name == NULL && a1->namelen != 0) ||
-        (a1->Control.buf == NULL && a1->Control.len != 0)) {
+        (a1->name == nullptr && a1->namelen != 0) ||
+        (a1->Control.buf == nullptr && a1->Control.len != 0)) {
         r = __sys_api(WSARecvMsg)(a0, a1, a2, a3, a4);
         goto end;
     }
@@ -978,8 +978,8 @@ int WINAPI hook_WSASendMsg(SOCKET a0, LPWSAMSG a1, DWORD a2, LPDWORD a3, LPWSAOV
     auto ctx = g_hook.get_hook_ctx(a0);
     const auto sched = co::xx::gSched;
     if (!sched || !ctx || ctx->is_non_blocking() || (ctx->is_overlapped() && (a4 || !a3)) || !a1 ||
-        (a1->name == NULL && a1->namelen != 0) ||
-        (a1->Control.buf == NULL && a1->Control.len != 0)) {
+        (a1->name == nullptr && a1->namelen != 0) ||
+        (a1->Control.buf == nullptr && a1->Control.len != 0)) {
         r = __sys_api(WSASendMsg)(a0, a1, a2, a3, a4, a5);
         goto end;
     }
@@ -1171,11 +1171,11 @@ WSARecvMsg_fp_t get_WSARecvMsg_fp() {
     int r = 0;
     DWORD n = 0;
     GUID guid = WSAID_WSARECVMSG;
-    WSARecvMsg_fp_t fp = NULL;
+    WSARecvMsg_fp_t fp = nullptr;
     r = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &fp, sizeof(fp), &n,
                  0, 0);
     CHECK_EQ(r, 0) << "get WSARecvMsg failed: " << co::strerror();
-    CHECK(fp != NULL) << "pointer to WSARecvMsg is NULL..";
+    CHECK(fp != nullptr) << "pointer to WSARecvMsg is nullptr..";
 
     ::closesocket(fd);
     return fp;
@@ -1191,11 +1191,11 @@ WSASendMsg_fp_t get_WSASendMsg_fp() {
     int r = 0;
     DWORD n = 0;
     GUID guid = WSAID_WSASENDMSG;
-    WSASendMsg_fp_t fp = NULL;
+    WSASendMsg_fp_t fp = nullptr;
     r = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &fp, sizeof(fp), &n,
                  0, 0);
     CHECK_EQ(r, 0) << "get WSASendMsg failed: " << co::strerror();
-    CHECK(fp != NULL) << "pointer to WSASendMsg is NULL..";
+    CHECK(fp != nullptr) << "pointer to WSASendMsg is nullptr..";
 
     ::closesocket(fd);
     return fp;

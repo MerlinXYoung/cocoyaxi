@@ -229,7 +229,7 @@ void Mod::add_flag(char iden, const char* name, const char* value, const char* h
 
 inline Flag* Mod::find_flag(const char* name) {
     auto it = flags.find(name);
-    return it != flags.end() ? it->second.get() : NULL;
+    return it != flags.end() ? it->second.get() : nullptr;
 }
 
 fastring Mod::alias(const char* name, const char* new_name) {

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-
 namespace json {
 namespace xx {
 
@@ -136,7 +135,7 @@ inline _H* make_array(_A& a) { return new (a.alloc()) _H(Json::_arr_t()); }
 // json parser
 //   @b: beginning of the string
 //   @e: end of the string
-// return the current position, or NULL on any error
+// return the current position, or nullptr on any error
 class Parser {
   public:
     Parser() : _a(xx::jalloc()) {}

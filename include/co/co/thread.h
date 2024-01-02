@@ -55,7 +55,7 @@ inline void tls_set(tls_key_t k, void* v) {
     (void)r;
     assert(r == 0);
 }
-// __coapi extern __thread uint32 g_tid;
+
 __coapi uint32 thread_id();
 #endif
 }  // namespace xx

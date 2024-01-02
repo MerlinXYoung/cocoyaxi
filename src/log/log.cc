@@ -348,7 +348,7 @@ void LogFile::write(const char* p, size_t n) {
         }
     }
 
-    if (_file || this->open(NULL, 0)) {
+    if (_file || this->open(nullptr, 0)) {
         _file.write(p, n);
         const uint64 size = _file.size();  // -1 if not exists
         if (size >= (uint64)FLG_max_log_file_size) _file.close();
@@ -626,7 +626,7 @@ void Logger::push_fatal_log(char* s, size_t n) {
 
     this->write_level_logs(s, n);
     if (!FLG_cout) fwrite(s, 1, n, stderr);
-    if (_file.open(NULL, fatal)) _file.write(s, n);
+    if (_file.open(nullptr, fatal)) _file.write(s, n);
 
     mod().check_failed.store(true);
     abort();
@@ -782,7 +782,7 @@ class StackTrace {
     ~StackTrace() {
         if (_buf) {
             ::free(_buf);
-            _buf = NULL;
+            _buf = nullptr;
         }
     }
 
@@ -829,7 +829,7 @@ int backtrace_cb(void* data, uintptr_t /*pc*/, const char* file, int line, const
 void StackTrace::dump_stack(void* f, int skip) {
     _f = (write_cb_t)f;
     struct user_data_t ud = {this, 0};
-    struct backtrace_state* state = backtrace_create_state(_exe.c_str(), 1, error_cb, NULL);
+    struct backtrace_state* state = backtrace_create_state(_exe.c_str(), 1, error_cb, nullptr);
     backtrace_full(state, skip, backtrace_cb, error_cb, (void*)&ud);
 }
 
@@ -931,8 +931,8 @@ void ExceptHandler::handle_signal(int sig) {
     }
 
     m.logger->stop(true);
-    m.log_file->open(NULL, 0);
-    m.log_fatal->open(NULL, fatal);
+    m.log_file->open(nullptr, 0);
+    m.log_fatal->open(nullptr, fatal);
     auto f = &ExceptHandler::write_fatal_message;
     auto& s = *m.stream;
     s.clear();
@@ -980,7 +980,7 @@ void ExceptHandler::handle_signal(int sig) {
 #ifdef _WIN32
 int ExceptHandler::handle_exception(void* e) {
     auto& m = mod();
-    const char* err = NULL;
+    const char* err = nullptr;
     auto p = (PEXCEPTION_POINTERS)e;
 
     switch (p->ExceptionRecord->ExceptionCode) {
@@ -1050,8 +1050,8 @@ int ExceptHandler::handle_exception(void* e) {
     }
 
     m.logger->stop();
-    m.log_file->open(NULL, 0);
-    m.log_fatal->open(NULL, fatal);
+    m.log_file->open(nullptr, 0);
+    m.log_fatal->open(nullptr, fatal);
     auto f = &ExceptHandler::write_fatal_message;
     auto& s = *m.stream;
     s.clear();

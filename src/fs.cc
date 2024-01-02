@@ -13,7 +13,6 @@
 
 #include "./co/close.h"
 
-
 namespace fs {
 
 bool exists(const char* path) {
@@ -302,7 +301,7 @@ bool dir::open(const char* path) {
     }
 
     d->d = ::opendir(path);
-    d->e = NULL;
+    d->e = nullptr;
     return d->d;
 }
 
@@ -310,7 +309,7 @@ void dir::close() {
     dctx* d = (dctx*)_p;
     if (d && d->d) {
         ::closedir(d->d);
-        d->d = NULL;
+        d->d = nullptr;
     }
 }
 
@@ -341,7 +340,7 @@ dir::iterator& dir::iterator::operator++() {
             char* const p = d->e->d_name;
             if (!is_dot_or_dotdot(p)) break;
         }
-        if (!d->e) _p = NULL;
+        if (!d->e) _p = nullptr;
     }
     return *this;
 }
@@ -355,7 +354,7 @@ dir::iterator dir::begin() const {
         }
         if (d->e) return dir::iterator(_p);
     }
-    return dir::iterator(NULL);
+    return dir::iterator(nullptr);
 }
 
 }  // namespace fs

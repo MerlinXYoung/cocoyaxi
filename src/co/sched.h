@@ -483,6 +483,6 @@ inline std::atomic_bool& is_active() {
     return _is_active;
 }
 
-extern __thread Sched* gSched;
+extern thread_local Sched* gSched;
 
 }}  // namespace co::xx
