@@ -13,22 +13,12 @@ namespace co {
 namespace now {
 namespace xx {
 
-static int g_nifty_counter;
-static int64_t g_freq;
-
-Initializer::Initializer() {
-    if (g_nifty_counter++ == 0) {
-        LARGE_INTEGER x;
-        QueryPerformanceFrequency(&x);
-        g_freq = x.QuadPart;
-    }
-}
-
 inline int64_t _query_counts() {
     LARGE_INTEGER x;
     QueryPerformanceCounter(&x);
     return x.QuadPart;
 }
+static int64_t g_freq = _query_counts();
 
 inline int64_t ns() {
     const int64_t count = _query_counts();

@@ -6,19 +6,6 @@
 namespace co {
 namespace now {
 
-#ifdef _WIN32
-namespace xx {
-
-struct __coapi Initializer {
-    Initializer();
-    ~Initializer() = default;
-};
-
-static Initializer g_initializer;
-
-}  // namespace xx
-#endif
-
 // monotonic timestamp in nanoseconds
 __coapi int64_t ns();
 
