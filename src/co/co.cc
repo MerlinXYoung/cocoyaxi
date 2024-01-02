@@ -159,13 +159,13 @@ class mutex_guard {
 class mutex_impl {
   public:
     struct queue {
-        static const int N = 12;
         struct _memb : co::clink {
             size_t size;
-            uint8 wx;
             uint8 rx;
+            uint8 wx;
             void* q[];
         };
+        static constexpr int N = (128 - sizeof(_memb)) / sizeof(void*);
 
         _memb* _make_memb() {
             // TODO: alines
@@ -937,7 +937,7 @@ class pool_impl {
     }
 
     inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    inline uint32 unref() noexcept { --_refn; }
+    inline uint32 unref() noexcept { return --_refn; }
 
   private:
     V* _pools;
@@ -1091,13 +1091,11 @@ wait_group::~wait_group() {
 
 void wait_group::add(uint32 n) const {
     god::cast<xx::event_impl*>(_p)->wg().fetch_add(n /*, std::memory_order_relaxed*/);
-    DLOG << "load:" << god::cast<xx::event_impl*>(_p)->wg().load();
 }
 
 void wait_group::done() const {
     const auto e = god::cast<xx::event_impl*>(_p);
     const uint32 x = --e->wg();
-    DLOG << "x:" << x;
     CHECK(x != (uint32)-1);
     if (x == 0) e->signal();
 }
