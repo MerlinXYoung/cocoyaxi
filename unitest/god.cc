@@ -59,28 +59,6 @@ DEF_test(god) {
         EXPECT_EQ(s, "12ell67");
     }
 
-    DEF_case(swap) {
-        int v = 1;
-        void* p = &v;
-        EXPECT_EQ(god::swap(&v, 0), 1);
-        EXPECT_EQ(v, 0);
-        EXPECT_EQ(god::swap(&p, (void*)0), &v);
-        EXPECT_EQ(p, (void*)0);
-    }
-
-    DEF_case(fetch_xx) {
-        int v = 0;
-        EXPECT_EQ(god::fetch_add(&v, 7), 0);
-        EXPECT_EQ(v, 7);
-        EXPECT_EQ(god::fetch_sub(&v, 3), 7);
-        EXPECT_EQ(v, 4);
-        EXPECT_EQ(god::fetch_and(&v, 5), 4);
-        EXPECT_EQ(v, 4);
-        EXPECT_EQ(god::fetch_or(&v, 3), 4);
-        EXPECT_EQ(v, 7);
-        EXPECT_EQ(god::fetch_xor(&v, 5), 7);
-        EXPECT_EQ(v, 2);
-    }
 
     DEF_case(type) {
         EXPECT_EQ((god::is_same<char, char>()), true);

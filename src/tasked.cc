@@ -6,7 +6,6 @@
 #include "co/time.h"
 #include "co/vector.h"
 
-
 namespace co {
 namespace xx {
 
@@ -112,13 +111,15 @@ void TaskedImpl::loop() {
         }
 
         _ev.wait(1000);
-        if (_stop.load(std::memory_order_relaxed))
-            if (_stop) {
-                atomic_store(&_stop, 2);
-                return;
-            }
+        // if (_stop.load(std::memory_order_relaxed))
+        //     if (_stop) {
+        //         atomic_store(&_stop, 2);
+        //         return;
+        //     }
         ms += timer.ms();
     }
+
+    atomic_store(&_stop, 2);
 }
 
 void TaskedImpl::stop() {

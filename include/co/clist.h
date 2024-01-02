@@ -3,48 +3,47 @@
 namespace co {
 
 struct clink {
-    clink* next;
     clink* prev;
+    clink* next;
 };
 
 class clist {
   public:
-    constexpr static clink* const null = (clink*)0;
-    constexpr clist() noexcept : _head(0) {}
+    constexpr clist() noexcept : _head(nullptr) {}
     ~clist() = default;
 
-    clink* front() const noexcept { return _head; }
-    clink* back() const noexcept { return _head ? _head->prev : 0; }
-    bool empty() const noexcept { return _head == null; }
-    void clear() noexcept { _head = 0; }
+    inline clink* front() const noexcept { return _head; }
+    inline clink* back() const noexcept { return _head ? _head->prev : nullptr; }
+    inline bool empty() const noexcept { return _head == nullptr; }
+    inline void clear() noexcept { _head = nullptr; }
 
-    void push_front(clink* node) {
+    inline void push_front(clink* node) noexcept {
         if (_head) {
             node->next = _head;
             node->prev = _head->prev;
             _head->prev = node;
             _head = node;
         } else {
-            node->next = 0;
+            node->next = nullptr;
             node->prev = node;
             _head = node;
         }
     }
 
-    void push_back(clink* node) {
+    inline void push_back(clink* node) noexcept {
         if (_head) {
-            node->next = 0;
+            node->next = nullptr;
             node->prev = _head->prev;
             _head->prev->next = node;
             _head->prev = node;
         } else {
-            node->next = 0;
+            node->next = nullptr;
             node->prev = node;
             _head = node;
         }
     }
 
-    clink* pop_front() {
+    inline clink* pop_front() noexcept {
         clink* const x = _head;
         if (_head) {
             _head = _head->next;
@@ -53,13 +52,13 @@ class clist {
         return x;
     }
 
-    clink* pop_back() {
+    inline clink* pop_back() noexcept {
         clink* const x = this->back();
         if (x) this->erase(x);
         return x;
     }
 
-    void erase(clink* node) {
+    inline void erase(clink* node) noexcept {
         if (node != _head) {
             node->prev->next = node->next;
             const auto x = node->next ? node->next : _head;
@@ -70,7 +69,7 @@ class clist {
         }
     }
 
-    void move_front(clink* node) {
+    inline void move_front(clink* node) noexcept {
         if (node != _head) {
             node->prev->next = node->next;
             if (node->next) {
@@ -83,7 +82,7 @@ class clist {
         }
     }
 
-    void move_back(clink* node) {
+    inline void move_back(clink* node) noexcept {
         if (node != _head->prev) {
             if (node == _head) {
                 _head = _head->next;
@@ -100,16 +99,16 @@ class clist {
         }
     }
 
-    void swap(clist& l) {
+    inline void swap(clist& l) noexcept {
         clink* const x = _head;
         _head = l._head;
         l._head = x;
     }
 
-    void swap(clist&& l) { l.swap(*this); }
+    inline void swap(clist&& l) noexcept { l.swap(*this); }
 
   private:
     clink* _head;
 };
 
-} // co
+}  // namespace co

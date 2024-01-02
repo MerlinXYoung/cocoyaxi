@@ -14,7 +14,7 @@ namespace co {
 template<typename T>
 class table {
   public:
-    table(int xbits, int ybits)
+    inline table(int xbits, int ybits)
         : _xbits(xbits),
           _xsize(static_cast<size_t>(1) << xbits),
           _ysize(static_cast<size_t>(1) << ybits), _i(1) {
@@ -22,7 +22,7 @@ class table {
         _v[0] = (T*) ::calloc(_xsize, sizeof(T));
     }
 
-    ~table() {
+    inline ~table() {
         for (size_t i = 0; i < _i; ++i) ::free(_v[i]);
         ::free(_v);
     }
@@ -30,7 +30,7 @@ class table {
     table(const table&) = delete;
     void operator=(const table&) = delete;
 
-    T& operator[](size_t i) {
+    inline T& operator[](size_t i) {
         const size_t q = i >> _xbits;      // i / _xsize
         const size_t r = i & (_xsize - 1); // i % _xsize
         assert(q < _ysize);
@@ -39,6 +39,7 @@ class table {
             std::lock_guard<std::mutex> g(_mtx);
             if (!_v[q]) {
                 _v[q] = (T*) ::calloc(_xsize, sizeof(T));
+                assert(_v[q]);
                 if (_i <= q) _i = q + 1;
             }
         }

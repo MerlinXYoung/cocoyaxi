@@ -42,7 +42,7 @@ class mutex_impl {
   public:
     struct queue {
         struct _memb : co::clink {
-            size_t size;
+            // size_t size;
             uint8_t rx;
             uint8_t wx;
             void* q[];
@@ -53,13 +53,13 @@ class mutex_impl {
             // TODO: alines
             _memb* m =
                 (_memb*)::malloc(sizeof(_memb) + N * sizeof(void*));  //, L1_CACHE_LINE_SIZE);
-            m->size = 0;
+            // m->size = 0;
             m->rx = 0;
             m->wx = 0;
             return m;
         }
 
-        queue() noexcept : _m(0) {}
+        queue() noexcept : _q(), _size(0) {}
 
         ~queue() {
             for (auto h = _q.front(); h;) {
@@ -69,8 +69,10 @@ class mutex_impl {
             }
         }
 
-        size_t size() const noexcept { return _m ? _m->size : 0; }
-        bool empty() const noexcept { return this->size() == 0; }
+        // size_t size() const noexcept { return _m ? _m->size : 0; }
+        // bool empty() const noexcept { return this->size() == 0; }
+        inline size_t size() const noexcept { return _size; }
+        inline bool empty() const noexcept { return this->size() == 0; }
 
         void push_back(void* x) {
             _memb* m = (_memb*)_q.back();
@@ -79,19 +81,32 @@ class mutex_impl {
                 _q.push_back(m);
             }
             m->q[m->wx++] = x;
-            ++_m->size;
+            // ++_m->size;
+            ++_size;
         }
 
         void* pop_front() {
             void* x = 0;
-            if (_m && _m->rx < _m->wx) {
-                x = _m->q[_m->rx++];
-                --_m->size;
-                if (_m->rx == _m->wx) {
-                    _m->rx = _m->wx = 0;
-                    if (_q.back() != _m) {
-                        _memb* const m = (_memb*)_q.pop_front();
-                        _m->size = m->size;
+            // if (_m && _m->rx < _m->wx) {
+            //     x = _m->q[_m->rx++];
+            //     --_m->size;
+            //     if (_m->rx == _m->wx) {
+            //         _m->rx = _m->wx = 0;
+            //         if (_q.back() != _m) {
+            //             _memb* const m = (_memb*)_q.pop_front();
+            //             _m->size = m->size;
+            //             ::free(m);
+            //         }
+            //     }
+            // }
+            auto m = (_memb*)_q.front();
+            if (m && m->rx < m->wx) {
+                x = m->q[m->rx++];
+                --_size;
+                if (m->rx == m->wx) {
+                    m->rx = m->wx = 0;
+                    if (_q.back() != m) {
+                        _q.pop_front();
                         ::free(m);
                     }
                 }
@@ -99,10 +114,11 @@ class mutex_impl {
             return x;
         }
 
-        union {
-            _memb* _m;
-            co::clist _q;
-        };
+        // union {
+        //     _memb* _m;
+        co::clist _q;
+        // };
+        size_t _size;
     };
 
     mutex_impl() : _m(), _cv(), _refn(1), _lock(0) {}
