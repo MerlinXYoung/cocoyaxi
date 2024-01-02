@@ -1,7 +1,8 @@
 #include <atomic>
 #ifdef __linux__
-#include "epoll.h"
 #include "../close.h"
+#include "epoll.h"
+
 
 namespace co {
 
@@ -18,18 +19,21 @@ Epoll::Epoll(int sched_id) : _signaled(false), _sched_id(sched_id) {
     co::set_nonblock(_pipe_fds[0]);
     CHECK(this->add_ev_read(_pipe_fds[0], 0));
 
-    _ev = (epoll_event*) ::calloc(1024, sizeof(epoll_event));
+    _ev = (epoll_event*)::calloc(1024, sizeof(epoll_event));
 }
 
 Epoll::~Epoll() {
     this->close();
-    if (_ev) { ::free(_ev); _ev = 0; }
+    if (_ev) {
+        ::free(_ev);
+        _ev = 0;
+    }
 }
 
 bool Epoll::add_ev_read(int fd, int32 co_id) {
     if (fd < 0) return false;
     auto& ctx = co::get_sock_ctx(fd);
-    if (ctx.has_ev_read()) return true; // already exists
+    if (ctx.has_ev_read()) return true;  // already exists
 
     const bool has_ev_write = ctx.has_ev_write(_sched_id);
     epoll_event ev;
@@ -41,7 +45,8 @@ bool Epoll::add_ev_read(int fd, int32 co_id) {
         ctx.add_ev_read(_sched_id, co_id);
         return true;
     } else {
-        ELOG << "epoll add ev read error: " << co::strerror() << ", fd: " << fd << ", co: " << co_id;
+        ELOG << "epoll add ev read error: " << co::strerror() << ", fd: " << fd
+             << ", co: " << co_id;
         return false;
     }
 }
@@ -49,7 +54,7 @@ bool Epoll::add_ev_read(int fd, int32 co_id) {
 bool Epoll::add_ev_write(int fd, int32 co_id) {
     if (fd < 0) return false;
     auto& ctx = co::get_sock_ctx(fd);
-    if (ctx.has_ev_write()) return true; // already exists
+    if (ctx.has_ev_write()) return true;  // already exists
 
     const bool has_ev_read = ctx.has_ev_read(_sched_id);
     epoll_event ev;
@@ -61,7 +66,8 @@ bool Epoll::add_ev_write(int fd, int32 co_id) {
         ctx.add_ev_write(_sched_id, co_id);
         return true;
     } else {
-        ELOG << "epoll add ev write error: " << co::strerror() << ", fd: " << fd << ", co: " << co_id;
+        ELOG << "epoll add ev write error: " << co::strerror() << ", fd: " << fd
+             << ", co: " << co_id;
         return false;
     }
 }
@@ -69,7 +75,7 @@ bool Epoll::add_ev_write(int fd, int32 co_id) {
 void Epoll::del_ev_read(int fd) {
     if (fd < 0) return;
     auto& ctx = co::get_sock_ctx(fd);
-    if (!ctx.has_ev_read()) return; // not exists
+    if (!ctx.has_ev_read()) return;  // not exists
 
     int r;
     ctx.del_ev_read();
@@ -90,7 +96,7 @@ void Epoll::del_ev_read(int fd) {
 void Epoll::del_ev_write(int fd) {
     if (fd < 0) return;
     auto& ctx = co::get_sock_ctx(fd);
-    if (!ctx.has_ev_write()) return; // not exists
+    if (!ctx.has_ev_write()) return;  // not exists
 
     int r;
     ctx.del_ev_write();
@@ -145,10 +151,10 @@ void Epoll::handle_ev_pipe() {
             break;
         }
     }
-    // atomic_store(&_signaled, 0, mo_release);
-    _signaled.store(true, std::memory_order_release);
+
+    _signaled.store(false, std::memory_order_release);
 }
 
-} // co
+}  // namespace co
 
 #endif
