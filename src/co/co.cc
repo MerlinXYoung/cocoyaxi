@@ -117,7 +117,7 @@ inline bool mutex_impl::try_lock() noexcept {
 }
 
 void mutex_impl::lock() {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();  // xx::gSched;
     if (sched) { /* in coroutine */
         _m.lock();
         if (!_lock) {
@@ -191,7 +191,7 @@ class event_impl {
 };
 
 bool event_impl::wait(uint32_t ms) {
-    const auto sched = gSched;
+    const auto sched =xx::current_sched();  //  gSched;
     if (sched) { /* in coroutine */
         Coroutine* co = sched->running();
         {
@@ -418,7 +418,7 @@ class pipe_impl {
 
     waitx* create_waitx(Coroutine* co, void* buf) {
         waitx* w;
-        if (co && gSched->on_stack(buf)) {
+        if (co && xx::current_sched()->on_stack(buf)) {
             w = (waitx*)::malloc(sizeof(waitx) + _blk_size);
             w->buf = (char*)w + sizeof(waitx);
             w->len = sizeof(waitx) + _blk_size;
@@ -470,7 +470,7 @@ inline void pipe_impl::_write_block(void* p, int v) {
 }
 
 void pipe_impl::read(void* p) {
-    auto sched = gSched;
+    auto sched = xx::current_sched();  // gSched;
     _m.lock();
 
     // buffer is neither empty nor full
@@ -586,7 +586,7 @@ done:
 }
 
 void pipe_impl::write(void* p, int v) {
-    auto sched = gSched;
+    auto sched = xx::current_sched();  // gSched;
     _m.lock();
     if (this->is_closed()) {
         _m.unlock();
@@ -794,7 +794,7 @@ class pool_impl {
 };
 
 inline void* pool_impl::pop() {
-    auto s = gSched;
+    auto s = xx::current_sched();  // gSched;
     CHECK(s) << "must be called in coroutine..";
     auto& v = _pools[s->id()];
     return !v.empty() ? v.pop_back() : (_ccb ? _ccb() : nullptr);
@@ -802,7 +802,7 @@ inline void* pool_impl::pop() {
 
 inline void pool_impl::push(void* p) {
     if (p) {
-        auto s = gSched;
+        auto s =xx::current_sched();  //  gSched;
         CHECK(s) << "must be called in coroutine..";
         auto& v = _pools[s->id()];
         (v.size() < _maxcap || !_dcb) ? v.push_back(p) : _dcb(p);
@@ -817,7 +817,7 @@ void pool_impl::clear() {
         co::wait_group wg((uint32_t)scheds.size());
         for (auto& s : scheds) {
             s->go([this, wg]() {
-                auto& v = this->_pools[gSched->id()];
+                auto& v = this->_pools[xx::current_sched()->id()];
                 if (this->_dcb)
                     for (auto& e : v) this->_dcb(e);
                 v.clear();
@@ -836,7 +836,7 @@ void pool_impl::clear() {
 }
 
 inline size_t pool_impl::size() const noexcept {
-    auto s = gSched;
+    auto s = xx::current_sched();  // gSched;
     CHECK(s) << "must be called in coroutine..";
     return _pools[s->id()].size();
 }

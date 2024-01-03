@@ -27,7 +27,7 @@ inline void cleanup_sock() {}
 
 namespace xx {
 
-thread_local Sched* gSched{nullptr};
+// thread_local Sched* gSched{nullptr};
 
 Sched::Sched(uint32_t id, uint32_t sched_num, uint32_t stack_num, uint32_t stack_size)
     : _cputime(0),
@@ -159,7 +159,8 @@ void Sched::resume(Coroutine* co) {
 }
 
 void Sched::loop() {
-    gSched = this;
+    // gSched = this;
+    current_sched() = this;
     co::vector<Closure*> new_tasks(512);
     co::vector<Coroutine*> ready_tasks(512);
     co::Timer timer;
@@ -398,7 +399,7 @@ const co::vector<co::Sched*>& scheds() {
 
 int sched_num() { return xx::is_active() ? (int)xx::sched_man()->scheds().size() : os::cpunum(); }
 
-co::Sched* sched() { return (co::Sched*)xx::gSched; }
+co::Sched* sched() { return (co::Sched*)xx::current_sched();/* xx::gSched;*/ }
 
 co::Sched* next_sched() { return (co::Sched*)xx::sched_man()->next_sched(); }
 
@@ -408,46 +409,46 @@ co::MainSched* main_sched() {
 }
 
 void* coroutine() {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     return s ? s->running() : 0;
 }
 
 int sched_id() {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     return s ? s->id() : -1;
 }
 
 int coroutine_id() {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     return (s && s->running()) ? s->coroutine_id() : -1;
 }
 
 void add_timer(uint32_t ms) {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->add_timer(ms);
 }
 
 bool add_io_event(sock_t fd, _ev_t ev) {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s->add_io_event(fd, ev);
 }
 
 void del_io_event(sock_t fd, _ev_t ev) {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s->del_io_event(fd, ev);
 }
 
 void del_io_event(sock_t fd) {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->del_io_event(fd);
 }
 
 void yield() {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->yield();
 }
@@ -458,18 +459,18 @@ void resume(void* p) {
 }
 
 void sleep(uint32_t ms) {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     s ? s->sleep(ms) : sleep::ms(ms);
 }
 
 bool timeout() {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s && s->timeout();
 }
 
 bool on_stack(const void* p) {
-    const auto s = xx::gSched;
+    const auto s = xx::current_sched();//xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s->on_stack(p);
 }

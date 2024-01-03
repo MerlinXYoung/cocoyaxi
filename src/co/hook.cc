@@ -116,13 +116,13 @@ static co::Hook g_hook;
 // hostent for the current scheduler
 inline hostent* hent() {
     static co::vector<hostent> _hents(co::sched_num(), 0);
-    return &_hents[co::xx::gSched->id()];
+    return &_hents[co::xx::current_sched()->id()];
 }
 
 inline co::mutex& smtx() {
     static co::vector<co::mutex> _mtx(co::sched_num(), 0);
 
-    return _mtx[co::xx::gSched->id()];
+    return _mtx[co::xx::current_sched()->id()];
 }
 
 inline co::mutex& gmtx() {
@@ -486,7 +486,7 @@ int _hook(connect)(int fd, const struct sockaddr* addr, socklen_t addrlen) {
     _hook_api(connect);
 
     int r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(connect)(fd, addr, addrlen);
@@ -507,7 +507,7 @@ int _hook(accept)(int fd, struct sockaddr* addr, socklen_t* addrlen) {
     _hook_api(accept);
 
     int r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(accept)(fd, addr, addrlen);
@@ -542,7 +542,7 @@ ssize_t _hook(read)(int fd, void* buf, size_t count) {
     _hook_api(read);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || !ctx->is_sock_or_pipe() || ctx->is_non_blocking()) {
         return __sys_api(read)(fd, buf, count);
@@ -566,7 +566,7 @@ ssize_t _hook(readv)(int fd, const struct iovec* iov, int iovcnt) {
     _hook_api(readv);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || !ctx->is_sock_or_pipe() || ctx->is_non_blocking()) {
         return __sys_api(readv)(fd, iov, iovcnt);
@@ -590,7 +590,7 @@ ssize_t _hook(recv)(int fd, void* buf, size_t len, int flags) {
     _hook_api(recv);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(recv)(fd, buf, len, flags);
@@ -616,7 +616,7 @@ ssize_t _hook(recvfrom)(int fd, void* buf, size_t len, int flags, struct sockadd
     _hook_api(recvfrom);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(recvfrom)(fd, buf, len, flags, addr, addrlen);
@@ -641,7 +641,7 @@ ssize_t _hook(recvmsg)(int fd, struct msghdr* msg, int flags) {
     _hook_api(recvmsg);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(recvmsg)(fd, msg, flags);
@@ -666,7 +666,7 @@ ssize_t _hook(write)(int fd, const void* buf, size_t count) {
     _hook_api(write);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || !ctx->is_sock_or_pipe() || ctx->is_non_blocking()) {
         return __sys_api(write)(fd, buf, count);
@@ -690,7 +690,7 @@ ssize_t _hook(writev)(int fd, const struct iovec* iov, int iovcnt) {
     _hook_api(writev);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || !ctx->is_sock_or_pipe() || ctx->is_non_blocking()) {
         return __sys_api(writev)(fd, iov, iovcnt);
@@ -714,7 +714,7 @@ ssize_t _hook(send)(int fd, const void* buf, size_t len, int flags) {
     _hook_api(send);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(send)(fd, buf, len, flags);
@@ -740,7 +740,7 @@ ssize_t _hook(sendto)(int fd, const void* buf, size_t len, int flags, const stru
     _hook_api(sendto);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(sendto)(fd, buf, len, flags, addr, addrlen);
@@ -765,7 +765,7 @@ ssize_t _hook(sendmsg)(int fd, const struct msghdr* msg, int flags) {
     _hook_api(sendmsg);
 
     ssize_t r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(sendmsg)(fd, msg, flags);
@@ -789,7 +789,7 @@ end:
 int _hook(poll)(struct pollfd* fds, nfds_t nfds, int ms) {
     _hook_api(poll);
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     int r = 0, fd = nfds > 0 ? fds[0].fd : -1;
     uint32_t t = ms < 0 ? -1 : ms, x = 1;
     if (!sched || ms == 0) {
@@ -846,7 +846,7 @@ end:
 int _hook(select)(int nfds, fd_set* rs, fd_set* ws, fd_set* es, struct timeval* tv) {
     _hook_api(select);
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     const int64_t max_ms = ((uint32_t)-1) >> 1;
     int r, ms = -1;
     uint32_t t, x = 1;
@@ -908,7 +908,7 @@ unsigned int _hook(sleep)(unsigned int n) {
     _hook_api(sleep);
 
     unsigned int r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched || !g_hook.hook_sleep) {
         r = __sys_api(sleep)(n);
         goto end;
@@ -926,7 +926,7 @@ int _hook(usleep)(useconds_t us) {
     _hook_api(usleep);
 
     int r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (us >= 1000000) {
         r = -1;
         errno = EINVAL;
@@ -950,7 +950,7 @@ int _hook(nanosleep)(const struct timespec* req, struct timespec* rem) {
     _hook_api(nanosleep);
 
     int r, ms = -1;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (req) {
         if (req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec > 999999999) {
             errno = EINVAL;
@@ -986,7 +986,7 @@ int _hook(epoll_wait)(int epfd, struct epoll_event* events, int n, int ms) {
     _hook_api(epoll_wait);
 
     int r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched || epfd < 0 || ms == 0) {
         r = __sys_api(epoll_wait)(epfd, events, n, ms);
         goto end;
@@ -1011,7 +1011,7 @@ int _hook(accept4)(int fd, struct sockaddr* addr, socklen_t* addrlen, int flags)
     _hook_api(accept4);
 
     int r;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     auto ctx = g_hook.get_hook_ctx(fd);
     if (!sched || !ctx || ctx->is_non_blocking()) {
         r = __sys_api(accept4)(fd, addr, addrlen, flags);
@@ -1052,7 +1052,7 @@ int _hook(gethostbyname_r)(const char* name, struct hostent* ret, char* buf, siz
     _hook_api(gethostbyname_r);
     HOOKLOG << "hook gethostbyname_r, name: " << (name ? name : "");
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched) return __sys_api(gethostbyname_r)(name, ret, buf, len, res, err);
 
     co::mutex_guard g(smtx());
@@ -1064,7 +1064,7 @@ int _hook(gethostbyname2_r)(const char* name, int af, struct hostent* ret, char*
     _hook_api(gethostbyname2_r);
     HOOKLOG << "hook gethostbyname2_r, name: " << (name ? name : "");
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched) return __sys_api(gethostbyname2_r)(name, af, ret, buf, len, res, err);
 
     co::mutex_guard g(smtx());
@@ -1076,7 +1076,7 @@ int _hook(gethostbyaddr_r)(const void* addr, socklen_t addrlen, int type, struct
     _hook_api(gethostbyaddr_r);
     HOOKLOG << "hook gethostbyaddr_r";
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched) return __sys_api(gethostbyaddr_r)(addr, addrlen, type, ret, buf, len, res, err);
 
     co::mutex_guard g(smtx());
@@ -1088,7 +1088,7 @@ struct hostent* _hook(gethostbyname2)(const char* name, int af) {
     _hook_api(gethostbyname2);
     HOOKLOG << "hook gethostbyname2, name: " << (name ? name : "");
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched || !name) return __sys_api(gethostbyname2)(name, af);
 
     fastream fs(1024);
@@ -1118,7 +1118,7 @@ int _hook(kevent)(int kq, const struct kevent* c, int nc, struct kevent* e, int 
     _hook_api(kevent);
 
     int r, ms = -1, fd = -1;
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched || c || kq < 0) {
         r = __sys_api(kevent)(kq, c, nc, e, ne, ts);
         goto end;
@@ -1168,7 +1168,7 @@ struct hostent* _hook(gethostbyname)(const char* name) {
     _hook_api(gethostbyname);
     HOOKLOG << "hook gethostbyname, name: " << (name ? name : "");
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched) return __sys_api(gethostbyname)(name);
 
     co::mutex_guard g(gmtx());
@@ -1184,7 +1184,7 @@ struct hostent* _hook(gethostbyaddr)(const void* addr, socklen_t len, int type) 
     _hook_api(gethostbyaddr);
     HOOKLOG << "hook gethostbyaddr";
 
-    const auto sched = co::xx::gSched;
+    const auto sched = co::xx::current_sched();
     if (!sched) return __sys_api(gethostbyaddr)(addr, len, type);
 
     co::mutex_guard g(gmtx());
