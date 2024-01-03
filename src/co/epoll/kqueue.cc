@@ -5,14 +5,14 @@
 
 namespace co {
 
-Kqueue::Kqueue(int sched_id) : _signaled(0) {
+Kqueue::Kqueue(int sched_id) : _signaled(false) {
     _kq = kqueue();
     CHECK_NE(_kq, -1) << "kqueue create error: " << co::strerror();
     CHECK_NE(__sys_api(pipe)(_pipe_fds), -1) << "create pipe error: " << co::strerror();
     co::set_cloexec(_pipe_fds[0]);
     co::set_cloexec(_pipe_fds[1]);
     co::set_nonblock(_pipe_fds[0]);
-    CHECK(this->add_ev_read(_pipe_fds[0], (void*)0));
+    CHECK(this->add_ev_read(_pipe_fds[0], nullptr));
     _ev = (struct kevent*)::calloc(1024, sizeof(struct kevent));
     (void)sched_id;
 }
@@ -21,7 +21,7 @@ Kqueue::~Kqueue() {
     this->close();
     if (_ev) {
         ::free(_ev);
-        _ev = 0;
+        _ev = nullptr;
     }
 }
 
@@ -130,7 +130,7 @@ void Kqueue::handle_ev_pipe() {
             break;
         }
     }
-    atomic_store(&_signaled, 0, std::memory_order_release);
+    _signaled.clear(std::memory_order_release);
 }
 
 }  // namespace co

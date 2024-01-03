@@ -13,19 +13,24 @@ class SockCtx {
   public:
     SockCtx() = delete;
 
-    bool has_event() const { return _x; }
+    inline bool has_event() const noexcept { return _x; }
 
-    int add_event() { return atomic_cas(&_x, 0, 0x0101, mo_acq_rel, mo_acquire); }
+    inline int add_event() noexcept {
+        uint16_t tmp = 0;
+        reinterpret_cast<std::atomic_uint16_t*>(&_x)->atomic_compare_exchange(
+            tmp, 0x0101, std::memory_order_acq_rel, std::memory_order_acquire);
+        return tmp;
+    }
 
-    void del_ev_read() { _s.r = 0; }
-    void del_ev_write() { _s.w = 0; }
-    void del_event() { _x = 0; }
+    inline void del_ev_read() noexcept { _s.r = 0; }
+    inline void del_ev_write() noexcept { _s.w = 0; }
+    inline void del_event() noexcept { _x = 0; }
 
-    void set_address_family(int x) {
+    inline void set_address_family(int x) noexcept {
         assert(x < 65536);
         _x = (uint16_t)x;
     }
-    int get_address_family() const { return _x; }
+    inline int get_address_family() const noexcept { return _x; }
 
   private:
     union {
@@ -44,36 +49,44 @@ class SockCtx {
     SockCtx() = delete;
 
     // store id and scheduler id of the coroutine that performs read operation.
-    void add_ev_read(int sched_id, int co_id) {
+    inline void add_ev_read(int sched_id, int co_id) noexcept {
         _rev.s = sched_id;
         _rev.c = co_id;
     }
 
     // store id and scheduler id of the coroutine that performs write operation.
-    void add_ev_write(int sched_id, int co_id) {
+    inline void add_ev_write(int sched_id, int co_id) noexcept {
         _wev.s = sched_id;
         _wev.c = co_id;
     }
 
-    void del_event() {
+    inline void del_event() noexcept {
         _r64 = 0;
         _w64 = 0;
     }
-    void del_ev_read() { _r64 = 0; }
-    void del_ev_write() { _w64 = 0; }
+    inline void del_ev_read() noexcept { _r64 = 0; }
+    inline void del_ev_write() noexcept { _w64 = 0; }
 
-    bool has_ev_read() const { return _rev.c != 0; }
-    bool has_ev_write() const { return _wev.c != 0; }
+    inline bool has_ev_read() const noexcept { return _rev.c != 0; }
+    inline bool has_ev_write() const noexcept { return _wev.c != 0; }
 
-    bool has_ev_read(int sched_id) const { return _rev.s == sched_id && _rev.c != 0; }
+    inline bool has_ev_read(int sched_id) const noexcept {
+        return _rev.s == sched_id && _rev.c != 0;
+    }
 
-    bool has_ev_write(int sched_id) const { return _wev.s == sched_id && _wev.c != 0; }
+    inline bool has_ev_write(int sched_id) const noexcept {
+        return _wev.s == sched_id && _wev.c != 0;
+    }
 
-    bool has_event() const { return this->has_ev_read() || this->has_ev_write(); }
+    inline bool has_event() const noexcept { return this->has_ev_read() || this->has_ev_write(); }
 
-    int32_t get_ev_read(int sched_id) const { return _rev.s == sched_id ? _rev.c : 0; }
+    inline int32_t get_ev_read(int sched_id) const noexcept {
+        return _rev.s == sched_id ? _rev.c : 0;
+    }
 
-    int32_t get_ev_write(int sched_id) const { return _wev.s == sched_id ? _wev.c : 0; }
+    inline int32_t get_ev_write(int sched_id) const noexcept {
+        return _wev.s == sched_id ? _wev.c : 0;
+    }
 
   private:
     struct S {
@@ -96,17 +109,21 @@ class SockCtx {
   public:
     SockCtx() = delete;
 
-    bool has_event() const { return _x; }
-    bool has_ev_read() const { return _s.r; }
-    bool has_ev_write() const { return _s.w; }
+    inline bool has_event() const noexcept { return _x; }
+    inline bool has_ev_read() const noexcept { return _s.r; }
+    inline bool has_ev_write() const noexcept { return _s.w; }
 
-    void add_event() { atomic_cas(&_x, 0, 0x0101, mo_acq_rel, mo_acquire); }
+    inline void add_event() noexcept {
+        uint16_t tmp = 0;
+        reinterpret_cast<std::atomic_uint16_t*>(&_x)->atomic_compare_exchange(
+            tmp, 0x0101, std::memory_order_acq_rel, std::memory_order_acquire);
+    }
 
-    void add_ev_read() { _s.r = 1; }
-    void add_ev_write() { _s.w = 1; }
-    void del_ev_read() { _s.r = 0; }
-    void del_ev_write() { _s.w = 0; }
-    void del_event() { _x = 0; }
+    inline void add_ev_read() noexcept { _s.r = 1; }
+    inline void add_ev_write() noexcept { _s.w = 1; }
+    inline void del_ev_read() noexcept { _s.r = 0; }
+    inline void del_ev_write() noexcept { _s.w = 0; }
+    inline void del_event() noexcept { _x = 0; }
 
   private:
     union {

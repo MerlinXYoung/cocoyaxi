@@ -4,6 +4,8 @@
 #include <sys/event.h>
 #include <time.h>
 
+#include <atomic>
+
 #include "../hook.h"
 #include "../sock_ctx.h"
 #include "co/co.h"
@@ -28,7 +30,7 @@ class Kqueue {
      */
     void del_event(int fd);
 
-    int wait(int ms) {
+    inline int wait(int ms) noexcept {
         if (ms >= 0) {
             struct timespec ts = {ms / 1000, ms % 1000 * 1000000};
             return __sys_api(kevent)(_kq, 0, 0, _ev, 1024, &ts);
@@ -37,24 +39,23 @@ class Kqueue {
         }
     }
 
-    void signal(char c = 'x') {
-        if (atomic_bool_cas(&_signaled, 0, 1, std::memory_order_acq_rel,
-                            std::memory_order_acquire)) {
+    inline void signal(char c = 'x') noexcept {
+        if (!_signaled.test_and_set()) {
             const int r = (int)__sys_api(write)(_pipe_fds[1], &c, 1);
             ELOG_IF(r != 1) << "pipe write error..";
         }
     }
 
-    const struct kevent& operator[](int i) const { return _ev[i]; }
-    void* user_data(const struct kevent& ev) { return ev.udata; }
-    bool is_ev_pipe(const struct kevent& ev) { return ev.udata == 0; }
+    inline const struct kevent& operator[](int i) const { return _ev[i]; }
+    inline void* user_data(const struct kevent& ev) const noexcept { return ev.udata; }
+    inline bool is_ev_pipe(const struct kevent& ev) const noexcept { return ev.udata == 0; }
     void handle_ev_pipe();
     void close();
 
   private:
     int _kq;
     int _pipe_fds[2];
-    int _signaled;
+    std::atomic_flag _signaled;
     struct kevent* _ev;
 };
 

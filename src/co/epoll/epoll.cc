@@ -25,7 +25,7 @@ Epoll::~Epoll() {
     this->close();
     if (_ev) {
         ::free(_ev);
-        _ev = 0;
+        _ev = nullptr;
     }
 }
 
@@ -150,8 +150,7 @@ void Epoll::handle_ev_pipe() {
             break;
         }
     }
-
-    _signaled.store(false, std::memory_order_release);
+    _signaled.clear(std::memory_order_release);
 }
 
 }  // namespace co

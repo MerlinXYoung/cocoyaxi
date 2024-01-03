@@ -1,11 +1,13 @@
 #ifdef _WIN32
 #pragma once
+#include <atomic>
 
 #include "../hook.h"
 #include "../sock_ctx.h"
 #include "co/co.h"
 #include "co/error.h"
 #include "co/log.h"
+
 
 namespace co {
 
@@ -44,7 +46,7 @@ class Iocp {
         if (fd != (sock_t)-1) co::get_sock_ctx(fd).del_ev_write();
     }
 
-    int wait(int ms) {
+    inline int wait(int ms) {
         ULONG n = 0;
         const BOOL r = __sys_api(GetQueuedCompletionStatusEx)(_iocp, _ev, 1024, &n, ms, false);
         if (r == TRUE) return (int)n;
@@ -52,9 +54,8 @@ class Iocp {
         return e == WAIT_TIMEOUT ? 0 : -1;
     }
 
-    void signal() {
-        if (atomic_bool_cas(&_signaled, 0, 1, std::memory_order_acq_rel,
-                            std::memory_order_acquire)) {
+    void signal() noexcept {
+        if (!_signaled.test_and_set()) {
             const BOOL r = PostQueuedCompletionStatus(_iocp, 0, 0, 0);
             if (!r) {
                 const uint32_t e = ::GetLastError();
@@ -63,15 +64,17 @@ class Iocp {
         }
     }
 
-    const OVERLAPPED_ENTRY& operator[](int i) const { return _ev[i]; }
-    void* user_data(const OVERLAPPED_ENTRY& ev) { return ev.lpOverlapped; }
-    bool is_ev_pipe(const OVERLAPPED_ENTRY& ev) { return ev.lpOverlapped == 0; }
-    void handle_ev_pipe() { atomic_store(&_signaled, 0, std::memory_order_release); }
+    inline const OVERLAPPED_ENTRY& operator[](int i) const { return _ev[i]; }
+    inline void* user_data(const OVERLAPPED_ENTRY& ev) const noexcept { return ev.lpOverlapped; }
+    inline bool is_ev_pipe(const OVERLAPPED_ENTRY& ev) const noexcept {
+        return ev.lpOverlapped == 0;
+    }
+    inline void handle_ev_pipe() { _signaled.clear(std::memory_order_release); }
 
   private:
     HANDLE _iocp;
     OVERLAPPED_ENTRY* _ev;
-    int _signaled;
+    std::atomic_flag _signaled;
     int _sched_id;
 };
 
