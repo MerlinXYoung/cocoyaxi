@@ -6,11 +6,11 @@ namespace co {
 #ifndef _WIN32
 
 io_event::~io_event() {
-    if (_added) xx::current_sched() /*xx::gSched*/->del_io_event(_fd, _ev);
+    if (_added) xx::current_sched()->del_io_event(_fd, _ev);
 }
 
 bool io_event::wait(uint32_t ms) {
-    auto sched = xx::current_sched();  // xx::gSched;
+    auto sched = xx::current_sched();  
     if (!_added) {
         _added = sched->add_io_event(_fd, _ev);
         if (!_added) return false;
@@ -34,9 +34,9 @@ extern bool can_skip_iocp_on_success;
 
 io_event::io_event(sock_t fd, _ev_t ev)
     : _fd(fd), _to(0), _nb_tcp(ev == ev_read ? nb_tcp_recv : nb_tcp_send), _timeout(false) {
-    const auto sched = xx::current_sched();  // xx::gSched;
+    const auto sched = xx::current_sched();  
     sched->add_io_event(fd, ev);             // add socket to IOCP
-    _info = (PerIoInfo*)co::alloc(sizeof(PerIoInfo), L1_CACHE_LINE_SIZE);
+    _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo));//, L1_CACHE_LINE_SIZE);
     memset(_info, 0, sizeof(PerIoInfo));
     _info->mlen = sizeof(PerIoInfo);
     _info->co = (void*)sched->running();
@@ -44,9 +44,9 @@ io_event::io_event(sock_t fd, _ev_t ev)
 }
 
 io_event::io_event(sock_t fd, int n) : _fd(fd), _to(0), _nb_tcp(0), _timeout(false) {
-    const auto sched = xx::current_sched();  // xx::gSched;
+    const auto sched = xx::current_sched();  
     sched->add_io_event(fd, ev_read);        // add socket to IOCP
-    _info = (PerIoInfo*)co::alloc(sizeof(PerIoInfo) + n, L1_CACHE_LINE_SIZE);
+    _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo) + n);//, L1_CACHE_LINE_SIZE);
     memset(_info, 0, sizeof(PerIoInfo) + n);
     _info->mlen = sizeof(PerIoInfo) + n;
     _info->co = (void*)sched->running();
@@ -55,17 +55,17 @@ io_event::io_event(sock_t fd, int n) : _fd(fd), _to(0), _nb_tcp(0), _timeout(fal
 
 io_event::io_event(sock_t fd, _ev_t ev, const void* buf, int size, int n)
     : _fd(fd), _to(0), _nb_tcp(0), _timeout(false) {
-    const auto sched = xx::current_sched();  // xx::gSched;
+    const auto sched = xx::current_sched();  
     sched->add_io_event(fd, ev);
     if (!sched->on_stack(buf)) {
-        _info = (PerIoInfo*)co::alloc(sizeof(PerIoInfo) + n, L1_CACHE_LINE_SIZE);
+        _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo) + n);//, L1_CACHE_LINE_SIZE);
         memset(_info, 0, sizeof(PerIoInfo) + n);
         _info->mlen = sizeof(PerIoInfo) + n;
         _info->co = (void*)sched->running();
         _info->buf.buf = (char*)buf;
         _info->buf.len = size;
     } else {
-        _info = (PerIoInfo*)co::alloc(sizeof(PerIoInfo) + n + size, L1_CACHE_LINE_SIZE);
+        _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo) + n + size);//, L1_CACHE_LINE_SIZE);
         memset(_info, 0, sizeof(PerIoInfo) + n);
         _info->mlen = sizeof(PerIoInfo) + n + size;
         _info->co = (void*)sched->running();
@@ -83,15 +83,15 @@ io_event::io_event(sock_t fd, _ev_t ev, const void* buf, int size, int n)
 io_event::~io_event() {
     if (!_timeout) {
         if (_to && _info->n > 0) memcpy(_to, _info->buf.buf, _info->n);
-        co::free(_info, _info->mlen);
+        ::free(_info);//, _info->mlen);
     }
     // xx::gSched->running()->waitx = nullptr;
-    xx::current_sched()->running()->waitw = nullptr;
+    xx::current_sched()->running()->waitx = nullptr;
 }
 
 bool io_event::wait(uint32_t ms) {
     int r, e;
-    const auto sched = xx::current_sched();  // xx::gSched;
+    const auto sched = xx::current_sched();  
     if (_info->state != xx::st_wait) _info->state = xx::st_wait;
 
     // If fd is a non-blocking TCP socket, we post the I/O operation to IOCP using

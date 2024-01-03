@@ -13,13 +13,17 @@ namespace co {
 namespace now {
 namespace xx {
 
+
+static int64_t g_freq = []()->int64_t{
+    LARGE_INTEGER x;
+    QueryPerformanceFrequency(&x);
+    return x.QuadPart;
+}();
 inline int64_t _query_counts() {
     LARGE_INTEGER x;
     QueryPerformanceCounter(&x);
     return x.QuadPart;
 }
-static int64_t g_freq = _query_counts();
-
 inline int64_t ns() {
     const int64_t count = _query_counts();
     return (int64_t)(static_cast<double>(count) * 1000000000 / g_freq);

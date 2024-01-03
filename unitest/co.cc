@@ -502,20 +502,26 @@ DEF_test(co) {
             wg.add(2);
             go([wg, ev, &v]() {
                 reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
-                while (v < 2) co::sleep(1);
+                while (v < 2) {DLOG<<v;co::sleep(1);}
+                DLOG<<"before wait";
                 ev.wait(1);
+                DLOG<<"end wait";
                 reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
+                DLOG<<"done";
             });
             std::thread([wg, ev, &v]() {
                 reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 while (v < 2) co::sleep(1);
+                DLOG<<"before wait";
                 ev.wait(1);
+                DLOG<<"end wait";
                 reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
+                DLOG<<"done";
             }).detach();
 
-            while (v < 4) co::sleep(1);
+            while (v < 4) {co::sleep(1);}
             ev.signal();
             wg.wait();
             EXPECT_EQ(v, 4);

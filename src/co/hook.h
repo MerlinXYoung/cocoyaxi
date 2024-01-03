@@ -29,9 +29,10 @@ void hook_sleep(bool x);
 // static HookInitializer g_hook_initializer;
 
 #ifdef _WIN32
-#include <MSWSock.h>
+
 #include <WinSock2.h>
 #include <ws2tcpip.h>  // for inet_ntop...
+#include <MSWSock.h>
 
 #define _CO_DEF_SYS_API(x) x##_fp_t __sys_api(x) = (x##_fp_t)x
 

@@ -17,7 +17,7 @@ class SockCtx {
 
     inline int add_event() noexcept {
         uint16_t tmp = 0;
-        reinterpret_cast<std::atomic_uint16_t*>(&_x)->atomic_compare_exchange(
+        reinterpret_cast<std::atomic_uint16_t*>(&_x)->compare_exchange_strong(
             tmp, 0x0101, std::memory_order_acq_rel, std::memory_order_acquire);
         return tmp;
     }
@@ -115,7 +115,7 @@ class SockCtx {
 
     inline void add_event() noexcept {
         uint16_t tmp = 0;
-        reinterpret_cast<std::atomic_uint16_t*>(&_x)->atomic_compare_exchange(
+        reinterpret_cast<std::atomic_uint16_t*>(&_x)->compare_exchange_strong(
             tmp, 0x0101, std::memory_order_acq_rel, std::memory_order_acquire);
     }
 

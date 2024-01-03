@@ -1,6 +1,7 @@
-#ifdef _WIN32
 #pragma once
+#ifdef _WIN32
 #include <atomic>
+#include <stdint.h>
 
 #include "../hook.h"
 #include "../sock_ctx.h"
@@ -13,7 +14,7 @@ namespace co {
 
 class Iocp {
   public:
-    Iocp(int sched_id);
+    Iocp(int32_t sched_id);
     ~Iocp();
 
     bool add_event(sock_t fd) {
@@ -75,7 +76,7 @@ class Iocp {
     HANDLE _iocp;
     OVERLAPPED_ENTRY* _ev;
     std::atomic_flag _signaled;
-    int _sched_id;
+    int32_t _sched_id;
 };
 
 typedef OVERLAPPED_ENTRY epoll_event;

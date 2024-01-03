@@ -187,8 +187,11 @@ void Sched::loop() {
 #if defined(_WIN32)
             auto info = xx::per_io_info(ev.lpOverlapped);
             auto co = (Coroutine*)info->co;
-            if (atomic_bool_cas(&info->state, st_wait, st_ready, std::memory_order_relaxed,
-                                std::memory_order_relaxed)) {
+            decltype(info->state) state(st_wait);
+            if(reinterpret_cast<std::atomic_uint8_t*>(&info->state)->compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                std::memory_order_relaxed)){
+            // if (atomic_bool_cas(&info->state, st_wait, st_ready, std::memory_order_relaxed,
+            //                     std::memory_order_relaxed)) {
                 info->n = ev.dwNumberOfBytesTransferred;
                 if (co->sched == this) {
                     this->resume(co);
@@ -196,7 +199,7 @@ void Sched::loop() {
                     co->sched->add_ready_task(co);
                 }
             } else {
-                co::free(info, info->mlen);
+                ::free(info);//, info->mlen);
             }
 #elif defined(__linux__)
             int32_t rco = 0, wco = 0;
@@ -266,10 +269,11 @@ void Sched::loop() {
 
 uint32_t TimerManager::check_timeout(co::vector<Coroutine*>& res) {
     if (_timer.empty()) return (uint32_t)-1;
-
+// SCHEDLOG << "timer not empty";
     int64_t now_ms = now::ms();
     auto it = _timer.begin();
     for (; it != _timer.end(); ++it) {
+        // SCHEDLOG << "it:"<< it<<"  ms:"<<it->first <<" now ms:"<<now_ms;
         if (it->first > now_ms) break;
         Coroutine* co = it->second;
         if (co->it != _timer.end()) co->it = _timer.end();

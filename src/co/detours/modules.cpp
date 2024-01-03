@@ -353,17 +353,17 @@ ULONG WINAPI DetourGetModuleSize(_In_opt_ HMODULE hModule) {
 #pragma warning(suppress : 6011)  // GetModuleHandleW(nullptr) never returns nullptr.
         if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
             SetLastError(ERROR_BAD_EXE_FORMAT);
-            return nullptr;
+            return 0UL;
         }
 
         PIMAGE_NT_HEADERS pNtHeader = (PIMAGE_NT_HEADERS)((PBYTE)pDosHeader + pDosHeader->e_lfanew);
         if (pNtHeader->Signature != IMAGE_NT_SIGNATURE) {
             SetLastError(ERROR_INVALID_EXE_SIGNATURE);
-            return nullptr;
+            return 0UL;
         }
         if (pNtHeader->FileHeader.SizeOfOptionalHeader == 0) {
             SetLastError(ERROR_EXE_MARKED_INVALID);
-            return nullptr;
+            return 0UL;
         }
         SetLastError(NO_ERROR);
 
@@ -371,7 +371,7 @@ ULONG WINAPI DetourGetModuleSize(_In_opt_ HMODULE hModule) {
     } __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER
                                                                  : EXCEPTION_CONTINUE_SEARCH) {
         SetLastError(ERROR_EXE_MARKED_INVALID);
-        return nullptr;
+        return 0UL;
     }
 }
 
@@ -419,7 +419,7 @@ HMODULE WINAPI DetourGetContainingModule(_In_ PVOID pvAddr) {
 }
 
 static inline PBYTE RvaAdjust(_Pre_notnull_ PIMAGE_DOS_HEADER pDosHeader, _In_ DWORD raddr) {
-    if (raddr != nullptr) {
+    if (raddr != 0) {
         return ((PBYTE)pDosHeader) + raddr;
     }
     return nullptr;
@@ -441,7 +441,7 @@ BOOL WINAPI DetourEnumerateExports(_In_ HMODULE hModule, _In_opt_ PVOID pContext
 #pragma warning(suppress : 6011)  // GetModuleHandleW(nullptr) never returns nullptr.
         if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
             SetLastError(ERROR_BAD_EXE_FORMAT);
-            return nullptr;
+            return FALSE;
         }
 
         PIMAGE_NT_HEADERS pNtHeader = (PIMAGE_NT_HEADERS)((PBYTE)pDosHeader + pDosHeader->e_lfanew);
@@ -499,7 +499,7 @@ BOOL WINAPI DetourEnumerateExports(_In_ HMODULE hModule, _In_opt_ PVOID pContext
     } __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER
                                                                  : EXCEPTION_CONTINUE_SEARCH) {
         SetLastError(ERROR_EXE_MARKED_INVALID);
-        return nullptr;
+        return FALSE;
     }
 }
 

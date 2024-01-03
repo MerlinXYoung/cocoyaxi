@@ -23,7 +23,7 @@ namespace xx {
 // typedef std::mutex mutex_t;
 // typedef std::condition_variable cv_t;
 // typedef std::unique_lock<std::mutex> mutex_guard_t;
-
+#ifndef _WIN32
 #ifdef __linux__
 #ifndef SYS_gettid
 #define SYS_gettid __NR_gettid
@@ -37,7 +37,7 @@ uint32_t thread_id() {
     return (uint32_t)x;
 }
 #endif
-
+#endif
 class mutex_impl {
   public:
     struct queue {

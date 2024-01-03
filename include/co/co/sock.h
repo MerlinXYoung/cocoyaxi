@@ -6,10 +6,10 @@
 
 
 #ifdef _WIN32
-#include <MSWSock.h>
+
 #include <WinSock2.h>
 #include <ws2tcpip.h>  // for inet_ntop...
-
+#include <MSWSock.h>
 
 #ifdef _MSC_VER
 #pragma comment(lib, "Ws2_32.lib")
