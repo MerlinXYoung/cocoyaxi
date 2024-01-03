@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <type_traits>
 #ifdef _MSC_VER
 #pragma warning(disable : 4127)
 #endif
@@ -54,7 +55,7 @@ struct waitx_t : co::clink {
 inline waitx_t* make_waitx(void* co, size_t n = sizeof(waitx_t)) {
     waitx_t* w = (waitx_t*)::malloc(n);
     assert(w);
-    w->next = w->prev = 0;
+    w->next = w->prev = nullptr;
     w->co = (Coroutine*)co;
     w->state = st_wait;
     return w;

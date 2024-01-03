@@ -25,8 +25,8 @@ class __coapi pipe {
     void read(void* p) const;
     void write(void* p, int o) const;
     void close() const;
-    bool is_closed() const;
-    bool done() const;
+    bool is_closed() const noexcept;
+    bool done() const noexcept;
 
   private:
     void* _p;
@@ -83,14 +83,14 @@ class chan {
     }
 
     // return true if the read or write operation was done successfully
-    bool done() const { return _p.done(); }
+    bool done() const noexcept{ return _p.done(); }
 
     // close the channel.
     // write was disabled then, but we can still read from the channel.
     void close() const { _p.close(); }
 
     // check if the channel was closed (false for closed)
-    explicit operator bool() const { return !_p.is_closed(); }
+    explicit operator bool() const noexcept{ return !_p.is_closed(); }
 
   private:
     xx::pipe _p;

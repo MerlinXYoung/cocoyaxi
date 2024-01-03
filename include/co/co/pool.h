@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../def.h"
 #include <functional>
+
+#include "../def.h"
+
 
 namespace co {
 
@@ -11,13 +13,13 @@ namespace co {
  *   - It stores void* pointers internally and it does not care about the actual
  *     type of the pointer.
  *   - It is usually used as a connection pool in network programming.
- * 
- *   - NOTE: Each thread holds its own pool, users SHOULD call pop() and push() 
+ *
+ *   - NOTE: Each thread holds its own pool, users SHOULD call pop() and push()
  *     in the same thread.
  */
 class __coapi pool {
   public:
-    // default constructor without ccb and dcb 
+    // default constructor without ccb and dcb
     pool();
     ~pool();
 
@@ -32,7 +34,7 @@ class __coapi pool {
      *             this argument is ignored if dcb is NULL.
      *             default: -1.
      */
-    pool(std::function<void*()>&& ccb, std::function<void(void*)>&& dcb, size_t cap=(size_t)-1);
+    pool(std::function<void*()>&& ccb, std::function<void(void*)>&& dcb, size_t cap = (size_t)-1);
 
     pool(pool&& p) : _p(p._p) { p._p = 0; }
 
@@ -41,7 +43,7 @@ class __coapi pool {
     void operator=(const pool&) = delete;
 
     /**
-     * pop an element from the pool of the current thread 
+     * pop an element from the pool of the current thread
      *   - It MUST be called in coroutine.
      *   - If the pool is empty and ccb is set, ccb() will be called to create a new element.
      *
@@ -50,7 +52,7 @@ class __coapi pool {
     void* pop() const;
 
     /**
-     * push an element to the pool of the current thread 
+     * push an element to the pool of the current thread
      *   - It MUST be called in coroutine.
      *   - Users SHOULD call push() and pop() in the same thread.
      *
@@ -59,15 +61,15 @@ class __coapi pool {
     void push(void* e) const;
 
     /**
-     * return pool size of the current thread 
+     * return pool size of the current thread
      *   - It MUST be called in coroutine.
      */
-    size_t size() const;
+    size_t size() const noexcept;
 
     /**
-     * clear pools of all threads 
-     *   - It can be called from any where. 
-     *   - If dcb is set, dcb() will be called to destroy elements in the pools. 
+     * clear pools of all threads
+     *   - It can be called from any where.
+     *   - If dcb is set, dcb() will be called to destroy elements in the pools.
      */
     void clear() const;
 
@@ -91,19 +93,23 @@ class __coapi pool {
  *     co::pool_guard<T> g(pool);
  *     g->hello();
  */
-template<typename T>
+template <typename T>
 class pool_guard {
   public:
-    explicit pool_guard(const pool& p) : _p(p) {
-        _e = (T*)_p.pop();
-    }
+    explicit pool_guard(const pool& p) : _p(p) { _e = (T*)_p.pop(); }
 
     explicit pool_guard(const pool* p) : pool_guard(*p) {}
 
     ~pool_guard() { _p.push(_e); }
 
-    T* operator->() const { assert(_e); return _e; }
-    T& operator*()  const { assert(_e); return *_e; }
+    T* operator->() const {
+        assert(_e);
+        return _e;
+    }
+    T& operator*() const {
+        assert(_e);
+        return *_e;
+    }
 
     bool operator==(T* e) const noexcept { return _e == e; }
     bool operator!=(T* e) const noexcept { return _e != e; }
@@ -120,7 +126,7 @@ class pool_guard {
 
 using Pool = pool;
 
-template<typename T>
+template <typename T>
 using PoolGuard = pool_guard<T>;
- 
-} // co
+
+}  // namespace co
