@@ -54,13 +54,6 @@ __coapi void set_write_cb(const std::function<void(const char*, const void*, siz
 
 namespace xx {
 
-// struct __coapi Initializer {
-//     Initializer();
-//     ~Initializer() = default;
-// };
-
-// static Initializer g_initializer;
-
 enum LogLevel { trace = 0, debug = 1, info = 2, warning = 3, error = 4, fatal = 5 };
 
 class __coapi LevelLogSaver {
