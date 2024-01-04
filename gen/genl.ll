@@ -1,5 +1,6 @@
 %{
 #define YY_NO_UNISTD_H 1
+#include <iostream>
 #include "gen.h"
 #include "geny.hh"
 #include "co/str.h"
@@ -37,8 +38,8 @@ literal_begin (['\"])
             if (state == 1) state = 2;
             break;
           case EOF:
-            cout << "unexpected end of file while parsing multiline comment at line: "
-                 << yylineno << endl;
+            std::cout << "unexpected end of file while parsing multiline comment at line: "
+                 << yylineno << std::endl;
             exit(0);
           default:
             if (state != 0) state = 0;
@@ -67,7 +68,7 @@ literal_begin (['\"])
 {intconstant} {
     yylval.iconst = str::to_int64(yytext);
     if (co::error() != 0) {
-        cout << "integer overflow: " << yytext << " at line " << yylineno << endl;
+        std::cout << "integer overflow: " << yytext << " at line " << yylineno << std::endl;
         exit(0);
     }
     return tok_int_constant;
@@ -76,7 +77,7 @@ literal_begin (['\"])
 {hexconstant} {
     yylval.iconst = str::to_int64(yytext);
     if (co::error() != 0) {
-        cout << "integer overflow: " << yytext << " at line " << yylineno << endl;
+        std::cout << "integer overflow: " << yytext << " at line " << yylineno << std::endl;
         exit(0);
     }
     return tok_int_constant;
@@ -99,10 +100,10 @@ literal_begin (['\"])
         int c = yyinput();
         switch (c) {
           case EOF:
-            cout << "missing " << q << " at line " << yylineno << endl;
+            std::cout << "missing " << q << " at line " << yylineno << std::endl;
             exit(0);
           case '\n':
-            cout << "missing " << q << " at line " << (yylineno - 1) << endl;
+            std::cout << "missing " << q << " at line " << (yylineno - 1) << std::endl;
             exit(0);
           case '\\':
             c = yyinput();
@@ -126,7 +127,7 @@ literal_begin (['\"])
                 s.append('\\');
                 continue;
               default:
-                cout << "invalid escape character: " << c << " at line " << yylineno << endl;
+                std::cout << "invalid escape character: " << c << " at line " << yylineno << std::endl;
                 exit(0);
             }
             break;
@@ -141,7 +142,7 @@ literal_begin (['\"])
 }
 
 . {
-    cout << "unexpected token: " << yytext << " at line " << yylineno << endl;
+    std::cout << "unexpected token: " << yytext << " at line " << yylineno << std::endl;
     exit(0);
 }
 

@@ -23,6 +23,6 @@ target(test[1])
     add_deps("libco")
     add_deps("libbenchmark")
     add_files(test[2])
-    add_cxflags("-Wno-builtin-macro-redefined")
-    before_build_file(redefine_file_macro)
+    -- add_cxflags("-Wno-builtin-macro-redefined")
+    -- before_build_file(redefine_file_macro)
 end

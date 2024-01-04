@@ -1,10 +1,9 @@
 #pragma once
-
+#include <iostream>
 #include "co/cout.h"
 #include "co/fastring.h"
 #include "co/flag.h"
 #include "co/vector.h"
-
 
 namespace unitest {
 
@@ -50,16 +49,17 @@ __coapi bool add_test(const char* name, bool& e, void (*f)(Test&));
 // define a test case in the current unit
 #define DEF_case(name) \
     _t_.c = #name;     \
-    cout << " case " << #name << ':' << endl;
+    std::cout << " case " << #name << ':' << std::endl;
 
 #define EXPECT(x)                                                                                  \
     {                                                                                              \
         if (x) {                                                                                   \
-            cout << color::green << "  EXPECT(" << #x << ") passed" << color::deflt << endl;       \
+            std::cout << color::green << "  EXPECT(" << #x << ") passed" << color::deflt           \
+                      << std::endl;                                                                \
         } else {                                                                                   \
             fastring _U_s(32);                                                                     \
             _U_s << "EXPECT(" << #x << ") failed";                                                 \
-            cout << color::red << "  " << _U_s << color::deflt << endl;                            \
+            std::cout << color::red << "  " << _U_s << color::deflt << std::endl;                  \
             _t_.failed.push_back(unitest::xx::Failed(_t_.c, __FILE__, __LINE__, std::move(_U_s))); \
         }                                                                                          \
     }
@@ -69,15 +69,15 @@ __coapi bool add_test(const char* name, bool& e, void (*f)(Test&));
         auto _U_x = (x);                                                                           \
         auto _U_y = (y);                                                                           \
         if (_U_x op _U_y) {                                                                        \
-            cout << color::green << "  EXPECT_" << opname << "(" << #x << ", " << #y               \
-                 << ") passed";                                                                    \
-            if (strcmp("==", #op) != 0) cout << ": " << _U_x << " vs " << _U_y;                    \
-            cout << color::deflt << endl;                                                          \
+            std::cout << color::green << "  EXPECT_" << opname << "(" << #x << ", " << #y          \
+                      << ") passed";                                                               \
+            if (strcmp("==", #op) != 0) std::cout << ": " << _U_x << " vs " << _U_y;               \
+            std::cout << color::deflt << std::endl;                                                \
         } else {                                                                                   \
             fastring _U_s(128);                                                                    \
             _U_s << "EXPECT_" << opname << "(" << #x << ", " << #y << ") failed: " << _U_x         \
                  << " vs " << _U_y;                                                                \
-            cout << color::red << "  " << _U_s << color::deflt << endl;                            \
+            std::cout << color::red << "  " << _U_s << color::deflt << std::endl;                  \
             _t_.failed.push_back(unitest::xx::Failed(_t_.c, __FILE__, __LINE__, std::move(_U_s))); \
         }                                                                                          \
     }

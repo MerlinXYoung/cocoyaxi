@@ -2,6 +2,7 @@
 
 #include "co/time.h"
 
+
 namespace unitest {
 namespace xx {
 
@@ -32,60 +33,60 @@ int run_tests() {
     if (enabled.empty()) { /* run all tests by default */
         n = tests.size();
         for (auto& t : tests) {
-            cout << "> begin test: " << t.name << endl;
+            std::cout << "> begin test: " << t.name << std::endl;
             timer.restart();
             t.f(t);
             if (!t.failed.empty()) {
                 ++ft;
                 fc += t.failed.size();
             }
-            cout << "< test " << t.name << " done in " << timer.us() << " us" << endl;
+            std::cout << "< test " << t.name << " done in " << timer.us() << " us" << std::endl;
         }
 
     } else {
         n = enabled.size();
         for (auto& t : enabled) {
-            cout << "> begin test: " << t->name << endl;
+            std::cout << "> begin test: " << t->name << std::endl;
             timer.restart();
             t->f(*t);
             if (!t->failed.empty()) {
                 ++ft;
                 fc += t->failed.size();
             }
-            cout << "< test " << t->name << " done in " << timer.us() << " us" << endl;
+            std::cout << "< test " << t->name << " done in " << timer.us() << " us" << std::endl;
         }
     }
 
     if (fc == 0) {
         if (n > 0) {
-            cout << color::green << "\nCongratulations! All tests passed!" << color::deflt << endl;
+            std::cout << color::green << "\nCongratulations! All tests passed!" << color::deflt << std::endl;
         } else {
-            cout << "No test found. Done nothing." << endl;
+            std::cout << "No test found. Done nothing." << std::endl;
         }
 
     } else {
-        cout << color::red << "\nAha! " << fc << " case" << (fc > 1 ? "s" : "");
-        cout << " from " << ft << " test" << (ft > 1 ? "s" : "");
-        cout << " failed. See details below:\n" << color::deflt << endl;
+        std::cout << color::red << "\nAha! " << fc << " case" << (fc > 1 ? "s" : "");
+        std::cout << " from " << ft << " test" << (ft > 1 ? "s" : "");
+        std::cout << " failed. See details below:\n" << color::deflt << std::endl;
 
         const char* last_case = "";
         for (auto& t : tests) {
             if (!t.failed.empty()) {
-                cout << color::red << "In test " << t.name << ":\n" << color::deflt;
+                std::cout << color::red << "In test " << t.name << ":\n" << color::deflt;
                 for (auto& f : t.failed) {
                     if (strcmp(last_case, f.c) != 0) {
                         last_case = f.c;
-                        cout << color::red << " case " << f.c << ":\n" << color::deflt;
+                        std::cout << color::red << " case " << f.c << ":\n" << color::deflt;
                     }
-                    cout << color::yellow << "  " << f.file << ':' << f.line << "] " << color::deflt
+                    std::cout << color::yellow << "  " << f.file << ':' << f.line << "] " << color::deflt
                          << f.msg << '\n';
                 }
-                cout.flush();
+                std::cout.flush();
             }
         }
 
-        cout << color::deflt;
-        cout.flush();
+        std::cout << color::deflt;
+        std::cout.flush();
     }
 
     return fc;

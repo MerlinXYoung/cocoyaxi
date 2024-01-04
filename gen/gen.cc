@@ -1,16 +1,20 @@
 #include "gen.h"
+
+#include <iostream>
+
+#include "co/cout.h"
 #include "co/def.h"
 #include "co/defer.h"
-#include "co/str.h"
-#include "co/fs.h"
 #include "co/flag.h"
+#include "co/fs.h"
 #include "co/json.h"
-#include "co/cout.h"
+#include "co/str.h"
+
 
 DEF_bool(std, false, "use std types in the generated code");
- 
+
 void yyerror(const char* s) {
-    cout << s << " at line " << yylineno << ", last token: " << yytext << endl;
+    std::cout << s << " at line " << yylineno << ", last token: " << yytext << std::endl;
 }
 
 int g_us = 0;
@@ -51,7 +55,8 @@ void gen_service(fs::fstream& fs, const fastring& serv, const co::vector<fastrin
 
     // virtual void xxx(co::Json& req, co::Json& res)
     for (size_t i = 0; i < methods.size(); ++i) {
-        fs << indent(4) << "virtual void " << methods[i] << "(co::Json& req, co::Json& res) = 0;\n\n";
+        fs << indent(4) << "virtual void " << methods[i]
+           << "(co::Json& req, co::Json& res) = 0;\n\n";
     }
 
     fs << "  private:\n";
@@ -93,34 +98,35 @@ void decode_array(fs::fstream& fs, Array* a, const fastring& name, const fastrin
        << indent(n) << "for (uint32 i = 0; i < " << ua << ".array_size(); ++i) {\n";
 
     switch (et->type()) {
-      case type_string:
-        fs << indent(n + 4) << name << ".push_back(" << ua << "[i].as_c_str());\n";
-        break;
-      case type_bool:
-        fs << indent(n + 4) << name << ".push_back(" << ua << "[i].as_bool());\n";
-        break;
-      case type_int:
-      case type_int32:
-      case type_int64:
-      case type_uint32:
-      case type_uint64:
-        fs << indent(n + 4) << name << ".push_back((" << et->name() << ")" << ua << "[i].as_int64());\n";
-        break;
-      case type_double:
-        fs << indent(n + 4) << name << ".push_back(" << ua << "[i].as_double());\n";
-        break;
-      case type_object:
-        fs << indent(n + 4) << et->name() << " " << uo << ";\n";
-        fs << indent(n + 4) << uo << ".from_json(" << ua << "[i]);\n";
-        fs << indent(n + 4) << name << ".emplace_back(std::move(" << uo << "));\n";
-        break;
-      case type_array:
-        fs << indent(n + 4) << "god::rm_ref_t<decltype(" << name << "[0])> " << uo << ";\n";
-        decode_array(fs, (Array*)et, uo, ua + "[i]", n + 4);
-        fs << indent(n + 4) << name << ".emplace_back(std::move(" << uo << "));\n";
-        break;
-      default:
-        break;
+        case type_string:
+            fs << indent(n + 4) << name << ".push_back(" << ua << "[i].as_c_str());\n";
+            break;
+        case type_bool:
+            fs << indent(n + 4) << name << ".push_back(" << ua << "[i].as_bool());\n";
+            break;
+        case type_int:
+        case type_int32:
+        case type_int64:
+        case type_uint32:
+        case type_uint64:
+            fs << indent(n + 4) << name << ".push_back((" << et->name() << ")" << ua
+               << "[i].as_int64());\n";
+            break;
+        case type_double:
+            fs << indent(n + 4) << name << ".push_back(" << ua << "[i].as_double());\n";
+            break;
+        case type_object:
+            fs << indent(n + 4) << et->name() << " " << uo << ";\n";
+            fs << indent(n + 4) << uo << ".from_json(" << ua << "[i]);\n";
+            fs << indent(n + 4) << name << ".emplace_back(std::move(" << uo << "));\n";
+            break;
+        case type_array:
+            fs << indent(n + 4) << "god::rm_ref_t<decltype(" << name << "[0])> " << uo << ";\n";
+            decode_array(fs, (Array*)et, uo, ua + "[i]", n + 4);
+            fs << indent(n + 4) << name << ".emplace_back(std::move(" << uo << "));\n";
+            break;
+        default:
+            break;
     }
 
     fs << indent(n) << "}\n";
@@ -131,37 +137,35 @@ void encode_array(fs::fstream& fs, Array* a, const fastring& name, const fastrin
     fs << indent(n) << "for (size_t i = 0; i < " << name << ".size(); ++i) {\n";
 
     switch (et->type()) {
-      case type_string:
-      case type_bool:
-      case type_int:
-      case type_int32:
-      case type_int64:
-      case type_uint32:
-      case type_uint64:
-      case type_double:
-        fs << indent(n + 4) << js << ".push_back(" << name << "[i]);\n";
-        break;
-      case type_object:
-        fs << indent(n + 4) << js << ".push_back(" << name << "[i].as_json());\n";
-        break;
-      case type_array:
-        {
+        case type_string:
+        case type_bool:
+        case type_int:
+        case type_int32:
+        case type_int64:
+        case type_uint32:
+        case type_uint64:
+        case type_double:
+            fs << indent(n + 4) << js << ".push_back(" << name << "[i]);\n";
+            break;
+        case type_object:
+            fs << indent(n + 4) << js << ".push_back(" << name << "[i].as_json());\n";
+            break;
+        case type_array: {
             fastring ua = unamed_var();
             fastring ub = unamed_var();
             fs << indent(n + 4) << "const auto& " << ua << " = " << name << "[i];\n";
             fs << indent(n + 4) << "co::Json " << ub << ";\n";
             encode_array(fs, (Array*)et, ua, ub, n + 4);
             fs << indent(n + 4) << js << ".push_back(" << ub << ");\n";
-        }
-        break;
-      default:
-        break;
+        } break;
+        default:
+            break;
     }
 
     fs << indent(n) << "}\n";
 }
 
-void gen_object(fs::fstream& fs, Object* o, int n=0) {
+void gen_object(fs::fstream& fs, Object* o, int n = 0) {
     fs << indent(n) << "struct " << o->name() << " {\n";
     const auto& aos = o->anony_objects();
     for (auto& ao : aos) {
@@ -194,33 +198,33 @@ void gen_object(fs::fstream& fs, Object* o, int n=0) {
         js << "_x_.get(\"" << name << "\")";
 
         switch (t->type()) {
-          case type_string:
-            fs << indent(n + 8) << name << " = " << js << ".as_c_str();\n";
-            break;
-          case type_bool:
-            fs << indent(n + 8) << name << " = " << js << ".as_bool();\n";
-            break;
-          case type_int:
-          case type_int32:
-          case type_int64:
-          case type_uint32:
-          case type_uint64:
-            fs << indent(n + 8) << name << " = (" << t->name() << ")" << js << ".as_int64();\n";
-            break;
-          case type_double:
-            fs << indent(n + 8) << name << " = " << js << ".as_double();\n";
-            break;
-          case type_object:
-            fs << indent(n + 8) << name << ".from_json(" << js << ");\n";
-            break;
-          case type_array:
-            g_uv = 0;
-            fs << indent(n + 8) << "do {\n";
-            decode_array(fs, (Array*)t, f->name(), js, n + 12);
-            fs << indent(n + 8) << "} while (0);\n";
-            break;
-          default:
-            break;
+            case type_string:
+                fs << indent(n + 8) << name << " = " << js << ".as_c_str();\n";
+                break;
+            case type_bool:
+                fs << indent(n + 8) << name << " = " << js << ".as_bool();\n";
+                break;
+            case type_int:
+            case type_int32:
+            case type_int64:
+            case type_uint32:
+            case type_uint64:
+                fs << indent(n + 8) << name << " = (" << t->name() << ")" << js << ".as_int64();\n";
+                break;
+            case type_double:
+                fs << indent(n + 8) << name << " = " << js << ".as_double();\n";
+                break;
+            case type_object:
+                fs << indent(n + 8) << name << ".from_json(" << js << ");\n";
+                break;
+            case type_array:
+                g_uv = 0;
+                fs << indent(n + 8) << "do {\n";
+                decode_array(fs, (Array*)t, f->name(), js, n + 12);
+                fs << indent(n + 8) << "} while (0);\n";
+                break;
+            default:
+                break;
         }
     }
     fs << indent(n + 4) << "}\n\n";
@@ -233,21 +237,21 @@ void gen_object(fs::fstream& fs, Object* o, int n=0) {
         const fastring& name = f->name();
 
         switch (t->type()) {
-          case type_string:
-          case type_bool:
-          case type_int:
-          case type_int32:
-          case type_int64:
-          case type_uint32:
-          case type_uint64:
-          case type_double:
-            fs << indent(n + 8) << "_x_.add_member(\"" << name << "\", " << name << ");\n";
-            break;
-          case type_object:
-            fs << indent(n + 8) << "_x_.add_member(\"" << name << "\", " << name << ".as_json());\n";
-            break;
-          case type_array:
-            {
+            case type_string:
+            case type_bool:
+            case type_int:
+            case type_int32:
+            case type_int64:
+            case type_uint32:
+            case type_uint64:
+            case type_double:
+                fs << indent(n + 8) << "_x_.add_member(\"" << name << "\", " << name << ");\n";
+                break;
+            case type_object:
+                fs << indent(n + 8) << "_x_.add_member(\"" << name << "\", " << name
+                   << ".as_json());\n";
+                break;
+            case type_array: {
                 g_uv = 0;
                 fastring uname = unamed_var();
                 fs << indent(n + 8) << "do {\n";
@@ -255,10 +259,9 @@ void gen_object(fs::fstream& fs, Object* o, int n=0) {
                 encode_array(fs, (Array*)t, f->name(), uname, n + 12);
                 fs << indent(n + 12) << "_x_.add_member(\"" << name << "\", " << uname << ");\n";
                 fs << indent(n + 8) << "} while (0);\n";
-            }
-            break;
-          default:
-            break;
+            } break;
+            default:
+                break;
         }
     }
     fs << indent(n + 8) << "return _x_;\n";
@@ -283,13 +286,13 @@ void gen(Program* p) {
 
     // includes
     fs << "// Autogenerated.\n"
-        << "// DO NOT EDIT. All changes will be undone.\n"
-        << "#pragma once\n\n";
+       << "// DO NOT EDIT. All changes will be undone.\n"
+       << "#pragma once\n\n";
 
     if (s) {
-        fs   << "#include \"co/rpc.h\"\n\n";
+        fs << "#include \"co/rpc.h\"\n\n";
     } else {
-        fs   << "#include \"co/json.h\"\n\n";
+        fs << "#include \"co/json.h\"\n\n";
     }
 
     // namespace
@@ -347,9 +350,9 @@ bool parse(const char* path) {
 int main(int argc, char** argv) {
     auto v = flag::parse(argc, argv);
     if (v.empty()) {
-        cout << "usage:\n"
-             << "\tgen xx.proto\n"
-             << "\tgen a.proto b.proto\n";
+        std::cout << "usage:\n"
+                  << "\tgen xx.proto\n"
+                  << "\tgen a.proto b.proto\n";
         return 0;
     }
 

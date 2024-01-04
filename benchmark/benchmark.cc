@@ -1,5 +1,7 @@
 #include "benchmark.h"
 
+#include <iostream>
+
 #include "co/cout.h"
 #include "co/fastring.h"
 
@@ -67,12 +69,12 @@ void print_results(Group& g) {
         if (maxlen < x) maxlen = x;
     }
 
-    cout << "|  " << text::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ') << "|  "
-         << text::bold("ns/iter  ").blue() << "|  " << text::bold("iters/s  ").blue() << "|  "
-         << text::bold("speedup  ").blue() << "|\n";
+    std::cout << "|  " << text::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ') << "|  "
+              << text::bold("ns/iter  ").blue() << "|  " << text::bold("iters/s  ").blue() << "|  "
+              << text::bold("speedup  ").blue() << "|\n";
 
-    cout << "| " << fastring(maxlen + 2, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "| "
-         << fastring(9, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "|\n";
+    std::cout << "| " << fastring(maxlen + 2, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "| "
+              << fastring(9, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "|\n";
 
     for (size_t i = 0; i < g.res.size(); ++i) {
         auto& r = g.res[i];
@@ -80,13 +82,13 @@ void print_results(Group& g) {
         fastring t = Num(r.ns).str();
         size_t p = t.size() <= 7 ? 9 - t.size() : 2;
 
-        cout << "|  " << text::green(r.bm) << fastring(maxlen - bmlen + 2, ' ') << "|  "
-             << text::red(t) << fastring(p, ' ');
+        std::cout << "|  " << text::green(r.bm) << fastring(maxlen - bmlen + 2, ' ') << "|  "
+                  << text::red(t) << fastring(p, ' ');
 
         double x = r.ns > 0 ? 1000000000.0 / r.ns : 1.2e12;
         t = Num(x).str();
         p = t.size() <= 7 ? 9 - t.size() : 2;
-        cout << "|  " << text::red(t) << fastring(p, ' ');
+        std::cout << "|  " << text::red(t) << fastring(p, ' ');
 
         if (i == 0) {
             t = "1.0";
@@ -97,7 +99,7 @@ void print_results(Group& g) {
         }
 
         p = t.size() <= 7 ? 9 - t.size() : 2;
-        cout << "|  " << text::yellow(t) << fastring(p, ' ') << "|\n";
+        std::cout << "|  " << text::yellow(t) << fastring(p, ' ') << "|\n";
     }
 }
 
@@ -106,7 +108,7 @@ void print_results(Group& g) {
 void run_benchmarks() {
     auto& groups = xx::groups();
     for (size_t i = 0; i < groups.size(); ++i) {
-        if (i != 0) cout << '\n';
+        if (i != 0) std::cout << '\n';
         auto& g = groups[i];
         g.f(g);
         xx::print_results(g);

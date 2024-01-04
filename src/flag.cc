@@ -1,5 +1,6 @@
 #include "co/flag.h"
 
+#include <iostream>
 #include <memory>
 
 #include "co/cout.h"
@@ -191,12 +192,12 @@ inline const char* Flag::type() const {
 }
 
 inline void Flag::print() const {
-    cout << color::green << "    -" << this->name;
-    if (*this->alias) cout << ", " << this->alias;
-    cout.flush();
-    cout << color::blue << "  " << this->help << '\n'
-         << color::deflt << "\ttype: " << this->type() << "\t  default: " << this->value
-         << "\n\tfrom: " << this->file << endl;
+    std::cout << color::green << "    -" << this->name;
+    if (*this->alias) std::cout << ", " << this->alias;
+    std::cout.flush();
+    std::cout << color::blue << "  " << this->help << '\n'
+              << color::deflt << "\ttype: " << this->type() << "\t  default: " << this->value
+              << "\n\tfrom: " << this->file << std::endl;
 }
 
 void Mod::add_flag(char iden, const char* name, const char* value, const char* help,
@@ -204,8 +205,8 @@ void Mod::add_flag(char iden, const char* name, const char* value, const char* h
     auto f = std::make_shared<Flag>(iden, name, alias, value, help, file, line, addr);
     auto r = flags.emplace(name, f);
     if (!r.second) {
-        cout << "multiple definitions of flag: " << name << ", from " << r.first->second->file
-             << " and " << file << endl;
+        std::cout << "multiple definitions of flag: " << name << ", from " << r.first->second->file
+                  << " and " << file << std::endl;
         ::exit(0);
     }
 
@@ -219,8 +220,8 @@ void Mod::add_flag(char iden, const char* name, const char* value, const char* h
             memcpy(s, x.c_str(), n);
             auto r = flags.emplace(s, f);
             if (!r.second) {
-                cout << "alias " << name << " as " << x << " failed, flag " << x
-                     << " already exists in " << r.first->second->file << endl;
+                std::cout << "alias " << name << " as " << x << " failed, flag " << x
+                          << " already exists in " << r.first->second->file << std::endl;
                 ::exit(0);
             }
         }
@@ -313,7 +314,7 @@ void Mod::print_flags() {
         if (!f.inco && *f.help && (!*f.alias || strcmp(it->first, f.name) == 0)) {
             if (the_first_one) {
                 the_first_one = false;
-                cout << "flags:\n";
+                std::cout << "flags:\n";
             }
             f.print();
         }
@@ -321,7 +322,7 @@ void Mod::print_flags() {
 }
 
 void Mod::print_all_flags() {
-    cout << "flags:\n";
+    std::cout << "flags:\n";
     for (auto it = flags.begin(); it != flags.end(); ++it) {
         const auto& f = *it->second;
         if (*f.help && (!*f.alias || strcmp(it->first, f.name) == 0)) {
@@ -331,15 +332,15 @@ void Mod::print_all_flags() {
 }
 
 inline void Mod::print_help() {
-    cout << "usage:  " << color::blue << "$exe [-flag] [value]\n"
-         << color::deflt << "\t"
-         << "$exe -x -i 8k -s ok        # x=true, i=8192, s=\"ok\"\n"
-         << "\t"
-         << "$exe --                    # print all flags\n"
-         << "\t"
-         << "$exe -mkconf               # generate config file\n"
-         << "\t"
-         << "$exe -conf xx.conf         # run with config file\n\n";
+    std::cout << "usage:  " << color::blue << "$exe [-flag] [value]\n"
+              << color::deflt << "\t"
+              << "$exe -x -i 8k -s ok        # x=true, i=8192, s=\"ok\"\n"
+              << "\t"
+              << "$exe --                    # print all flags\n"
+              << "\t"
+              << "$exe -mkconf               # generate config file\n"
+              << "\t"
+              << "$exe -conf xx.conf         # run with config file\n\n";
 
     this->print_flags();
 }
@@ -377,7 +378,7 @@ void Mod::make_config(const fastring& exe) {
 
     fs::fstream f(fname.c_str(), 'w');
     if (!f) {
-        cout << "can't open config file: " << fname << endl;
+        std::cout << "can't open config file: " << fname << std::endl;
         return;
     }
 
@@ -426,8 +427,8 @@ co::vector<fastring> Mod::analyze_args(const co::vector<fastring>& args,
         }
 
         if (ep <= bp) {
-            cout << "invalid parameter"
-                 << ": " << arg << endl;
+            std::cout << "invalid parameter"
+                      << ": " << arg << std::endl;
             ::exit(0);
         }
 
@@ -507,14 +508,14 @@ co::vector<fastring> Mod::parse_commandline(int argc, char** argv) {
         if (f && f->iden == 's') {
             auto& s = *static_cast<fastring*>(f->addr);
             if (!s.empty()) {
-                cout << s << endl;
+                std::cout << s << std::endl;
                 ::exit(0);
             }
             if (name == "help") {
                 this->print_help();
                 ::exit(0);
             }
-            cout << name << ": value not set" << endl;
+            std::cout << name << ": value not set" << std::endl;
             ::exit(0);
         }
     }
@@ -534,7 +535,7 @@ co::vector<fastring> Mod::parse_commandline(int argc, char** argv) {
     for (it = kv.begin(); it != kv.end(); ++it) {
         fastring e = this->set_flag_value(it->first.c_str(), it->second);
         if (!e.empty()) {
-            cout << e << endl;
+            std::cout << e << std::endl;
             ::exit(0);
         }
     }
@@ -542,7 +543,7 @@ co::vector<fastring> Mod::parse_commandline(int argc, char** argv) {
     for (size_t i = 0; i < k.size(); ++i) {
         fastring e = this->set_bool_flags(k[i].c_str());
         if (!e.empty()) {
-            cout << e << endl;
+            std::cout << e << std::endl;
             ::exit(0);
         }
     }
@@ -608,7 +609,7 @@ fastring getline(co::vector<fastring>& lines, size_t& n) {
 void Mod::parse_config(const fastring& config) {
     fs::file f(config, 'r');
     if (!f) {
-        cout << "can't open config file: " << config << endl;
+        std::cout << "can't open config file: " << config << std::endl;
         ::exit(0);
     }
 
@@ -626,7 +627,8 @@ void Mod::parse_config(const fastring& config) {
 
         size_t p = s.find('=');
         if (p == 0 || p == s.npos) {
-            cout << "invalid config: " << s << ", at " << config << ':' << (lineno + 1) << endl;
+            std::cout << "invalid config: " << s << ", at " << config << ':' << (lineno + 1)
+                      << std::endl;
             ::exit(0);
         }
 
@@ -637,10 +639,11 @@ void Mod::parse_config(const fastring& config) {
         fastring e = this->set_flag_value(flg.c_str(), val);
         if (!e.empty()) {
             if (!e.starts_with("flag not defined")) {
-                cout << e << ", at " << config << ':' << (lineno + 1) << endl;
+                std::cout << e << ", at " << config << ':' << (lineno + 1) << std::endl;
                 ::exit(0);
             } else {
-                cout << "WARNING: " << e << ", at " << config << ':' << (lineno + 1) << endl;
+                std::cout << "WARNING: " << e << ", at " << config << ':' << (lineno + 1)
+                          << std::endl;
             }
         }
     }

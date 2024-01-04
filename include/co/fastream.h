@@ -21,6 +21,9 @@ class __coapi fastream : public fast::stream {
     fastring str() const { return fastring(_p, _size); }
 
     fastream& append(const void* p, size_t n) { return (fastream&)fast::stream::append(p, n); }
+    inline fastream& write(const void* p, size_t n) {
+        return (fastream&)fast::stream::append(p, n);
+    }
 
     // like append(), but will not check if p overlaps with the internal memory
     fastream& append_nomchk(const void* p, size_t n) {

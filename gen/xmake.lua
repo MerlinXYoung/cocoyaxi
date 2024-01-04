@@ -4,6 +4,6 @@ target("gen")
     add_deps("libco")
     add_files("*.cc")
     set_rundir("$(projectdir)")
-    add_cxflags("-Wno-builtin-macro-redefined")
-    before_build_file(redefine_file_macro)
+    -- add_cxflags("-Wno-builtin-macro-redefined")
+    -- before_build_file(redefine_file_macro)
 

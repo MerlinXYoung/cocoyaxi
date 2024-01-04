@@ -13,6 +13,7 @@ function(redefine_file_macro targetname)
         get_filename_component(filepath "${sourcefile}" ABSOLUTE)
         #将绝对路径中的项目路径替换成空,得到源文件相对于项目路径的相对路径
         string(REPLACE ${PROJECT_SOURCE_DIR}/ "" relpath ${filepath})
+        message("${filepath} -> ${relpath}")
         #将我们要加的编译参数(__FILE__定义)添加到原来的编译参数里面
         list(APPEND defs "__FILE__=\"${relpath}\"")
         target_compile_options(${targetname} PUBLIC -Wno-builtin-macro-redefined)
@@ -21,5 +22,10 @@ function(redefine_file_macro targetname)
             SOURCE "${sourcefile}"
             PROPERTY COMPILE_DEFINITIONS ${defs}
             )
+    endforeach()
+
+    get_target_property(header_files "${targetname}" INCLUDES)
+    foreach(sourcefile ${header_files})
+        message("${sourcefile}")
     endforeach()
 endfunction()

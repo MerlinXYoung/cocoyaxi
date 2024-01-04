@@ -1,4 +1,5 @@
 %{
+#include <iostream>
 #include "gen.h"
 %}
 
@@ -83,7 +84,7 @@ Service:
     tok_service tok_identifier '{' MethodList '}'
     {
         if (g_prog->service()) {
-            cout << "error: found multiple service" << endl;
+            std::cout << "error: found multiple service" << std::endl;
             delete($4);
             exit(0);
         }
@@ -97,7 +98,7 @@ MethodList:
         $$ = $1;
         fastring m = S($2);
         if (!$$->add_method(m)) {
-            cout << "error: method name " << m << " duplicated" << endl;
+            std::cout << "error: method name " << m << " duplicated" << std::endl;
             exit(0);
         }
     }
@@ -117,7 +118,7 @@ Object:
         $$ = $4;
         $$->set_name(S($2));
         if (!g_prog->add_object($$)) {
-            cout << "error: object type " << $$->name() << " duplicated" << endl;
+            std::cout << "error: object type " << $$->name() << " duplicated" << std::endl;
             delete($$);
             exit(0);
         }
@@ -128,7 +129,7 @@ FieldList:
     {
         $$ = $1;
         if (!($$->add_field($2))) {
-            cout << "error: field " << $2->name() << " duplicated in object " << $$->name() << endl;
+            std::cout << "error: field " << $2->name() << " duplicated in object " << $$->name() << std::endl;
             exit(0);
         }
     }
@@ -166,7 +167,7 @@ FieldType:
         fastring s = S($1);
         $$ = g_prog->find_object(s);
         if (!$$) {
-            cout << "unknown type " << s << " at line " << yylineno << endl;
+            std::cout << "unknown type " << s << " at line " << yylineno << std::endl;
             exit(0);
         }
     }
