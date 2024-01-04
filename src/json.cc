@@ -443,42 +443,7 @@ err:
     assert(u.size() == 0);
     return false;
 }
-
-static int g_nifty_counter;
-static char g_s2e_tb[256];
-static char g_e2s_tb[256];
-static char g_hex_tb[256];
-
-namespace xx {
-
-Initializer::Initializer() {
-    if (g_nifty_counter++ == 0) {
-        g_s2e_tb[(uint8_t)'r'] = '\r';
-        g_s2e_tb[(uint8_t)'n'] = '\n';
-        g_s2e_tb[(uint8_t)'t'] = '\t';
-        g_s2e_tb[(uint8_t)'b'] = '\b';
-        g_s2e_tb[(uint8_t)'f'] = '\f';
-        g_s2e_tb[(uint8_t)'"'] = '"';
-        g_s2e_tb[(uint8_t)'\\'] = '\\';
-        g_s2e_tb[(uint8_t)'/'] = '/';
-        g_s2e_tb[(uint8_t)'u'] = 'u';
-
-        g_e2s_tb[(uint8_t)'\r'] = 'r';
-        g_e2s_tb[(uint8_t)'\n'] = 'n';
-        g_e2s_tb[(uint8_t)'\t'] = 't';
-        g_e2s_tb[(uint8_t)'\b'] = 'b';
-        g_e2s_tb[(uint8_t)'\f'] = 'f';
-        g_e2s_tb[(uint8_t)'\"'] = '"';
-        g_e2s_tb[(uint8_t)'\\'] = '\\';
-
-        memset(g_hex_tb, 16, 256);
-        for (char c = '0'; c <= '9'; ++c) g_hex_tb[(uint8_t)c] = c - '0';
-        for (char c = 'A'; c <= 'F'; ++c) g_hex_tb[(uint8_t)c] = c - 'A' + 10;
-        for (char c = 'a'; c <= 'f'; ++c) g_hex_tb[(uint8_t)c] = c - 'a' + 10;
-    }
-}
-
-}  // namespace xx
+#include "json.h.in"
 
 S Parser::parse_string(S b, S e, void_ptr_t& v) {
     S p, q;

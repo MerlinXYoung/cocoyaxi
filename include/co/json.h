@@ -12,13 +12,6 @@
 namespace json {
 namespace xx {
 
-struct __coapi Initializer {
-    Initializer();
-    ~Initializer() = default;
-};
-
-static Initializer g_initializer;
-
 class Array {
   public:
     typedef void* T;

@@ -36,16 +36,6 @@ constexpr _fpt _n(double v, int n) { return _fpt(v, n); }
 }  // namespace dp
 
 namespace fast {
-namespace xx {
-
-struct __coapi Initializer {
-    Initializer();
-    ~Initializer() = default;
-};
-
-static Initializer g_initializer;
-
-}  // namespace xx
 
 // double to ascii string, return length of the result
 inline int dtoa(double v, char* buf, int mdp = 324) { return milo::dtoa(v, buf, mdp); }

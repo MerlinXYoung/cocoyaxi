@@ -1,6 +1,9 @@
 
 #include <inttypes.h>
 
+#include <sstream>
+#include <string>
+
 #include "benchmark.h"
 #include "co/color.h"
 #include "co/flag.h"
@@ -18,6 +21,17 @@ BM_group(uint64_to_string) {
 
     BM_add(u64toa)(for (uint64_t i = FLG_beg; i < FLG_end; i++) { fast::u64toa(i, buf); })
         BM_use(buf);
+
+    BM_add(to_string)(for (uint64_t i = FLG_beg; i < FLG_end; i++) { (void)std::to_string(i); })
+        BM_use(buf);
+
+    BM_add(ostringstream)(for (uint64_t i = FLG_beg; i < FLG_end; i++) {
+        std::ostringstream os;
+        os << i;
+        os.str();
+    }) BM_use(buf);
+
+    // BM_use(buf);
 }
 
 BM_group(uint64_to_hex) {
@@ -35,6 +49,14 @@ BM_group(double_to_string) {
 
     BM_add(dtoa)(r = fast::dtoa(FLG_f, buf);) BM_use(r);
     BM_use(buf);
+
+    BM_add(to_string)({ (void)std::to_string(FLG_f); }) BM_use(buf);
+
+    BM_add(ostringstream)({
+        std::ostringstream os;
+        os << FLG_f;
+        os.str();
+    }) BM_use(buf);
 }
 
 int main(int argc, char** argv) {

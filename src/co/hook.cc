@@ -1350,25 +1350,8 @@ void hook_sleep(bool x) {
     std::atomic_store_explicit((std::atomic_bool*)&g_hook.hook_sleep, x, std::memory_order_relaxed);
 }
 
-// static int g_nifty_counter;
-// HookInitializer::HookInitializer() {
-//     if (g_nifty_counter++ == 0) {
-//         co::init_hook();
-//     }
-// }
-
-// HookInitializer::~HookInitializer() {}
-
 }  // namespace co
 
-// static int g_nifty_counter;
-// HookInitializer::HookInitializer() {
-//     if (g_nifty_counter++ == 0) {
-//         co::init_hook();
-//     }
-// }
-
-// HookInitializer::~HookInitializer() {}
 
 #undef do_hook
 #undef _hook

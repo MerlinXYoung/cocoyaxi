@@ -5,36 +5,7 @@
 namespace fast {
 namespace xx {
 
-static int g_nifty_counter;
-static uint16_t g_itoh_tb[256];
-static uint32_t g_itoa_tb[10000];
-
-Initializer::Initializer() {
-    if (g_nifty_counter++ == 0) {
-        for (int i = 0; i < 256; ++i) {
-            char* b = (char*)(g_itoh_tb + i);
-            b[0] = "0123456789abcdef"[i >> 4];
-            b[1] = "0123456789abcdef"[i & 0x0f];
-        }
-
-        for (int i = 0; i < 10000; ++i) {
-            char* b = (char*)(g_itoa_tb + i);
-            b[3] = (char)(i % 10 + '0');
-            b[2] = (char)(i % 100 / 10 + '0');
-            b[1] = (char)(i % 1000 / 100 + '0');
-            b[0] = (char)(i / 1000);
-
-            // digits of i: (b[0] >> 4) + 1
-            if (i > 999) {
-                b[0] |= (3 << 4);  // 0x30
-            } else if (i > 99) {
-                b[0] |= (2 << 4);  // 0x20
-            } else if (i > 9) {
-                b[0] |= (1 << 4);  // 0x10
-            }
-        }
-    }
-}
+#include "fast.h.in"
 
 }  // namespace xx
 

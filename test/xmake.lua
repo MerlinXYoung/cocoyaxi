@@ -9,7 +9,7 @@ function all_tests()
     end
     return res
 end
-
+    
 for _, test in ipairs(all_tests()) do
 target(test[1])
     if test[1] == "stack" then
@@ -24,6 +24,9 @@ target(test[1])
 
     add_includedirs("../utest")
     add_deps("libutest")
+    add_packages("RapidJSON")
+
+    
     -- add_cxflags("-Wno-builtin-macro-redefined")
     -- before_build_file(redefine_file_macro)
 end

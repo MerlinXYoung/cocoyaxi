@@ -1,5 +1,8 @@
 #include "co/json.h"
 
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
+
 #include "co/color.h"
 #include "co/defer.h"
 #include "co/flag.h"
@@ -80,6 +83,17 @@ int main(int argc, char** argv) {
         co::Json xx = json::parse(s.data(), s.size());
     }
     int64_t end = now::us();
+
+    co::print("parse average time used: ", (end - beg) * 1.0 / n, "us");
+
+    beg = now::us();
+    for (int i = 0; i < n; ++i) {
+        // co::Json xx = json::parse(s.data(), s.size());
+        rapidjson::Document doc;
+        doc.Parse(s.c_str());
+        // doc.add_member()
+    }
+    end = now::us();
 
     co::print("parse average time used: ", (end - beg) * 1.0 / n, "us");
 

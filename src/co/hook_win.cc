@@ -1315,14 +1315,6 @@ void hook_sleep(bool x) {
 
 }  // namespace co
 
-// static int g_nifty_counter;
-// HookInitializer::HookInitializer() {
-//     if (g_nifty_counter++ == 0) {
-//     }
-// }
-
-// HookInitializer::~HookInitializer() {}
-
 #undef attach_hook
 #undef detach_hook
 #undef do_hard_hook
