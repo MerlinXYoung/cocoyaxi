@@ -74,7 +74,7 @@ struct Mod {
     std::atomic_bool check_failed;
 };
 
-inline Mod& mod() {
+inline Mod& mod() noexcept {
     static Mod _mod;
     return _mod;
 }
@@ -376,7 +376,7 @@ class Logger {
     static const uint32_t N = 128 * 1024;
     static const int A = 8;  // array size
 
-    Logger(LogTime* t, LogFile* f);
+    Logger(LogTime& t, LogFile& f);
     ~Logger() { this->stop(); }
 
     bool start();
@@ -448,8 +448,8 @@ class Logger {
     std::atomic_int _stop;  // -2: init, -1: starting, 0: running, 1: stopping, 2: stopped, 3: final
 };
 
-Logger::Logger(LogTime* t, LogFile* f)
-    : _llog(), _tlog(), _log_event(true, false), _time(*t), _file(*f), _stop(-2) {
+Logger::Logger(LogTime& t, LogFile& f)
+    : _llog(), _tlog(), _log_event(true, false), _time(t), _file(f), _stop(-2) {
     memcpy(_llog.x.time_str, _time.get(), 24);
     _llog.sec = _time.sec();
     for (int i = 0; i < A; ++i) {
@@ -458,7 +458,7 @@ Logger::Logger(LogTime* t, LogFile* f)
 }
 
 bool Logger::start() {
-    // if (co::atomic_bool_cas(&_stop, -2, -1)) {
+    ::printf("logger start\n");
     decltype(_stop)::value_type stop = -2;
     if (_stop.compare_exchange_strong(stop, -1, std::memory_order_seq_cst,
                                       std::memory_order_seq_cst)) {
@@ -483,7 +483,9 @@ bool Logger::start() {
         } while (0);
 
         _stop.store(0);
+        ::printf("logger start, before thread\n");
         std::thread(&Logger::thread_fun, this).detach();
+        ::printf("logger start, after thread\n");
     } else {
         while (_stop.load(std::memory_order_relaxed) < 0) {
             sleep::ms(1);
@@ -545,15 +547,19 @@ void Logger::stop(bool signal_safe) {
     }
 }
 
-std::once_flag g_flag;
-static std::atomic_bool g_thread_started;
+// std::once_flag g_flag;
+// static std::atomic_bool g_thread_started;
+static std::atomic_flag g_thread_started;
 
 void Logger::push_level_log(char* s, size_t n) {
-    if (unlikely(!g_thread_started)) {
-        std::call_once(g_flag, [this]() {
-            this->start();
-            g_thread_started.store(true);
-        });
+    // if (unlikely(!g_thread_started)) {
+    //     std::call_once(g_flag, [this]() {
+    //         this->start();
+    //         g_thread_started.store(true);
+    //     });
+    // }
+    if (unlikely(!g_thread_started.test_and_set())) {
+        this->start();
     }
     if (unlikely(n > FLG_log_max_size)) {
         n = FLG_log_max_size;
@@ -584,11 +590,14 @@ void Logger::push_level_log(char* s, size_t n) {
 }
 
 void Logger::push_topic_log(const char* topic, char* s, size_t n) {
-    if (unlikely(!g_thread_started)) {
-        std::call_once(g_flag, [this]() {
-            this->start();
-            g_thread_started.store(true);
-        });
+    // if (unlikely(!g_thread_started)) {
+    //     std::call_once(g_flag, [this]() {
+    //         this->start();
+    //         g_thread_started.store(true);
+    //     });
+    // }
+    if (unlikely(!g_thread_started.test_and_set())) {
+        this->start();
     }
     if (unlikely(n > FLG_log_max_size)) {
         n = FLG_log_max_size;
@@ -649,10 +658,13 @@ void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size
 }
 
 void Logger::thread_fun() {
+    ::printf("run in logger thread\n");
     bool signaled;
     int64_t sec;
-    // while (co::atomic_load(&g_init_done, co::mo_acquire) != true) _log_event.wait(8);
-    while (g_init_done.load(std::memory_order_acquire) != true) _log_event.wait(8);
+    while (g_init_done.load(std::memory_order_acquire) != true) {
+        ::printf("wait\n");
+        _log_event.wait(8);
+    }
     while (!_stop) {
         signaled = _log_event.wait(FLG_log_flush_ms);
         if (_stop) break;
@@ -1077,7 +1089,7 @@ Mod::Mod() {
     log_time = new LogTime();
     log_file = new LogFile();
     log_fatal = new LogFile();
-    logger = new Logger(log_time, log_file);
+    logger = new Logger(*log_time, *log_file);
     except_handler = new ExceptHandler();
     check_failed = false;
 }
