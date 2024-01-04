@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "color.h"
+#include "co/color.h"
 #include "co/fastring.h"
 
 namespace bm {

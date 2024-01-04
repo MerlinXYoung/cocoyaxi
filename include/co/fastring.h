@@ -160,7 +160,7 @@ class __coapi fastring : public fast::stream {
 
     fastring& operator<<(std::nullptr_t) { return (fastring&)fast::stream::operator<<(nullptr); }
 
-    fastring& operator<<(const char* s) { return this->append(s, strlen(s)); }
+    fastring& operator<<(const char* s) { return this->append(s, ::strlen(s)); }
 
     fastring& operator<<(const signed char* s) { return this->operator<<((const char*)s); }
 

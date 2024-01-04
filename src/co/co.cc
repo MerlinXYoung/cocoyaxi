@@ -118,7 +118,7 @@ inline bool mutex_impl::try_lock() noexcept {
 
 void mutex_impl::lock() {
     const auto sched = xx::current_sched();  // xx::gSched;
-    if (sched) { /* in coroutine */
+    if (sched) {                             /* in coroutine */
         _m.lock();
         if (!_lock) {
             _lock = 1;
@@ -191,8 +191,8 @@ class event_impl {
 };
 
 bool event_impl::wait(uint32_t ms) {
-    const auto sched =xx::current_sched();  //  gSched;
-    if (sched) { /* in coroutine */
+    const auto sched = xx::current_sched();  //  gSched;
+    if (sched) {                             /* in coroutine */
         Coroutine* co = sched->running();
         {
             std::unique_lock<std::mutex> g(_m);
@@ -777,7 +777,7 @@ class pool_impl {
     }
 
     void _free_pools() {
-        for (int i = 0; i < _size; ++i) _pools[i].~V();
+        for (size_t i = 0; i < _size; ++i) _pools[i].~V();
         ::free(_pools);
     }
 
@@ -802,7 +802,7 @@ inline void* pool_impl::pop() {
 
 inline void pool_impl::push(void* p) {
     if (p) {
-        auto s =xx::current_sched();  //  gSched;
+        auto s = xx::current_sched();  //  gSched;
         CHECK(s) << "must be called in coroutine..";
         auto& v = _pools[s->id()];
         (v.size() < _maxcap || !_dcb) ? v.push_back(p) : _dcb(p);

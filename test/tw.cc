@@ -1,12 +1,13 @@
 #include <algorithm>
 
-#include "co/benchmark.h"
+#include "benchmark.h"
 #include "co/color.h"
 #include "co/def.h"
 #include "co/fastream.h"
 #include "co/flag.h"
 #include "co/str.h"
 #include "co/time.h"
+
 
 #ifndef _WIN32
 #define max std::max

@@ -1,7 +1,7 @@
 #include "co/flag.h"
 
 #include "co/fs.h"
-#include "co/unitest.h"
+#include "unitest.h"
 
 DEF_bool(ut_bool, false, "bool type");
 DEF_int32(ut_int32, -32, "int32_t type");

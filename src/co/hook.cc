@@ -17,7 +17,7 @@ void hook_sleep(bool) {}
 #include <stdarg.h>
 
 #include <atomic>
-// #include "co/atomic.h"
+
 #include "co/color.h"
 #include "co/defer.h"
 #include "co/table.h"
@@ -28,11 +28,6 @@ DEF_bool(co_hook_log, false, ">>#1 print log for API hooks");
 #define HOOKLOG DLOG_IF(FLG_co_hook_log)
 
 namespace co {
-// struct HookInitializer {
-//     HookInitializer();
-//     ~HookInitializer();
-// };
-// static HookInitializer g_hook_initializer;
 
 class HookCtx {
   public:

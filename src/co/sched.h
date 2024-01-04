@@ -171,7 +171,7 @@ class CoroutinePool {
         _o = 0;
 
     newco : {
-        if (_c < _v.size()) {
+        if (_c < (int)_v.size()) {
             if (!_v[_c]) _v[_c] = (Coroutine*)::calloc(N, sizeof(Coroutine));
         } else {
             const int c = god::align_up<M>(_c + 1);

@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-#include "co/color.h"
 #include "co/time.h"
 #include "co/vector.h"
+#include "color.h"
 
 namespace bm {
 

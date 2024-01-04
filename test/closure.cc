@@ -2,7 +2,6 @@
 
 #include "co/color.h"
 
-
 template <class F, typename P>
 class X : public co::Closure {
   public:

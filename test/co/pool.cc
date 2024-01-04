@@ -3,7 +3,6 @@
 #include "co/co.h"
 #include "co/color.h"
 
-
 static std::atomic_int g_id{0};
 
 class S {

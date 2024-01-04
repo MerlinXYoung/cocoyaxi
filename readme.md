@@ -101,7 +101,7 @@ void f() {
 
 ```cpp
 #include "co/flag.h"
-#include "co/color.h"
+#include "color.h"
 
 DEF_bool(x, false, "x");
 DEF_bool(y, true, "y");

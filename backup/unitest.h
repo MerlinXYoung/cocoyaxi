@@ -1,11 +1,11 @@
 #pragma once
 #include <iostream>
 
-#include "co/color.h"
 #include "co/fastring.h"
 #include "co/flag.h"
 #include "co/time.h"
 #include "co/vector.h"
+#include "color.h"
 
 namespace unitest {
 

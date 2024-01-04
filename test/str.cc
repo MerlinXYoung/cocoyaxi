@@ -1,9 +1,10 @@
 #include "co/str.h"
 
-#include "co/benchmark.h"
+#include "benchmark.h"
 #include "co/color.h"
 #include "co/fastring.h"
 #include "co/flag.h"
+
 
 DEF_string(s, "", "string for search test");
 
