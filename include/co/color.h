@@ -5,9 +5,10 @@
 
 #include "fastream.h"
 
-#ifdef _WIN32
-#include "co/os.h"
 
+#ifdef _WIN32
+#include "os.h"
+#include "god.h"
 #ifdef _MSC_VER
 #pragma warning(disable : 4503)
 #endif
@@ -54,12 +55,12 @@ inline const char* get_color_str(int c) {
     return _fg[c];
 }
 #ifdef _WIN32
-inline HANDLE cout_handle() {
+inline HANDLE& cout_handle()noexcept {
     static HANDLE _h = GetStdHandle(STD_OUTPUT_HANDLE);
     return _h;
 }
 
-inline bool has_vterm() {
+inline bool has_vterm()noexcept {
     if (!os::env("TERM").empty()) return true;
 #ifdef ENABLE_VIRTUAL_TERMINAL_PROCESSING
     auto h = cout_handle();
@@ -74,13 +75,12 @@ inline bool has_vterm() {
 #endif
 }
 
-inline bool ansi_esc_seq_enabled() {
+inline bool ansi_esc_seq_enabled()noexcept {
     static int _vterm = has_vterm() ? 1 : -1;
-    ;
     return _vterm > 0;
 }
 
-inline int get_default_color() {
+inline int get_default_color() noexcept{
     CONSOLE_SCREEN_BUFFER_INFO buf;
     auto h = cout_handle();
     if (h && GetConsoleScreenBufferInfo(h, &buf)) {
@@ -89,7 +89,7 @@ inline int get_default_color() {
     return 0;
 }
 
-inline int get_fgi(int c) {
+inline int get_fgi(int c)noexcept {
     static const int fgi[16] = {
         color::get_default_color(),  // default
         FOREGROUND_RED,
@@ -155,27 +155,27 @@ inline Text cyan(const char* s) noexcept { return Text(s, ::strlen(s), color::cy
 
 struct Bold {
     constexpr Bold(const char* s, size_t n) noexcept : s(s), n(n), c(color::bold) {}
-    Bold& red() noexcept {
+   inline Bold& red() noexcept {
         i |= color::red;
         return *this;
     }
-    Bold& green() noexcept {
+   inline Bold& green() noexcept {
         i |= color::green;
         return *this;
     }
-    Bold& blue() noexcept {
+  inline  Bold& blue() noexcept {
         i |= color::blue;
         return *this;
     }
-    Bold& yellow() noexcept {
+  inline  Bold& yellow() noexcept {
         i |= color::yellow;
         return *this;
     }
-    Bold& magenta() noexcept {
+   inline Bold& magenta() noexcept {
         i |= color::magenta;
         return *this;
     }
-    Bold& cyan() noexcept {
+   inline Bold& cyan() noexcept {
         i |= color::cyan;
         return *this;
     }
@@ -198,16 +198,20 @@ inline Bold bold(const char* s) noexcept { return Bold(s, ::strlen(s)); }
 namespace color = co::color;
 namespace text = co::text;
 
+DEF_has_method(flush);
+
 template <class OStream>
 inline OStream& operator<<(OStream& os, color::Color c) {
 #ifdef _WIN32
-    if (color::ansi_esc_seq_enabled()) return os << get_color_str(c);
-    os.flush();
+    if (color::ansi_esc_seq_enabled()) return os << color::get_color_str(c);
+        
+    if constexpr (god::has_method_flush<OStream>())
+        os.flush();
     auto h = color::cout_handle();
-    if (h) SetConsoleTextAttribute(h, (WORD)get_win_fgi(c));
+    if (h) SetConsoleTextAttribute(h, (WORD)color::get_fgi(c));
     return os;
 #else
-    return os << get_color_str(c);
+    return os << color::get_color_str(c);
 #endif
 }
 
@@ -227,7 +231,7 @@ inline fastream& cstream() {
     return _s;
 }
 struct Printer {
-    inline Printer() : s(cstream()) { n = s.size(); }
+    inline Printer() noexcept: s(cstream()) { n = s.size(); }
     inline ~Printer() {
         s << '\n';
         {
