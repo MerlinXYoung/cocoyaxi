@@ -2,14 +2,13 @@
 
 #include <iostream>
 
-#include "co/cout.h"
+#include "co/color.h"
 #include "co/def.h"
 #include "co/defer.h"
 #include "co/flag.h"
 #include "co/fs.h"
 #include "co/json.h"
 #include "co/str.h"
-
 
 DEF_bool(std, false, "use std types in the generated code");
 

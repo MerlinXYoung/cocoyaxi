@@ -1,5 +1,5 @@
 #include "co/co.h"
-#include "co/cout.h"
+#include "co/color.h"
 
 void f() {
     co::chan<int> ch;

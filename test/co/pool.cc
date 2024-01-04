@@ -1,6 +1,8 @@
-#include "co/co.h"
-#include "co/cout.h"
 #include <atomic>
+
+#include "co/co.h"
+#include "co/color.h"
+
 
 static std::atomic_int g_id{0};
 

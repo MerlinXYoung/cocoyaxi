@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
-#include "co/cout.h"
+
+#include "co/color.h"
 #include "co/fastring.h"
 #include "co/flag.h"
 #include "co/vector.h"

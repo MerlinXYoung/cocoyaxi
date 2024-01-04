@@ -1,6 +1,6 @@
 #include "co/flag.h"
 
-#include "co/cout.h"
+#include "co/color.h"
 
 DEF_bool(boo, false, "bool flag");
 DEF_bool(x, false, "bool x");

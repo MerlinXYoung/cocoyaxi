@@ -1,7 +1,7 @@
 #include <algorithm>
 
 #include "benchmark.h"
-#include "co/cout.h"
+#include "co/color.h"
 #include "co/def.h"
 #include "co/fastream.h"
 #include "co/flag.h"

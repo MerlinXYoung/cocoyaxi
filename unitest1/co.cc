@@ -2,7 +2,7 @@
 #include "co/co.h"
 
 #include "co/atomic.h"
-#include "co/cout.h"
+#include "co/color.h"
 #include "helper.h"
 
 namespace test {

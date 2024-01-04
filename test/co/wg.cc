@@ -1,5 +1,5 @@
 #include "co/co.h"
-#include "co/cout.h"
+#include "co/color.h"
 
 DEF_uint32(n, 8, "coroutine number");
 

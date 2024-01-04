@@ -3,7 +3,7 @@
 #include "byte_order.h"
 #include "closure.h"
 #include "co.h"
-#include "cout.h"
+#include "color.h"
 #include "def.h"
 #include "defer.h"
 #include "fast.h"
@@ -23,4 +23,3 @@
 #include "str.h"
 #include "tasked.h"
 #include "time.h"
-

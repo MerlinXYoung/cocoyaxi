@@ -1,8 +1,8 @@
 #pragma once
 
+#include "co/color.h"
 #include "co/fastring.h"
 #include "co/stl.h"
-#include "co/cout.h"
 
 extern "C" {
 int yylex(void);
@@ -40,7 +40,7 @@ class Service {
   private:
     fastring _name;
     co::vector<fastring> _methods;
-    co::hash_set<fastring> _keys; 
+    co::hash_set<fastring> _keys;
 };
 
 enum type_t {
@@ -87,10 +87,22 @@ class Value {
     double get_double() const { return _d; }
     char* get_string() const { return _s; }
 
-    void set_bool(bool x) { _type = type_bool; _b = x; }
-    void set_integer(int64_t x) { _type = type_int64; _i = x; }
-    void set_double(double x) { _type = type_double; _d = x; }
-    void set_string(char* s) { _type = type_string; _s = s; }
+    void set_bool(bool x) {
+        _type = type_bool;
+        _b = x;
+    }
+    void set_integer(int64_t x) {
+        _type = type_int64;
+        _i = x;
+    }
+    void set_double(double x) {
+        _type = type_double;
+        _d = x;
+    }
+    void set_string(char* s) {
+        _type = type_string;
+        _s = s;
+    }
 
   private:
     type_t _type;
@@ -102,7 +114,7 @@ class Value {
     };
 };
 
-// anonymous 
+// anonymous
 class Field {
   public:
     Field() : _type(0), _value(0) {}
@@ -128,21 +140,15 @@ class Field {
 
 class Array : public Type {
   public:
-    Array() {
-        _type = type_array;
-    }
+    Array() { _type = type_array; }
 
     virtual ~Array() {
         if (_element_type->type() != type_object) delete (_element_type);
     }
 
-    Type* element_type() const {
-        return _element_type;
-    }
+    Type* element_type() const { return _element_type; }
 
-    void set_element_type(Type* t) {
-        _element_type = t;
-    }
+    void set_element_type(Type* t) { _element_type = t; }
 
   private:
     Type* _element_type;
@@ -150,9 +156,7 @@ class Array : public Type {
 
 class Object : public Type {
   public:
-    Object() {
-        _type = type_object;
-    }
+    Object() { _type = type_object; }
 
     virtual ~Object() {
         for (auto& x : _fields) delete (x);
@@ -166,17 +170,11 @@ class Object : public Type {
         return true;
     }
 
-    const co::vector<Field*>& fields() const {
-        return _fields;
-    }
+    const co::vector<Field*>& fields() const { return _fields; }
 
-    const co::vector<Object*>& anony_objects() const {
-        return _anony_objects;
-    }
+    const co::vector<Object*>& anony_objects() const { return _anony_objects; }
 
-    void set_anony_objects(co::vector<Object*>&& x) {
-        _anony_objects = std::move(x);
-    }
+    void set_anony_objects(co::vector<Object*>&& x) { _anony_objects = std::move(x); }
 
   private:
     co::vector<Field*> _fields;
@@ -187,9 +185,7 @@ class Object : public Type {
 class Program {
   public:
     Program() : _serv(0) {}
-    ~Program() {
-        this->clear();
-    }
+    ~Program() { this->clear(); }
 
     void set_fbase(fastring&& x) { _fbase = std::move(x); }
     const fastring& fbase() const { return _fbase; }
@@ -197,9 +193,7 @@ class Program {
     void set_fname(fastring&& x) { _fname = std::move(x); }
     const fastring& fname() const { return _fname; }
 
-    void add_pkg(fastring&& x) {
-        _pkgs.emplace_back(std::move(x));
-    }
+    void add_pkg(fastring&& x) { _pkgs.emplace_back(std::move(x)); }
 
     const co::vector<fastring>& pkgs() const { return _pkgs; }
 
@@ -214,9 +208,7 @@ class Program {
         return true;
     }
 
-    void add_anony_object(Object* x) {
-        _anony_objects.push_back(x);
-    }
+    void add_anony_object(Object* x) { _anony_objects.push_back(x); }
 
     Object* find_object(const fastring& name) const {
         auto it = _idx.find(name);
@@ -224,9 +216,7 @@ class Program {
         return nullptr;
     }
 
-    const co::vector<Object*>& objects() const {
-        return _objects;
-    }
+    const co::vector<Object*>& objects() const { return _objects; }
 
     void clear() {
         _fbase.clear();
@@ -240,8 +230,8 @@ class Program {
     }
 
   private:
-    fastring _fbase; // base name of proto file
-    fastring _fname; // name of the proto file
+    fastring _fbase;  // base name of proto file
+    fastring _fname;  // name of the proto file
     co::vector<fastring> _pkgs;
     Service* _serv;
     co::vector<Object*> _objects;

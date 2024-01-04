@@ -341,7 +341,7 @@ class Sched {
     // sleep for milliseconds in the current coroutine
     void sleep(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
-        auto it = _timer_mgr.add_timer(ms, _running);
+        (void)_timer_mgr.add_timer(ms, _running);
         SCHEDLOG << "co(" << _running << ") sleep(" << ms << " ms)";
         this->yield();
     }
