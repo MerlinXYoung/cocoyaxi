@@ -1,12 +1,31 @@
-#include "benchmark.h"
+#pragma once
 
 #include <iostream>
 
 #include "co/color.h"
-#include "co/fastring.h"
+#include "co/time.h"
+#include "co/vector.h"
 
 namespace bm {
+
 namespace xx {
+
+struct Result {
+    Result(const char* bm, double ns) noexcept : bm(bm), ns(ns) {}
+    const char* bm;
+    double ns;
+};
+
+struct Group {
+    Group(const char* name, void (*f)(Group&)) noexcept : name(name), f(f) {}
+    const char* name;
+    const char* bm;
+    void (*f)(Group&);
+    int iters;
+    int64_t ns;
+    co::Timer timer;
+    co::vector<Result> res;
+};
 
 int calc_iters(int64_t ns) {
     if (ns <= 1000) return 100 * 1000;
@@ -22,13 +41,13 @@ inline co::vector<Group>& groups() {
     return _g;
 }
 
-bool add_group(const char* name, void (*f)(Group&)) {
+inline bool add_group(const char* name, void (*f)(Group&)) {
     groups().push_back(Group(name, f));
     return true;
 }
 
 // do nothing, just fool the compiler
-void use(void*, int) {}
+inline void use(void*, int) {}
 
 struct Num {
     constexpr Num(double v) noexcept : v(v) {}
@@ -61,7 +80,7 @@ struct Num {
 // | ------- | --------- | --------- | --------- |
 // |  bm 0   |  50.0     |  20.0M    |  1.0      |
 // |  bm 1   |  10.0     |  100.0M   |  5.0      |
-void print_results(Group& g) {
+inline void print_results(Group& g) {
     size_t grplen = ::strlen(g.name);
     size_t maxlen = grplen;
     for (auto& r : g.res) {
@@ -105,7 +124,7 @@ void print_results(Group& g) {
 
 }  // namespace xx
 
-void run_benchmarks() {
+inline void run_benchmarks() {
     auto& groups = xx::groups();
     for (size_t i = 0; i < groups.size(); ++i) {
         if (i != 0) std::cout << '\n';
@@ -116,3 +135,34 @@ void run_benchmarks() {
 }
 
 }  // namespace bm
+
+// define a benchmark group
+#define BM_group(_name_)                                                               \
+    void _co_bm_group_##_name_(bm::xx::Group&);                                        \
+    static bool _co_bm_v_##_name_ = bm::xx::add_group(#_name_, _co_bm_group_##_name_); \
+    void _co_bm_group_##_name_(bm::xx::Group& _g_)
+
+// add a benchmark, it must be inside BM_group
+#define BM_add(_name_) \
+    _g_.bm = #_name_;  \
+    _BM_add
+
+#define _BM_add(e)                                                           \
+    {                                                                        \
+        auto _f_ = [&]() { e; };                                             \
+        _g_.timer.restart();                                                 \
+        _f_();                                                               \
+        _g_.ns = _g_.timer.ns();                                             \
+        _g_.iters = bm::xx::calc_iters(_g_.ns);                              \
+        if (_g_.iters > 1) {                                                 \
+            _g_.timer.restart();                                             \
+            for (int _i_ = 0; _i_ < _g_.iters; ++_i_) {                      \
+                _f_();                                                       \
+            }                                                                \
+            _g_.ns = _g_.timer.ns();                                         \
+        }                                                                    \
+        _g_.res.push_back(bm::xx::Result(_g_.bm, _g_.ns * 1.0 / _g_.iters)); \
+    }
+
+// tell the compiler do not optimize this away
+#define BM_use(v) bm::xx::use(&v, sizeof(v))

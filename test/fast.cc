@@ -1,7 +1,7 @@
 
 #include <inttypes.h>
 
-#include "benchmark.h"
+#include "co/benchmark.h"
 #include "co/color.h"
 #include "co/flag.h"
 #include "co/time.h"

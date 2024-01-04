@@ -1,6 +1,6 @@
 #include "co/god.h"
 
-#include "unitest.h"
+#include "co/unitest.h"
 
 namespace test {
 
@@ -58,7 +58,6 @@ DEF_test(god) {
         god::copy<3>(&s[2], &t[1]);
         EXPECT_EQ(s, "12ell67");
     }
-
 
     DEF_case(type) {
         EXPECT_EQ((god::is_same<char, char>()), true);

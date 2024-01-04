@@ -111,4 +111,4 @@ end
 
 -- include sub-projects
 --"unitest1",
-includes("src", "gen", "test", "unitest", "benchmark", "utest")
+includes("src", "gen", "test", "unitest")

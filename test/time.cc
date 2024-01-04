@@ -2,7 +2,7 @@
 
 #include <time.h>
 
-#include "benchmark.h"
+#include "co/benchmark.h"
 #include "co/fastream.h"
 #include "co/str.h"
 

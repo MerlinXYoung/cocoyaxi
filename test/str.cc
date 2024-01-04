@@ -1,6 +1,6 @@
 #include "co/str.h"
 
-#include "benchmark.h"
+#include "co/benchmark.h"
 #include "co/color.h"
 #include "co/fastring.h"
 #include "co/flag.h"
