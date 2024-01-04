@@ -21,6 +21,9 @@ target(test[1])
     set_default(false)
     add_deps("libco")
     add_files(test[2])
+
+    add_includedirs("../utest")
+    add_deps("libutest")
     -- add_cxflags("-Wno-builtin-macro-redefined")
     -- before_build_file(redefine_file_macro)
 end
