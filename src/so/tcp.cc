@@ -302,7 +302,7 @@ void ServerImpl::loop() {
         }
 
         const uint32_t n = this->ref() - 1;
-        DLOG << "server " << _ip << ':' << _port
+        TLOG << "server " << _ip << ':' << _port
              << " accept connection: " << co::addr2str(&_addr, _addrlen) << ", connfd: " << _connfd
              << ", conn num: " << n;
         go(&_on_sock, _connfd);

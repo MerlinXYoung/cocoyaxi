@@ -145,11 +145,11 @@ void Client::reset(const char* serv_url) {
         _ctx->serv_url = serv_url;
     } else {
         std::call_once(g_curl_flag, []() {
-            DLOG << "curl_global_init ...";
+            TLOG << "curl_global_init ...";
             const bool x = curl_global_init(CURL_GLOBAL_ALL) == 0;
             CHECK(x) << "curl init failed..";
             std::atexit([]() {
-                DLOG << "curl_global_cleanup ...";
+                TLOG << "curl_global_cleanup ...";
                 curl_global_cleanup();
             });
         });

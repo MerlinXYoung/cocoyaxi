@@ -9,7 +9,9 @@ void hook_sleep(bool) {}
 
 #else
 #include <Mswsock.h>
+
 #include <atomic>
+
 #include "co/co.h"
 #include "co/defer.h"
 #include "co/flag.h"
@@ -18,9 +20,10 @@ void hook_sleep(bool) {}
 #include "detours/detours.h"
 #include "sched.h"
 
+
 DEF_bool(co_hook_log, false, ">>#1 enable log for hook if true");
 
-#define HOOKLOG DLOG_IF(FLG_co_hook_log)
+#define HOOKLOG TLOG_IF(FLG_co_hook_log)
 
 namespace co {
 extern bool can_skip_iocp_on_success;
@@ -79,11 +82,11 @@ class HookCtx {
             this->clear();
     }
 
-    void set_skip_iocp() { 
-        // atomic_or(&_s.flags, f_skip_iocp, std::memory_order_acq_rel); 
+    void set_skip_iocp() {
+        // atomic_or(&_s.flags, f_skip_iocp, std::memory_order_acq_rel);
         std::atomic_fetch_or_explicit((std::atomic_uint8_t*)&_s.flags, f_skip_iocp,
-                                          std::memory_order_acq_rel);
-                                          }
+                                      std::memory_order_acq_rel);
+    }
     bool has_skip_iocp() const { return _s.flags & f_skip_iocp; }
     void set_non_sock_stream() { _s.flags |= f_non_sock_stream; }
     bool is_sock_stream() const { return !(_s.flags & f_non_sock_stream); }
@@ -545,10 +548,10 @@ static void clean_wsabufs(LPWSABUF x, LPWSABUF p, DWORD n, int do_memcpy) {
     for (DWORD i = 0; i < n; ++i) {
         if (x[i].buf != p[i].buf) {
             if (do_memcpy) memcpy(p[i].buf, x[i].buf, x[i].len);
-            ::free(x[i].buf);//, x[i].len);
+            ::free(x[i].buf);  //, x[i].len);
         }
     }
-    ::free(x);//, sizeof(WSABUF) * n);
+    ::free(x);  //, sizeof(WSABUF) * n);
 }
 
 int WINAPI hook_recv(SOCKET a0, char* a1, int a2, int a3) {
@@ -920,13 +923,13 @@ static LPWSAMSG check_wsamsg(LPWSAMSG p, char c, int do_memcpy) {
 static void clean_wsamsg(LPWSAMSG x, LPWSAMSG p, int do_memcpy) {
     if (x->name != p->name) {
         if (do_memcpy && x->namelen <= p->namelen) memcpy(p->name, x->name, x->namelen);
-        ::free(x->name);//, sizeof(SOCKADDR_STORAGE));
+        ::free(x->name);  //, sizeof(SOCKADDR_STORAGE));
     }
     p->namelen = x->namelen;
 
     if (x->Control.buf != p->Control.buf) {
         if (do_memcpy) memcpy(p->Control.buf, x->Control.buf, x->Control.len);
-        ::free(x->Control.buf);//, p->Control.len);
+        ::free(x->Control.buf);  //, p->Control.len);
     }
     p->Control.len = x->Control.len;
 
@@ -934,7 +937,7 @@ static void clean_wsamsg(LPWSAMSG x, LPWSAMSG p, int do_memcpy) {
         clean_wsabufs(x->lpBuffers, p->lpBuffers, p->dwBufferCount, do_memcpy);
     }
 
-    ::free(x);//, sizeof(*p));
+    ::free(x);  //, sizeof(*p));
 }
 
 int WINAPI hook_WSARecvMsg(SOCKET a0, LPWSAMSG a1, LPDWORD a2, LPWSAOVERLAPPED a3,
@@ -1306,7 +1309,9 @@ void cleanup_hook() {
 }
 #endif
 
-void hook_sleep(bool x) { reinterpret_cast<std::atomic_bool*>(&g_hook.hook_sleep)->store(x, std::memory_order_relaxed); }
+void hook_sleep(bool x) {
+    reinterpret_cast<std::atomic_bool*>(&g_hook.hook_sleep)->store(x, std::memory_order_relaxed);
+}
 
 }  // namespace co
 

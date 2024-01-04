@@ -110,7 +110,7 @@ err:
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
-    FLG_cout = true;
+    FLG_log_console = true;
 
     tcp::Server serv;
     serv.on_connection(on_connection);

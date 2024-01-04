@@ -33,14 +33,14 @@ static void _at_mod_init() {
     g_log_dir = &FLG_log_dir;
     g_log_file_name = &FLG_log_file_name;
 }
-DEF_int32(min_log_level, 0,
-          ">>#0 write logs at or above this level, 0-4 (debug|info|warning|error|fatal)");
-DEF_int32(max_log_size, 4096, ">>#0 max size of a single log");
-DEF_int64(max_log_file_size, 256 << 20, ">>#0 max size of log file, default: 256MB");
-DEF_uint32(max_log_file_num, 8, ">>#0 max number of log files");
-DEF_uint32(max_log_buffer_size, 32 << 20, ">>#0 max size of log buffer, default: 32MB");
+DEF_int32(log_min_level, 0,
+          ">>#0 write logs at or above this level, 0-5 (trace|debug|info|warning|error|fatal)");
+DEF_uint32(log_max_size, 4096, ">>#0 max size of a single log");
+DEF_uint64(log_max_file_size, 256 << 20, ">>#0 max size of log file, default: 256MB");
+DEF_uint32(log_max_file_num, 8, ">>#0 max number of log files");
+DEF_uint32(log_max_buffer_size, 32 << 20, ">>#0 max size of log buffer, default: 32MB");
 DEF_uint32(log_flush_ms, 128, ">>#0 flush the log buffer every n ms");
-DEF_bool(cout, false, ">>#0 also logging to terminal");
+DEF_bool(log_console, false, ">>#0 also logging to terminal");
 DEF_bool(log_daily, false, ">>#0 if true, enable daily log rotation");
 DEF_bool(log_compress, false, ">>#0 if true, compress rotated log files with xz");
 
@@ -287,7 +287,7 @@ fs::file& LogFile::open(const char* topic, int level) {
         if (!new_file) {
             if (!_old_paths.empty()) {
                 auto& path = _old_paths.back();
-                if (fs::fsize(_path) >= FLG_max_log_file_size ||
+                if (fs::fsize(_path) >= FLG_log_max_file_size ||
                     (FLG_log_daily && get_day_from_path(path) != _day)) {
                     fs::mv(_path, path);  // rename xx.log to xx_0808_15_30_08.123.log
                     if (FLG_log_compress) compress_file(path);
@@ -309,7 +309,7 @@ fs::file& LogFile::open(const char* topic, int level) {
             s << _path_base << '_' << x << ".log";
             _old_paths.push_back(s);
 
-            while (!_old_paths.empty() && _old_paths.size() > FLG_max_log_file_num) {
+            while (!_old_paths.empty() && _old_paths.size() > FLG_log_max_file_num) {
                 if (FLG_log_compress) _old_paths.front().append(".xz");
                 fs::remove(_old_paths.front());
                 _old_paths.pop_front();
@@ -351,7 +351,7 @@ void LogFile::write(const char* p, size_t n) {
     if (_file || this->open(nullptr, 0)) {
         _file.write(p, n);
         const uint64_t size = _file.size();  // -1 if not exists
-        if (size >= (uint64_t)FLG_max_log_file_size) _file.close();
+        if (size >= (uint64_t)FLG_log_max_file_size) _file.close();
     }
 }
 
@@ -367,7 +367,7 @@ void LogFile::write(const char* topic, const char* p, size_t n) {
     if (_file || this->open(topic, 0)) {
         _file.write(p, n);
         const uint64_t size = _file.size();  // -1 if not exists
-        if (size >= (uint64_t)FLG_max_log_file_size) _file.close();
+        if (size >= (uint64_t)FLG_log_max_file_size) _file.close();
     }
 }
 
@@ -463,9 +463,9 @@ bool Logger::start() {
     if (_stop.compare_exchange_strong(stop, -1, std::memory_order_seq_cst,
                                       std::memory_order_seq_cst)) {
         do {
-            // ensure max_log_buffer_size >= 1M, max_log_size >= 256
-            auto& bs = FLG_max_log_buffer_size;
-            auto& ls = *(uint32_t*)&FLG_max_log_size;
+            // ensure log_max_buffer_size >= 1M, log_max_size >= 256
+            auto& bs = FLG_log_max_buffer_size;
+            auto& ls = *(uint32_t*)&FLG_log_max_size;
             if (bs < (1 << 20)) bs = 1 << 20;
             if (ls < 256) ls = 256;
             if (ls > (bs >> 2)) ls = bs >> 2;
@@ -555,8 +555,8 @@ void Logger::push_level_log(char* s, size_t n) {
             g_thread_started.store(true);
         });
     }
-    if (unlikely(n > FLG_max_log_size)) {
-        n = FLG_max_log_size;
+    if (unlikely(n > FLG_log_max_size)) {
+        n = FLG_log_max_size;
         char* const p = s + n - 4;
         p[0] = '.';
         p[1] = '.';
@@ -569,7 +569,7 @@ void Logger::push_level_log(char* s, size_t n) {
             memcpy(s + 1, _llog.x.time_str, LogTime::t_len);  // log time
 
             auto& buf = _llog.x.buf;
-            if (unlikely(buf.size() + n >= FLG_max_log_buffer_size)) {
+            if (unlikely(buf.size() + n >= FLG_log_max_buffer_size)) {
                 const char* p = strchr(buf.data() + (buf.size() >> 1) + 7, '\n');
                 const size_t len = buf.data() + buf.size() - p - 1;
                 memcpy((char*)(buf.data()), "......\n", 7);
@@ -590,8 +590,8 @@ void Logger::push_topic_log(const char* topic, char* s, size_t n) {
             g_thread_started.store(true);
         });
     }
-    if (unlikely(n > FLG_max_log_size)) {
-        n = FLG_max_log_size;
+    if (unlikely(n > FLG_log_max_size)) {
+        n = FLG_log_max_size;
         char* const p = s + n - 4;
         p[0] = '.';
         p[1] = '.';
@@ -606,7 +606,7 @@ void Logger::push_topic_log(const char* topic, char* s, size_t n) {
             memcpy(s, x.time_str, LogTime::t_len);
 
             auto& buf = x.buf[topic];
-            if (unlikely(buf.size() + n >= FLG_max_log_buffer_size)) {
+            if (unlikely(buf.size() + n >= FLG_log_max_buffer_size)) {
                 const char* p = strchr(buf.data() + (buf.size() >> 1) + 7, '\n');
                 const size_t len = buf.data() + buf.size() - p - 1;
                 memcpy((char*)(buf.data()), "......\n", 7);
@@ -625,7 +625,7 @@ void Logger::push_fatal_log(char* s, size_t n) {
     memcpy(s + 1, _time.get(), LogTime::t_len);
 
     this->write_level_logs(s, n);
-    if (!FLG_cout) fwrite(s, 1, n, stderr);
+    if (!FLG_log_console) fwrite(s, 1, n, stderr);
     if (_file.open(nullptr, fatal)) _file.write(s, n);
 
     mod().check_failed.store(true);
@@ -637,7 +637,7 @@ void Logger::write_level_logs(const char* p, size_t n) {
         _file.write(p, n);
     }
     if (_llog.write_cb) _llog.write_cb(p, n);
-    if (FLG_cout) fwrite(p, 1, n, stderr);
+    if (FLG_log_console) fwrite(p, 1, n, stderr);
 }
 
 void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size_t n) {
@@ -645,7 +645,7 @@ void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size
         f.write(topic, p, n);
     }
     if (_tlog.write_cb) _tlog.write_cb(topic, p, n);
-    if (FLG_cout) fwrite(p, 1, n, stderr);
+    if (FLG_log_console) fwrite(p, 1, n, stderr);
 }
 
 void Logger::thread_fun() {
@@ -1100,14 +1100,14 @@ LevelLogSaver::LevelLogSaver(const char* fname, unsigned fnlen, unsigned line, i
     : _s(log_stream()) {
     _n = _s.size();
     _s.resize(_n + (LogTime::t_len + 1));  // make room for: "I0523 17:00:00.123"
-    _s[_n] = "DIWE"[level];
+    _s[_n] = "TDIWE"[level];
     (_s << ' ' << co::thread_id() << ' ').append(fname, fnlen) << ':' << line << "] ";
 }
 
 LevelLogSaver::LevelLogSaver(const char* fname, unsigned line, int level) : _s(log_stream()) {
     _n = _s.size();
     _s.resize(_n + (LogTime::t_len + 1));  // make room for: "I0523 17:00:00.123"
-    _s[_n] = "DIWE"[level];
+    _s[_n] = "TDIWE"[level];
     _s << ' ' << co::thread_id() << ' ' << fname << ':' << line << "] ";
 }
 

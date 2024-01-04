@@ -2,12 +2,11 @@
 
 #include <functional>
 
-
 #include "fastream.h"
 #include "flag.h"
 
-__coapi DEC_bool(cout);
-__coapi DEC_int32(min_log_level);
+__coapi DEC_bool(log_console);
+__coapi DEC_int32(log_min_level);
 
 namespace _xx { namespace log {
 
@@ -38,7 +37,7 @@ enum {
 __coapi void set_write_cb(const std::function<void(const void*, size_t)>& cb, int flags = 0);
 
 /**
- * set a callback for writing topic logs (TLOG)
+ * set a callback for writing topic logs (TOPIC_LOG)
  *
  * @param cb
  *   a callback takes 3 params:  void f(const char* topic, const void* p, size_t n);
@@ -62,7 +61,7 @@ namespace xx {
 
 // static Initializer g_initializer;
 
-enum LogLevel { debug = 0, info = 1, warning = 2, error = 3, fatal = 4 };
+enum LogLevel { trace = 0, debug = 1, info = 2, warning = 3, error = 4, fatal = 5 };
 
 class __coapi LevelLogSaver {
   public:
@@ -124,13 +123,14 @@ using namespace _xx;
 #else
 #define _CO_FILELINE __FILE__, __LINE__
 #endif
-// TLOG are logs grouped by the topic.
-// TLOG("xxx") << "hello xxx" << 23;
+// TOPIC_LOG are logs grouped by the topic.
+// TOPIC_LOG("xxx") << "hello xxx" << 23;
 // It is better to use literal string as the topic.
-#define TLOG(topic) log::xx::TLogSaver(_CO_FILELINE, topic).stream()
-#define TLOG_IF(topic, cond) \
-    if (cond) TLOG(topic)
+#define TOPIC_LOG(topic) log::xx::TLogSaver(_CO_FILELINE, topic).stream()
+#define TOPIC_TLOG_IF(topic, cond) \
+    if (cond) TOPIC_LOG(topic)
 
+// TLOG  ->  trace log
 // DLOG  ->  debug log
 // LOG   ->  info log
 // WLOG  ->  warning log
@@ -142,17 +142,21 @@ using namespace _xx;
 // WLOG_IF(1 + 1 == 2) << "xx";
 #define _CO_LOG_STREAM(lv) log::xx::LevelLogSaver(_CO_FILELINE, lv).stream()
 #define _CO_FLOG_STREAM log::xx::FatalLogSaver(_CO_FILELINE).stream()
+#define TLOG \
+    if (FLG_log_min_level <= log::xx::trace) _CO_LOG_STREAM(log::xx::trace)
 #define DLOG \
-    if (FLG_min_log_level <= log::xx::debug) _CO_LOG_STREAM(log::xx::debug)
+    if (FLG_log_min_level <= log::xx::debug) _CO_LOG_STREAM(log::xx::debug)
 #define LOG \
-    if (FLG_min_log_level <= log::xx::info) _CO_LOG_STREAM(log::xx::info)
+    if (FLG_log_min_level <= log::xx::info) _CO_LOG_STREAM(log::xx::info)
 #define WLOG \
-    if (FLG_min_log_level <= log::xx::warning) _CO_LOG_STREAM(log::xx::warning)
+    if (FLG_log_min_level <= log::xx::warning) _CO_LOG_STREAM(log::xx::warning)
 #define ELOG \
-    if (FLG_min_log_level <= log::xx::error) _CO_LOG_STREAM(log::xx::error)
+    if (FLG_log_min_level <= log::xx::error) _CO_LOG_STREAM(log::xx::error)
 #define FLOG _CO_FLOG_STREAM << "fatal error! "
 
 // conditional log
+#define TLOG_IF(cond) \
+    if (cond) TLOG
 #define DLOG_IF(cond) \
     if (cond) DLOG
 #define LOG_IF(cond) \
@@ -185,19 +189,21 @@ using namespace _xx;
 // occasional log
 #define _CO_LOG_COUNTER PP_CONCAT(_co_log_counter_, __LINE__)
 
-#define _CO_LOG_EVERY_N(n, what)             \
+#define _CO_LOG_EVERY_N(n, what)                    \
     static std::atomic_uint32_t _CO_LOG_COUNTER{0}; \
-    if (_CO_LOG_COUNTER.fetch_add( 1, std::memory_order_relaxed) % (n) == 0) what
+    if (_CO_LOG_COUNTER.fetch_add(1, std::memory_order_relaxed) % (n) == 0) what
 
-#define _CO_LOG_FIRST_N(n, what)    \
+#define _CO_LOG_FIRST_N(n, what)               \
     static std::atomic_int _CO_LOG_COUNTER{0}; \
-    if (_CO_LOG_COUNTER < (n) && _CO_LOG_COUNTER.fetch_add( 1, std::memory_order_relaxed) < (n)) what
+    if (_CO_LOG_COUNTER < (n) && _CO_LOG_COUNTER.fetch_add(1, std::memory_order_relaxed) < (n)) what
 
+#define TLOG_EVERY_N(n) _CO_LOG_EVERY_N(n, TLOG)
 #define DLOG_EVERY_N(n) _CO_LOG_EVERY_N(n, DLOG)
 #define LOG_EVERY_N(n) _CO_LOG_EVERY_N(n, LOG)
 #define WLOG_EVERY_N(n) _CO_LOG_EVERY_N(n, WLOG)
 #define ELOG_EVERY_N(n) _CO_LOG_EVERY_N(n, ELOG)
 
+#define TLOG_FIRST_N(n) _CO_LOG_FIRST_N(n, TLOG)
 #define DLOG_FIRST_N(n) _CO_LOG_FIRST_N(n, DLOG)
 #define LOG_FIRST_N(n) _CO_LOG_FIRST_N(n, LOG)
 #define WLOG_FIRST_N(n) _CO_LOG_FIRST_N(n, WLOG)

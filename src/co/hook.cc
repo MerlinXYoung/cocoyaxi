@@ -25,7 +25,7 @@ void hook_sleep(bool) {}
 
 DEF_bool(co_hook_log, false, ">>#1 print log for API hooks");
 
-#define HOOKLOG DLOG_IF(FLG_co_hook_log)
+#define HOOKLOG TLOG_IF(FLG_co_hook_log)
 
 namespace co {
 
@@ -184,7 +184,7 @@ _CO_DEF_SYS_API(kevent);
 #define _hook(f) f
 #define _hook_api(f)                                                                       \
     if (!__sys_api(f)) do {                                                                \
-            LOG << __str("hook ", __sys_api(f));                                           \
+            HOOKLOG << __str("hook ", __sys_api(f));                                       \
             __sys_api(f) = reinterpret_cast<decltype(__sys_api(f))>(dlsym(RTLD_NEXT, #f)); \
             /*atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed);*/         \
     } while (0)
@@ -1293,7 +1293,7 @@ static bool _init_hook() {
 }
 
 static bool init_hook() {
-    LOG << "";
+    HOOKLOG << "";
 #ifdef __APPLE__
     _init_hook();
     (void)_dummy;

@@ -83,7 +83,7 @@ int shutdown(S* s, int ms) {
         r = SSL_shutdown((SSL*)s);
         if (r == 1) return 1;  // success
         if (r == 0) {
-            DLOG << "SSL_shutdown return 0, call again..";
+            TLOG << "SSL_shutdown return 0, call again..";
             continue;
         }
 
@@ -95,7 +95,7 @@ int shutdown(S* s, int ms) {
             co::io_event ev(fd, co::ev_write);
             if (!ev.wait(ms)) return -1;
         } else {
-            DLOG << "SSL_shutdown return " << r << ", error: " << e;
+            TLOG << "SSL_shutdown return " << r << ", error: " << e;
             return r;
         }
     } while (true);
@@ -112,7 +112,7 @@ int accept(S* s, int ms) {
         r = SSL_accept((SSL*)s);
         if (r == 1) return 1;  // success
         if (r == 0) {
-            // DLOG << "SSL_accept return 0, error: " << SSL_get_error(s, 0);
+            // TLOG << "SSL_accept return 0, error: " << SSL_get_error(s, 0);
             return 0;  // ssl connection shut down
         }
 
@@ -124,7 +124,7 @@ int accept(S* s, int ms) {
             co::io_event ev(fd, co::ev_write);
             if (!ev.wait(ms)) return -1;
         } else {
-            // DLOG << "SSL_accept return " << r << ", error: " << e;
+            // TLOG << "SSL_accept return " << r << ", error: " << e;
             return r;
         }
     } while (true);
@@ -141,7 +141,7 @@ int connect(S* s, int ms) {
         r = SSL_connect((SSL*)s);
         if (r == 1) return 1;  // success
         if (r == 0) {
-            // DLOG << "SSL_connect return 0, error: " << SSL_get_error(s, 0);
+            // TLOG << "SSL_connect return 0, error: " << SSL_get_error(s, 0);
             return 0;  // ssl connection shut down
         }
 
@@ -153,7 +153,7 @@ int connect(S* s, int ms) {
             co::io_event ev(fd, co::ev_write);
             if (!ev.wait(ms)) return -1;
         } else {
-            // DLOG << "SSL_connect return " << r << ", error: " << e;
+            // TLOG << "SSL_connect return " << r << ", error: " << e;
             return r;
         }
     } while (true);
@@ -170,7 +170,7 @@ int recv(S* s, void* buf, int n, int ms) {
         r = SSL_read((SSL*)s, buf, n);
         if (r > 0) return r;  // success
         if (r == 0) {
-            // DLOG << "SSL_read return 0, error: " << SSL_get_error(s, 0);
+            // TLOG << "SSL_read return 0, error: " << SSL_get_error(s, 0);
             return 0;
         }
 
@@ -182,7 +182,7 @@ int recv(S* s, void* buf, int n, int ms) {
             co::io_event ev(fd, co::ev_write);
             if (!ev.wait(ms)) return -1;
         } else {
-            // DLOG << "SSL_read return " << r << ", error: " << e;
+            // TLOG << "SSL_read return " << r << ", error: " << e;
             return r;
         }
     } while (true);
@@ -202,7 +202,7 @@ int recvn(S* s, void* buf, int n, int ms) {
         r = SSL_read((SSL*)s, p, remain);
         if (r == remain) return n;  // success
         if (r == 0) {
-            // DLOG << "SSL_read return 0, error: " << SSL_get_error(s, 0);
+            // TLOG << "SSL_read return 0, error: " << SSL_get_error(s, 0);
             return 0;
         }
 
@@ -215,7 +215,7 @@ int recvn(S* s, void* buf, int n, int ms) {
                 co::io_event ev(fd, co::ev_write);
                 if (!ev.wait(ms)) return -1;
             } else {
-                // DLOG << "SSL_read return " << r << ", error: " << e;
+                // TLOG << "SSL_read return " << r << ", error: " << e;
                 return r;
             }
         } else {
@@ -239,7 +239,7 @@ int send(S* s, const void* buf, int n, int ms) {
         r = SSL_write((SSL*)s, p, remain);
         if (r == remain) return n;  // success
         if (r == 0) {
-            // DLOG << "SSL_write return 0, error: " << SSL_get_error(s, 0);
+            // TLOG << "SSL_write return 0, error: " << SSL_get_error(s, 0);
             return 0;
         }
 
@@ -252,7 +252,7 @@ int send(S* s, const void* buf, int n, int ms) {
                 co::io_event ev(fd, co::ev_write);
                 if (!ev.wait(ms)) return -1;
             } else {
-                // DLOG << "SSL_write return " << r << ", error: " << e;
+                // TLOG << "SSL_write return " << r << ", error: " << e;
                 return r;
             }
         } else {

@@ -148,7 +148,8 @@ log supports two types of logs: one is level log, which is divided into 5 levels
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
 
-    TLOG("xx") << "s" << 23; // topic log
+    TOPIC_LOG("xx") << "s" << 23; // topic log
+    TLOG << "hello " << 23;  // trace
     DLOG << "hello " << 23;  // debug
     LOG << "hello " << 23;   // info
     WLOG << "hello " << 23;  // warning

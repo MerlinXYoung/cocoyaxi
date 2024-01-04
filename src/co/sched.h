@@ -29,7 +29,7 @@ DEC_uint32(co_stack_num);
 DEC_uint32(co_stack_size);
 DEC_bool(co_sched_log);
 
-#define SCHEDLOG DLOG_IF(FLG_co_sched_log)
+#define SCHEDLOG TLOG_IF(FLG_co_sched_log)
 
 namespace co { namespace xx {
 
