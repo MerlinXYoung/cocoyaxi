@@ -86,19 +86,7 @@ DEF_test(god) {
         EXPECT_EQ((god::is_same<god::const_ref_t<int&&>, const int&>()), true)
         EXPECT_EQ((god::is_same<god::const_ref_t<const int&>, const int&>()), true)
 
-        EXPECT_EQ((god::is_ref<int&>()), true);
-        EXPECT_EQ((god::is_ref<int&&>()), true);
-        EXPECT_EQ((god::is_ref<int>()), false);
-
-        EXPECT_EQ((god::is_array<int[]>()), true);
-        EXPECT_EQ((god::is_array<int[][8]>()), true);
-        EXPECT_EQ((god::is_array<char[8]>()), true);
-        EXPECT_EQ((god::is_array<const char[8]>()), true);
-        EXPECT_EQ((god::is_array<const char(&)[8]>()), false);
-        EXPECT_EQ((god::is_array<char*>()), false);
-
-        EXPECT_EQ((god::is_class<std::string>()), true);
-        EXPECT_EQ((god::is_class<void>()), false);
+      
     }
 }
 

@@ -153,46 +153,6 @@ constexpr bool is_same() {
     return xx::is_same<T, U, X...>::value;
 };
 
-template <typename T>
-constexpr bool is_ref() {
-    return std::is_reference<T>::value;
-}
-
-template <typename T>
-constexpr bool is_array() {
-    return std::is_array<T>::value;
-}
-
-template <typename T>
-constexpr bool is_class() {
-    return std::is_class<T>::value;
-}
-
-template <typename T>
-constexpr bool is_scalar() {
-    return std::is_scalar<T>::value;
-}
-
-template <typename T>
-constexpr bool is_trivially_copyable() {
-    return std::is_trivially_copyable<T>::value;
-}
-
-template <typename T>
-constexpr bool is_trivially_destructible() {
-    return std::is_trivially_destructible<T>::value;
-}
-
-// if B is base class of D
-template <typename B, typename D>
-constexpr bool is_base_of() {
-    return std::is_base_of<B, D>::value;
-}
-
-template <typename T>
-constexpr bool has_virtual_destructor() {
-    return std::has_virtual_destructor<T>::value;
-}
 
 }  // namespace god
 

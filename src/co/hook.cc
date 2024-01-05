@@ -173,18 +173,20 @@ _CO_DEF_SYS_API(kevent);
 #ifdef __APPLE__
 #define _hook(f) hook_##f
 #define _hook_api(f)
-#define hook_api(f)                                                                  \
-    if (!__sys_api(f)) {                                                             \
-        void* origin = 0;                                                            \
-        rebind_symbols((rebinding[1]){{#f, (void*)::_hook(f), (void**)&origin}}, 1); \
-        atomic_store(&__sys_api(f), origin, mo_relaxed);                             \
-    }
+#define hook_api(f)                                                                      \
+    if (!__sys_api(f)) do {                                                              \
+            void* origin = 0;                                                            \
+            rebind_symbols((rebinding[1]){{#f, (void*)::_hook(f), (void**)&origin}}, 1); \
+            HOOKLOG << __str("hook ", __sys_api(f));                                     \
+            __sys_api(f) = origin;                                                       \
+            /*atomic_store(&__sys_api(f), origin, mo_relaxed);  */                       \
+    } while (0)
 #else
 #define __str(a, b) a #b
 #define _hook(f) f
 #define _hook_api(f)                                                                       \
     if (!__sys_api(f)) do {                                                                \
-            HOOKLOG << __str("hook ", __sys_api(f));                                       \
+            LOG << __str("hook ", __sys_api(f));                                           \
             __sys_api(f) = reinterpret_cast<decltype(__sys_api(f))>(dlsym(RTLD_NEXT, #f)); \
             /*atomic_store(&__sys_api(f), dlsym(RTLD_NEXT, #f), co::mo_relaxed);*/         \
     } while (0)
@@ -1351,7 +1353,6 @@ void hook_sleep(bool x) {
 }
 
 }  // namespace co
-
 
 #undef do_hook
 #undef _hook

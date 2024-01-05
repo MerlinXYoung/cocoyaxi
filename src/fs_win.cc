@@ -16,7 +16,7 @@ inline fastring& cache() {
     return _s;
 }
 
-const int W = sizeof(wchar_t);
+constexpr int W = sizeof(wchar_t);
 typedef wchar_t* PWC;
 
 inline int nwc(const char* p) { return MultiByteToWideChar(CP_UTF8, 0, p, -1, nullptr, 0); }
@@ -64,9 +64,9 @@ static fastring narrow(const wchar_t* p) {
     return s;
 }
 
-const DWORD g_bad_attr = INVALID_FILE_ATTRIBUTES;
-const DWORD g_attr_dir = FILE_ATTRIBUTE_DIRECTORY;
-const DWORD g_attr_lnk = FILE_ATTRIBUTE_REPARSE_POINT;
+static constexpr DWORD g_bad_attr = INVALID_FILE_ATTRIBUTES;
+static constexpr DWORD g_attr_dir = FILE_ATTRIBUTE_DIRECTORY;
+static constexpr DWORD g_attr_lnk = FILE_ATTRIBUTE_REPARSE_POINT;
 
 inline DWORD _getattr(const wchar_t* path) { return GetFileAttributesW(path); }
 

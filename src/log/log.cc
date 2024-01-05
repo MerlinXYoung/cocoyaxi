@@ -42,7 +42,6 @@ DEF_uint32(log_max_buffer_size, 32 << 20, ">>#0 max size of log buffer, default:
 DEF_uint32(log_flush_ms, 128, ">>#0 flush the log buffer every n ms");
 DEF_bool(log_console, false, ">>#0 also logging to terminal");
 DEF_bool(log_daily, false, ">>#0 if true, enable daily log rotation");
-DEF_bool(log_compress, false, ">>#0 if true, compress rotated log files with xz");
 
 // When this value is true, the above flags should have been initialized,
 // and we are safe to start the logging thread.
@@ -252,11 +251,11 @@ inline uint32_t get_day_from_path(const fastring& path) {
 }
 
 // compress log file with the xz command
-inline void compress_file(const fastring& path) {
-    fastring cmd(path.size() + 8);
-    cmd.append("xz ").append(path);
-    os::system(cmd);
-}
+// inline void compress_file(const fastring& path) {
+//     fastring cmd(path.size() + 8);
+//     cmd.append("xz ").append(path);
+//     os::system(cmd);
+// }
 
 fs::file& LogFile::open(const char* topic, int level) {
     if (!_checked) {
@@ -290,7 +289,6 @@ fs::file& LogFile::open(const char* topic, int level) {
                 if (fs::fsize(_path) >= FLG_log_max_file_size ||
                     (FLG_log_daily && get_day_from_path(path) != _day)) {
                     fs::mv(_path, path);  // rename xx.log to xx_0808_15_30_08.123.log
-                    if (FLG_log_compress) compress_file(path);
                     new_file = true;
                 }
             } else {
@@ -310,7 +308,6 @@ fs::file& LogFile::open(const char* topic, int level) {
             _old_paths.push_back(s);
 
             while (!_old_paths.empty() && _old_paths.size() > FLG_log_max_file_num) {
-                if (FLG_log_compress) _old_paths.front().append(".xz");
                 fs::remove(_old_paths.front());
                 _old_paths.pop_front();
             }
@@ -549,7 +546,7 @@ void Logger::stop(bool signal_safe) {
 
 // std::once_flag g_flag;
 // static std::atomic_bool g_thread_started;
-static std::atomic_flag g_thread_started;
+static std::atomic_flag g_thread_started{ATOMIC_FLAG_INIT};
 
 void Logger::push_level_log(char* s, size_t n) {
     // if (unlikely(!g_thread_started)) {
