@@ -370,7 +370,7 @@ class sync_event_impl {
     const bool _manual_reset;
 };
 
-static thread_local bool g_done = false;
+// static thread_local bool g_done = false;
 
 class pipe_impl {
   public:
@@ -394,7 +394,7 @@ class pipe_impl {
 
     void read(void* p);
     void write(void* p, int v);
-    bool done() const noexcept { return g_done; }
+    bool done() const noexcept { return _done; }
     void close();
     bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
 
@@ -453,7 +453,11 @@ class pipe_impl {
     std::atomic_uint32_t _refn;
     uint8_t _full;
     std::atomic_uint8_t _closed;
+
+  private:
+    static thread_local bool _done;
 };
+thread_local bool pipe_impl::_done{false};
 
 inline void pipe_impl::_read_block(void* p) {
     _d(p);
@@ -579,10 +583,10 @@ void pipe_impl::read(void* p) {
     }
 
 enod:
-    g_done = false;
+    _done = false;
     return;
 done:
-    g_done = true;
+    _done = true;
 }
 
 void pipe_impl::write(void* p, int v) {
@@ -689,10 +693,10 @@ void pipe_impl::write(void* p, int v) {
     }
 
 enod:
-    g_done = false;
+    _done = false;
     return;
 done:
-    g_done = true;
+    _done = true;
 }
 
 void pipe_impl::close() {
