@@ -5,7 +5,6 @@
 
 #include "def.h"
 
-
 namespace co {
 
 class __coapi Closure {

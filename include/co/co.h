@@ -14,7 +14,6 @@
 #include "log.h"
 #include "stl.h"
 
-
 namespace co {
 
 /**
@@ -50,6 +49,20 @@ template <typename F>
 inline void go(F&& f) {
     go(new_closure(std::forward<F>(f)));
 }
+namespace xx {
+struct go_helper {
+    template <typename Func>
+    void operator-(Func&& func) {
+        return go(std::move(func));
+    }
+};
+}  // namespace xx
+#define _co_go_concat(x, n) x##n
+#define _co_go_make_name(x, n) _co_go_concat(x, n)
+#define _co_go_name _co_go_make_name(_go_helper_, __LINE__)
+#define GO                         \
+    co::xx::go_helper _co_go_name; \
+    _co_go_name -
 
 /**
  * add a task, which will run as a coroutine

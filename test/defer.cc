@@ -9,6 +9,7 @@ void f(int sn, int x, int y) { co::print(sn, ": ", x + y); }
 void f() {
     co::Timer t;
     defer(co::print("time elapse: ", t.us(), "us"));
+    DEFER { co::print("time elapse1: ", t.us(), "us"); };
     co::print("hello f()");
 }
 
