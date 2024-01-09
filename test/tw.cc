@@ -1,10 +1,11 @@
 #include <algorithm>
 
-#include "benchmark.h"
+#include "co/benchmark.h"
 #include "co/color.h"
 #include "co/def.h"
 #include "co/fastream.h"
 #include "co/flag.h"
+#include "co/print.h"
 #include "co/str.h"
 #include "co/time.h"
 

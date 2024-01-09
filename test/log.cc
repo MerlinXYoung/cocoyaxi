@@ -7,6 +7,7 @@
 
 #include "co/color.h"
 #include "co/os.h"
+#include "co/print.h"
 #include "co/time.h"
 
 DEF_bool(perf, false, "performance testing");

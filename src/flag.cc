@@ -192,11 +192,11 @@ inline const char* Flag::type() const {
 }
 
 inline void Flag::print() const {
-    std::cout << color::green << "    -" << this->name;
+    std::cout << co::Color::green << "    -" << this->name;
     if (*this->alias) std::cout << ", " << this->alias;
     std::cout.flush();
-    std::cout << color::blue << "  " << this->help << '\n'
-              << color::deflt << "\ttype: " << this->type() << "\t  default: " << this->value
+    std::cout << co::Color::blue << "  " << this->help << '\n'
+              << co::Color::deflt << "\ttype: " << this->type() << "\t  default: " << this->value
               << "\n\tfrom: " << this->file << std::endl;
 }
 
@@ -332,8 +332,8 @@ void Mod::print_all_flags() {
 }
 
 inline void Mod::print_help() {
-    std::cout << "usage:  " << color::blue << "$exe [-flag] [value]\n"
-              << color::deflt << "\t"
+    std::cout << "usage:  " << co::Color::blue << "$exe [-flag] [value]\n"
+              << co::Color::deflt << "\t"
               << "$exe -x -i 8k -s ok        # x=true, i=8192, s=\"ok\"\n"
               << "\t"
               << "$exe --                    # print all flags\n"

@@ -55,12 +55,13 @@ __coapi bool add_test(const char* name, bool& e, void (*f)(Test&));
 #define EXPECT(x)                                                                                  \
     {                                                                                              \
         if (x) {                                                                                   \
-            std::cout << color::green << "  EXPECT(" << #x << ") passed" << color::deflt           \
-                      << std::endl;                                                                \
+            std::cout << co::color::Color::green << "  EXPECT(" << #x << ") passed"                \
+                      << co::color::Color::deflt << std::endl;                                     \
         } else {                                                                                   \
             fastring _U_s(32);                                                                     \
             _U_s << "EXPECT(" << #x << ") failed";                                                 \
-            std::cout << color::red << "  " << _U_s << color::deflt << std::endl;                  \
+            std::cout << co::color::Color::red << "  " << _U_s << co::color::Color::deflt          \
+                      << std::endl;                                                                \
             _t_.failed.push_back(unitest::xx::Failed(_t_.c, __FILE__, __LINE__, std::move(_U_s))); \
         }                                                                                          \
     }
@@ -70,15 +71,16 @@ __coapi bool add_test(const char* name, bool& e, void (*f)(Test&));
         auto _U_x = (x);                                                                           \
         auto _U_y = (y);                                                                           \
         if (_U_x op _U_y) {                                                                        \
-            std::cout << color::green << "  EXPECT_" << opname << "(" << #x << ", " << #y          \
-                      << ") passed";                                                               \
+            std::cout << co::color::Color::green << "  EXPECT_" << opname << "(" << #x << ", "     \
+                      << #y << ") passed";                                                         \
             if (strcmp("==", #op) != 0) std::cout << ": " << _U_x << " vs " << _U_y;               \
-            std::cout << color::deflt << std::endl;                                                \
+            std::cout << co::color::Color::deflt << std::endl;                                     \
         } else {                                                                                   \
             fastring _U_s(128);                                                                    \
             _U_s << "EXPECT_" << opname << "(" << #x << ", " << #y << ") failed: " << _U_x         \
                  << " vs " << _U_y;                                                                \
-            std::cout << color::red << "  " << _U_s << color::deflt << std::endl;                  \
+            std::cout << co::color::Color::red << "  " << _U_s << co::color::Color::deflt          \
+                      << std::endl;                                                                \
             _t_.failed.push_back(unitest::xx::Failed(_t_.c, __FILE__, __LINE__, std::move(_U_s))); \
         }                                                                                          \
     }

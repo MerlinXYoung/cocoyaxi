@@ -17,6 +17,7 @@
 #include "log.h"
 #include "os.h"
 #include "path.h"
+#include "print.h"
 #include "rand.h"
 #include "so.h"
 #include "stl.h"

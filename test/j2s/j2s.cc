@@ -2,6 +2,7 @@
 
 #include "co/color.h"
 #include "co/flag.h"
+#include "co/print.h"
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);

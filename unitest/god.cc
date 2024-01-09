@@ -1,6 +1,6 @@
 #include "co/god.h"
 
-#include "unitest.h"
+#include "co/unitest.h"
 
 namespace test {
 
@@ -85,8 +85,6 @@ DEF_test(god) {
         EXPECT_EQ((god::is_same<god::const_ref_t<int>, const int&>()), true)
         EXPECT_EQ((god::is_same<god::const_ref_t<int&&>, const int&>()), true)
         EXPECT_EQ((god::is_same<god::const_ref_t<const int&>, const int&>()), true)
-
-      
     }
 }
 

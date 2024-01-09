@@ -3,8 +3,6 @@
 #include <functional>
 
 #include "../def.h"
-
-
 namespace co {
 namespace xx {
 
@@ -45,7 +43,7 @@ class chan {
     // @ms   timeout in milliseconds, -1 by default.
     explicit chan(uint32_t cap = 1, uint32_t ms = (uint32_t)-1)
         : _p(
-              cap * sizeof(T), sizeof(T), ms,
+              std::max(cap, 1U) * sizeof(T), sizeof(T), ms,
               [](void* dst, void* src, int o) {
                   switch (o) {
                       case 0:
@@ -83,14 +81,14 @@ class chan {
     }
 
     // return true if the read or write operation was done successfully
-    bool done() const noexcept{ return _p.done(); }
+    bool done() const noexcept { return _p.done(); }
 
     // close the channel.
     // write was disabled then, but we can still read from the channel.
     void close() const { _p.close(); }
 
     // check if the channel was closed (false for closed)
-    explicit operator bool() const noexcept{ return !_p.is_closed(); }
+    explicit operator bool() const noexcept { return !_p.is_closed(); }
 
   private:
     xx::pipe _p;

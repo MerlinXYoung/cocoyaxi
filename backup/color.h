@@ -215,11 +215,11 @@ inline OStream& operator<<(OStream& os, color::Color c) {
 }
 
 template <class OStream>
-inline OStream& operator<<(OStream& os, const text::Text& x) {
+inline OStream& operator<<(OStream& os, const co::color::Text& x) {
     return (os << x.c).write(x.s, x.n) << color::deflt;
 }
 template <class OStream>
-inline OStream& operator<<(OStream& os, const text::Bold& x) {
+inline OStream& operator<<(OStream& os, const co::color::Bold& x) {
     return (os << x.c).write(x.s, x.n) << color::deflt;
 }
 
@@ -252,7 +252,7 @@ struct Printer {
 }  // namespace xx
 
 // print to stdout with newline (thread-safe)
-//   - co::print("hello", text::green(" xxx "), 23);
+//   - co::print("hello", co::color::green(" xxx "), 23);
 template <typename... X>
 inline void print(X&&... x) {
     xx::Printer().s.cat(std::forward<X>(x)...);

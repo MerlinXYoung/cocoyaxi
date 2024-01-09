@@ -8,7 +8,9 @@
 #include "co/flag.h"
 #include "co/fs.h"
 #include "co/json.h"
+#include "co/print.h"
 #include "co/str.h"
+
 
 DEF_bool(std, false, "use std types in the generated code");
 

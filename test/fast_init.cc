@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#include "benchmark.h"
+#include "co/benchmark.h"
 #include "co/flag.h"
 DEF_string(out, "./fast.h.in", "output file");
 

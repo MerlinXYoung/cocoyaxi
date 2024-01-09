@@ -4,6 +4,8 @@
 #pragma warning(disable : 4706)  // if ((a = x))
 #endif
 
+#include <string.h>
+
 #include <ostream>
 #include <string>
 
@@ -85,7 +87,7 @@ class __coapi fastring : public fast::stream {
         return (fastring&)fast::stream::append_nomchk(p, n);
     }
 
-    fastring& append(const char* s) { return this->append(s, strlen(s)); }
+    fastring& append(const char* s) { return this->append(s, ::strlen(s)); }
 
     // like append(), but will not check if s overlaps with the internal memory
     fastring& append_nomchk(const char* s) { return this->append_nomchk(s, strlen(s)); }

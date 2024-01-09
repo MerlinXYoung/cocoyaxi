@@ -1286,7 +1286,7 @@ static bool _init_hook() {
     if (!__sys_api(select)) {
         void* origin = 0;
         rebind_symbols((rebinding[1]){{"select$1050", (void*)::_hook(select), (void**)&origin}}, 1);
-        if (!origin) co::print(text::bold("hook select failed..").red());
+        if (!origin) co::print(co::color::bold("hook select failed..").red());
         atomic_store(&__sys_api(select), origin, mo_relaxed);
     }
 #endif

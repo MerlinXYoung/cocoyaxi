@@ -1,8 +1,8 @@
 #include "co/defer.h"
 
 #include "co/color.h"
+#include "co/print.h"
 #include "co/time.h"
-
 
 void f(int sn, int x, int y) { co::print(sn, ": ", x + y); }
 

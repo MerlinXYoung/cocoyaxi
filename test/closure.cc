@@ -1,6 +1,7 @@
 #include "co/closure.h"
 
 #include "co/color.h"
+#include "co/print.h"
 
 template <class F, typename P>
 class X : public co::Closure {

@@ -1,5 +1,6 @@
 #include "co/co.h"
 #include "co/color.h"
+#include "co/print.h"
 
 void f0() { co::print("f0()"); }
 

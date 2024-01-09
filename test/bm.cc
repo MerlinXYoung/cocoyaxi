@@ -1,7 +1,7 @@
 #include <atomic>
 
-#include "benchmark.h"
 #include "co/all.h"
+#include "co/benchmark.h"
 
 BM_group(atomic) {
     int i = 0;

@@ -1,8 +1,8 @@
 #include "co/tasked.h"
 
 #include "co/color.h"
+#include "co/print.h"
 #include "co/time.h"
-
 
 void f() { co::print("f(): ", now::str()); }
 

@@ -2,6 +2,7 @@
 
 #include "co/co.h"
 #include "co/color.h"
+#include "co/print.h"
 
 static std::atomic_int g_id{0};
 

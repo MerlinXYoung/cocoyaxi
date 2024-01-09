@@ -71,7 +71,7 @@ inline int get_default_color() {
 }}  // namespace co::color
 
 static const int fgi[16] = {
-    color::get_default_color(),  // default
+    co::color::get_default_color(),  // default
     FOREGROUND_RED,
     FOREGROUND_GREEN,
     FOREGROUND_RED | FOREGROUND_GREEN,  // yellow
@@ -89,47 +89,22 @@ static const int fgi[16] = {
     FOREGROUND_INTENSITY | FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED,
 };
 
-std::ostream& operator<<(std::ostream& os, color::Color c) {
-    if (color::ansi_esc_seq_enabled()) return os << fg[c];
+std::ostream& operator<<(std::ostream& os, co::color::Color c) {
+    if (co::color::ansi_esc_seq_enabled()) return os << fg[(int)c];
     os.flush();
-    auto h = color::cout_handle();
-    if (h) SetConsoleTextAttribute(h, (WORD)fgi[c]);
+    auto h = co::color::cout_handle();
+    if (h) SetConsoleTextAttribute(h, (WORD)fgi[(int)c]);
     return os;
 }
 
 // ANSI color sequence may be not supported on windows
-fastream& operator<<(fastream& s, color::Color c) {
-    if (color::ansi_esc_seq_enabled()) s << fg[c];
+fastream& operator<<(fastream& s, co::color::Color c) {
+    if (co::color::ansi_esc_seq_enabled()) s << fg[(int)c];
     return s;
 }
 
 #else
-std::ostream& operator<<(std::ostream& os, color::Color c) { return os << fg[c]; }
+std::ostream& operator<<(std::ostream& os, co::color::Color c) { return os << fg[(int)c]; }
 
-fastream& operator<<(fastream& s, color::Color c) { return s << fg[c]; }
+fastream& operator<<(fastream& s, co::color::Color c) { return s << fg[(int)c]; }
 #endif
-
-namespace co { namespace xx {
-
-inline std::mutex& cmutex() {
-    static std::mutex _m;
-    return _m;
-}
-
-inline fastream& cstream() {
-    static thread_local fastream _s(256);
-    return _s;
-}
-
-Printer::Printer() : s(cstream()) { n = s.size(); }
-
-Printer::~Printer() {
-    s << '\n';
-    {
-        std::lock_guard<std::mutex> m(cmutex());
-        ::fwrite(s.data() + n, 1, s.size() - n, stdout);
-        s.resize(n);
-    }
-}
-
-}}  // namespace co::xx

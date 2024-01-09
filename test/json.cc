@@ -6,7 +6,9 @@
 #include "co/color.h"
 #include "co/defer.h"
 #include "co/flag.h"
+#include "co/print.h"
 #include "co/time.h"
+
 
 DEF_uint32(n, 64, "string length for this test");
 

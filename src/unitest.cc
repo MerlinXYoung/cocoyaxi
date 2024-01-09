@@ -59,34 +59,34 @@ int run_tests() {
 
     if (fc == 0) {
         if (n > 0) {
-            std::cout << color::green << "\nCongratulations! All tests passed!" << color::deflt
+            std::cout << co::Color::green << "\nCongratulations! All tests passed!" << co::Color::deflt
                       << std::endl;
         } else {
             std::cout << "No test found. Done nothing." << std::endl;
         }
 
     } else {
-        std::cout << color::red << "\nAha! " << fc << " case" << (fc > 1 ? "s" : "");
+        std::cout << co::Color::red << "\nAha! " << fc << " case" << (fc > 1 ? "s" : "");
         std::cout << " from " << ft << " test" << (ft > 1 ? "s" : "");
-        std::cout << " failed. See details below:\n" << color::deflt << std::endl;
+        std::cout << " failed. See details below:\n" << co::Color::deflt << std::endl;
 
         const char* last_case = "";
         for (auto& t : tests) {
             if (!t.failed.empty()) {
-                std::cout << color::red << "In test " << t.name << ":\n" << color::deflt;
+                std::cout << co::Color::red << "In test " << t.name << ":\n" << co::Color::deflt;
                 for (auto& f : t.failed) {
                     if (strcmp(last_case, f.c) != 0) {
                         last_case = f.c;
-                        std::cout << color::red << " case " << f.c << ":\n" << color::deflt;
+                        std::cout << co::Color::red << " case " << f.c << ":\n" << co::Color::deflt;
                     }
-                    std::cout << color::yellow << "  " << f.file << ':' << f.line << "] "
-                              << color::deflt << f.msg << '\n';
+                    std::cout << co::Color::yellow << "  " << f.file << ':' << f.line << "] "
+                              << co::Color::deflt << f.msg << '\n';
                 }
                 std::cout.flush();
             }
         }
 
-        std::cout << color::deflt;
+        std::cout << co::Color::deflt;
         std::cout.flush();
     }
 

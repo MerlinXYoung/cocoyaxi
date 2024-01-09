@@ -88,9 +88,10 @@ inline void print_results(Group& g) {
         if (maxlen < x) maxlen = x;
     }
 
-    std::cout << "|  " << text::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ') << "|  "
-              << text::bold("ns/iter  ").blue() << "|  " << text::bold("iters/s  ").blue() << "|  "
-              << text::bold("speedup  ").blue() << "|\n";
+    std::cout << "|  " << co::color::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ')
+              << "|  " << co::color::bold("ns/iter  ").blue() << "|  "
+              << co::color::bold("iters/s  ").blue() << "|  " << co::color::bold("speedup  ").blue()
+              << "|\n";
 
     std::cout << "| " << fastring(maxlen + 2, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "| "
               << fastring(9, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "|\n";
@@ -101,13 +102,13 @@ inline void print_results(Group& g) {
         fastring t = Num(r.ns).str();
         size_t p = t.size() <= 7 ? 9 - t.size() : 2;
 
-        std::cout << "|  " << text::green(r.bm) << fastring(maxlen - bmlen + 2, ' ') << "|  "
-                  << text::red(t) << fastring(p, ' ');
+        std::cout << "|  " << co::color::green(r.bm) << fastring(maxlen - bmlen + 2, ' ') << "|  "
+                  << co::color::red(t) << fastring(p, ' ');
 
         double x = r.ns > 0 ? 1000000000.0 / r.ns : 1.2e12;
         t = Num(x).str();
         p = t.size() <= 7 ? 9 - t.size() : 2;
-        std::cout << "|  " << text::red(t) << fastring(p, ' ');
+        std::cout << "|  " << co::color::red(t) << fastring(p, ' ');
 
         if (i == 0) {
             t = "1.0";
@@ -118,7 +119,7 @@ inline void print_results(Group& g) {
         }
 
         p = t.size() <= 7 ? 9 - t.size() : 2;
-        std::cout << "|  " << text::yellow(t) << fastring(p, ' ') << "|\n";
+        std::cout << "|  " << co::color::yellow(t) << fastring(p, ' ') << "|\n";
     }
 }
 

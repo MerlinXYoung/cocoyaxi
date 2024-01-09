@@ -1,8 +1,8 @@
 #include "co/co.h"
 
 #include "co/color.h"
+#include "co/print.h"
 #include "co/stl.h"
-
 
 DEF_int32(n, 32, "n coroutines");
 
