@@ -13,13 +13,6 @@ set_warnings("all")     -- -Wall
 --set_symbols("debug")    -- dbg symbols
 --add_rules("mode.debug", "mode.release")
 
-package("RapidJSON")
-    if is_plat("macosx", "linux") then
-        add_deps("pkg-config")
-    end
-    add_extsources("pkgconfig::RapidJSON")
-package_end()
-
 if is_plat("windows") then
     set_optimize("fastest")  -- faster: -O2  fastest: -Ox  none: -O0
     add_cxflags("/EHsc")
@@ -92,11 +85,6 @@ end
 if has_config("with_backtrace") then
     add_requires("libbacktrace")
 end
-
--- find_packages("pkgconfig::rapidjson")
-add_requires("RapidJSON", {system = true})
--- add_requires("RapidJSON")
-
 
 -- include dir
 add_includedirs("include")
