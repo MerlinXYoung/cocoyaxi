@@ -57,7 +57,7 @@ struct waitx_t : co::clink {
 inline waitx_t* make_waitx(void* co, size_t n = sizeof(waitx_t)) {
     auto p = ::malloc(n);
     assert(p);
-    new (p) waitx_t((Coroutine*)co);
+    return new (p) waitx_t((Coroutine*)co);
 }
 
 struct Stack {
@@ -76,21 +76,21 @@ struct Buffer {
     Buffer() = delete;
     ~Buffer() = delete;
 
-    const char* data() const noexcept { return _h ? _h->p : 0; }
-    uint32_t size() const noexcept { return _h ? _h->size : 0; }
-    uint32_t capacity() const noexcept { return _h ? _h->cap : 0; }
-    void clear() noexcept {
+    inline const char* data() const noexcept { return _h ? _h->p : 0; }
+    inline uint32_t size() const noexcept { return _h ? _h->size : 0; }
+    inline uint32_t capacity() const noexcept { return _h ? _h->cap : 0; }
+    inline void clear() noexcept {
         if (_h) _h->size = 0;
     }
 
-    void reset() {
+    inline void reset() {
         if (_h) {
             ::free(_h);
             _h = 0;
         }
     }
 
-    void append(const void* p, size_t size) {
+    inline void append(const void* p, size_t size) {
         const uint32_t n = (uint32_t)size;
         if (!_h) {
             _h = (H*)::malloc(size + 8);
@@ -142,12 +142,12 @@ class CoroutinePool {
     static const int N = 1 << E;  // max coroutines per block
     static const int M = 256;
 
-    CoroutinePool() : _c(0), _o(0), _v(M), _use_count(M) {
+    inline CoroutinePool() : _c(0), _o(0), _v(M), _use_count(M) {
         _v.resize(M);
         _use_count.resize(M);
     }
 
-    ~CoroutinePool() {
+    inline ~CoroutinePool() {
         for (size_t i = 0; i < _v.size(); ++i) {
             if (_v[i]) ::free(_v[i]);
         }
@@ -276,19 +276,19 @@ inline fastream& operator<<(fastream& fs, const timer_id_t& id) { return fs << *
 // Timer must be added in the scheduler thread. We need no lock here.
 class TimerManager {
   public:
-    TimerManager() : _timer(), _it(_timer.end()) {}
+    inline TimerManager() : _timer(), _it(_timer.end()) {}
     ~TimerManager() = default;
 
-    timer_id_t add_timer(uint32_t ms, Coroutine* co) {
+    inline timer_id_t add_timer(uint32_t ms, Coroutine* co) {
         return _it = _timer.emplace_hint(_it, now::ms() + ms, co);
     }
 
-    void del_timer(const timer_id_t& it) {
+    inline void del_timer(const timer_id_t& it) {
         if (_it == it) ++_it;
         _timer.erase(it);
     }
 
-    timer_id_t end() { return _timer.end(); }
+    inline timer_id_t end() { return _timer.end(); }
 
     // get timedout coroutines, return time(ms) to wait for the next timeout
     uint32_t check_timeout(co::vector<Coroutine*>& res);
@@ -305,16 +305,16 @@ class Sched {
     ~Sched();
 
     // id of this scheduler
-    uint32_t id() const { return _id; }
+    inline uint32_t id() const noexcept { return _id; }
 
     // the current running coroutine
-    Coroutine* running() const { return _running; }
+    inline Coroutine* running() const noexcept { return _running; }
 
     // id of the current running coroutine
-    int coroutine_id() const { return _sched_num * (_running->id - 1) + _id; }
+    inline int coroutine_id() const noexcept { return _sched_num * (_running->id - 1) + _id; }
 
     // check if the memory @p points to is on the stack of the coroutine
-    bool on_stack(const void* p) const {
+    inline bool on_stack(const void* p) const {
         Stack* const s = _running->stack;
         return (s->p <= (char*)p) && ((char*)p < s->top);
     }
@@ -323,22 +323,22 @@ class Sched {
     void resume(Coroutine* co);
 
     // suspend the current coroutine
-    void yield() { tb_context_jump(_main_co->ctx, _running); }
+    inline void yield() { tb_context_jump(_main_co->ctx, _running); }
 
     // add a new task to run as a coroutine later (thread-safe)
-    void add_new_task(Closure* cb) {
+    inline void add_new_task(Closure* cb) {
         _task_mgr.add_new_task(cb);
         _x.epoll->signal();
     }
 
     // add a coroutine ready to resume (thread-safe)
-    void add_ready_task(Coroutine* co) {
+    inline void add_ready_task(Coroutine* co) {
         _task_mgr.add_ready_task(co);
         _x.epoll->signal();
     }
 
     // sleep for milliseconds in the current coroutine
-    void sleep(uint32_t ms) {
+    inline void sleep(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
         (void)_timer_mgr.add_timer(ms, _running);
         SCHEDLOG << "co(" << _running << ") sleep(" << ms << " ms)";
@@ -346,17 +346,17 @@ class Sched {
     }
 
     // add a timer for the current coroutine
-    void add_timer(uint32_t ms) {
+    inline void add_timer(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
         _running->it = _timer_mgr.add_timer(ms, _running);
         SCHEDLOG << "co(" << _running << ") add timer " << _running->it << " (" << ms << " ms)";
     }
 
     // check whether the current coroutine has timed out
-    bool timeout() const { return _timeout; }
+    inline bool timeout() const noexcept { return _timeout; }
 
     // add an IO event on a socket to epoll for the current coroutine.
-    bool add_io_event(sock_t fd, _ev_t ev) {
+    inline bool add_io_event(sock_t fd, _ev_t ev) {
         SCHEDLOG << "co(" << _running << ") add io event fd: " << fd << " ev: " << (int)ev;
 #if defined(_WIN32)
         (void)ev;  // we do not care what the event is on windows
@@ -371,22 +371,22 @@ class Sched {
     }
 
     // delete an IO event on a socket from the epoll for the current coroutine.
-    void del_io_event(sock_t fd, _ev_t ev) {
+    inline void del_io_event(sock_t fd, _ev_t ev) {
         SCHEDLOG << "co(" << _running << ") del io event, fd: " << fd << " ev: " << (int)ev;
         ev == ev_read ? _x.epoll->del_ev_read(fd) : _x.epoll->del_ev_write(fd);
     }
 
     // delete all IO events on a socket from the epoll.
-    void del_io_event(sock_t fd) {
+    inline void del_io_event(sock_t fd) {
         SCHEDLOG << "co(" << _running << ") del io event, fd: " << fd;
         _x.epoll->del_event(fd);
     }
 
     // cputime of this scheduler (us)
-    int64_t cputime() { return _cputime.load(std::memory_order_relaxed); }
+    inline int64_t cputime() const noexcept { return _cputime.load(std::memory_order_relaxed); }
 
     // start the scheduler thread
-    void start() { std::thread(&Sched::loop, this).detach(); }
+    inline void start() { std::thread(&Sched::loop, this).detach(); }
 
     // stop the scheduler thread
     void stop();
@@ -399,7 +399,7 @@ class Sched {
     static void main_func(tb_context_from_t from);
 
     // save stack for the coroutine
-    void save_stack(Coroutine* co) {
+    inline void save_stack(Coroutine* co) {
         if (co) {
             if (!co->pbuf && !_bufs.empty()) co->pbuf = _bufs.pop_back();
             co->buf.clear();
@@ -468,9 +468,9 @@ class SchedManager {
     SchedManager();
     ~SchedManager();
 
-    Sched* next_sched() const { return _next(_scheds); }
+    inline Sched* next_sched() const noexcept { return _next(_scheds); }
 
-    const co::vector<Sched*>& scheds() const { return _scheds; }
+    inline const co::vector<Sched*>& scheds() const noexcept { return _scheds; }
 
     void stop();
 
