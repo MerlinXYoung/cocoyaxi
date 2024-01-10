@@ -61,14 +61,13 @@ Sched::~Sched() {
     _bufs.clear();
     ::free(_stack);
 }
-#if defined(_WIN32) && defined(BUILDING_CO_SHARED)
-static std::atomic_int g_cnt{0};
-#endif
+
 void Sched::stop() {
     if (!_x.stopped.exchange(true)) {
         _x.epoll->signal();
 #if defined(_WIN32) && defined(BUILDING_CO_SHARED)
-        const int n = g_cnt.fetch_add(1, std::memory_order_relaxed) + 1;
+        static std::atomic_int _cnt{0};
+        const int n = _cnt.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n == 1) {
             // the thread may not respond in dll, wait at most 64ms here
             co::Timer t;
