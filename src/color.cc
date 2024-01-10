@@ -35,7 +35,7 @@ static const char* fg[16] = {
 namespace co { namespace color {
 
 inline HANDLE& cout_handle() noexcept {
-    static HANDLE _h;
+    static HANDLE _h = GetStdHandle(STD_OUTPUT_HANDLE);
     return _h;
 }
 
@@ -54,8 +54,8 @@ static bool has_vterm() noexcept {
 #endif
 }
 
-inline const bool ansi_esc_seq_enabled() noexcept {
-    static const int _vterm{has_vterm() ? 1 : -1};
+inline  bool ansi_esc_seq_enabled() noexcept {
+    static  int _vterm{has_vterm() ? 1 : -1};
     return _vterm > 0;
 }
 
