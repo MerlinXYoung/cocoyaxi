@@ -53,8 +53,8 @@ namespace xx {
 struct go_helper {
     go_helper() = default;
     template <typename Func>
-    void operator-(Func&& func) {
-        return go(std::move(func));
+    inline void operator-(Func&& func) const {
+        go(std::move(func));
     }
 };
 }  // namespace xx

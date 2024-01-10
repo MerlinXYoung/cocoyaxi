@@ -4,11 +4,9 @@
 #include "co/color.h"
 #include "co/print.h"
 
-static std::atomic_int g_id{0};
-
 class S {
   public:
-    S() { _v = this->get_id(); }
+    S() : _v(get_id()) {}
     ~S() = default;
 
     void run() { co::print("S: ", _v); }
@@ -16,7 +14,10 @@ class S {
   private:
     int _v;
 
-    int get_id() { return g_id.fetch_add(1) + 1; }
+    static int get_id() {
+        static std::atomic_int g_id{0};
+        return g_id.fetch_add(1) + 1;
+    }
 };
 
 // use DEF_main to make code in main() also run in coroutine.
