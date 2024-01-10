@@ -1,6 +1,7 @@
 #include <mutex>
 
 #include "co/all.h"
+#include "co/co/wait_group.h"
 
 DEF_string(ip, "127.0.0.1", "server ip");
 DEF_int32(port, 9988, "server port");
@@ -17,6 +18,7 @@ class Connection {
         std::function<void(void*)> D;
     };
     explicit Connection(tcp::Connection c) : _impl(std::move(c)), _out_msg(2) {}
+    ~Connection() { LOG << "~Connection"; }
     // get the underlying socket fd
     int socket() const { return _impl.socket(); }
 
@@ -44,6 +46,7 @@ class Connection {
      */
     template <class F>
     int send(const void* buf, int n, F&& f) {
+        LOG << " add msg:" << (char*)buf << " n:" << n;
         _out_msg << Message{false, buf, n, std::move(f)};
         return 0;
     }
@@ -55,6 +58,7 @@ class Connection {
      * @param ms  if ms > 0, the connection will be closed ms milliseconds later.
      */
     int close() {
+        LOG << "conn close";
         _out_msg << Message{true, nullptr, 0, nullptr};
         return 0;
     }
@@ -94,7 +98,7 @@ class Connection {
     // co::mutex _mtx;
     co::chan<Message> _out_msg;
 };
-
+static int g_id = 0;
 void conn_cb(tcp::Connection _conn) {
     Connection conn(std::move(_conn));
     conn.start();
@@ -103,17 +107,19 @@ void conn_cb(tcp::Connection _conn) {
     while (true) {
         int r = conn.recv(buf, 8);
         if (r == 0) { /* client close the connection */
+            LOG << "server recv 0";
             conn.close();
             break;
         } else if (r < 0) { /* error */
             conn.reset(3000);
             break;
         } else {
-            LOG << "server recv " << fastring(buf, r);
+            LOG << "server recv(" << r << ") " << fastring(buf, r);
             for (int i = 0; i < 100; ++i) {
-                GO[i, &conn] {
+                auto id = ++g_id;
+                GO[i, id, &conn] {
                     auto str = new fastring("pong ");
-                    *str << i;
+                    *str << i << " id:" << id;
                     conn.send(str->data(), str->size(), [str](void* p) {
                         LOG << "std:" << (void*)str->data() << " [" << *str << "]"
                             << " p:" << p;
@@ -160,7 +166,9 @@ void client_fun() {
             break;
         }
     }
+    LOG << "client will sleep...";
     co::sleep(10000);
+    LOG << "client will disconnect";
     c.disconnect();
 }
 
@@ -197,27 +205,13 @@ void client_with_pool() {
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
-    gPool = new co::Pool(
-        []() {
-            bool use_ssl = !FLG_key.empty() && !FLG_ca.empty();
-            return (void*)new tcp::Client(FLG_ip.c_str(), FLG_port, use_ssl);
-        },
-        [](void* p) { delete (tcp::Client*)p; });
+    co::wait_group wg(1);
 
-    tcp::Server().on_connection(conn_cb).start("0.0.0.0", FLG_port, FLG_key.c_str(),
-                                               FLG_ca.c_str());
+    tcp::Server()
+        .on_connection(conn_cb)
+        .on_exit([&wg] { wg.done(); })
+        .start("0.0.0.0", FLG_port, FLG_key.c_str(), FLG_ca.c_str());
 
-    sleep::ms(32);
-
-    if (FLG_client_num > 1) {
-        for (int i = 0; i < FLG_client_num; ++i) {
-            go(client_with_pool);
-        }
-    } else {
-        go(client_fun);
-    }
-
-    sleep::sec(2);
-    delete gPool;
+    wg.wait();
     return 0;
 }

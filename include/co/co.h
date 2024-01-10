@@ -51,15 +51,21 @@ inline void go(F&& f) {
 }
 namespace xx {
 struct go_helper {
-    go_helper() = default;
+    static go_helper& instance() {
+        static go_helper _inst;
+        return _inst;
+    }
     template <typename Func>
     inline void operator-(Func&& func) const {
-        go(std::move(func));
+        go(new_closure(std::move(func)));
     }
+
+  private:
+    go_helper() = default;
 };
 }  // namespace xx
 
-#define GO co::xx::go_helper() -
+#define GO co::xx::go_helper::instance() -
 
 /**
  * add a task, which will run as a coroutine
