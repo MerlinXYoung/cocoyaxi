@@ -402,6 +402,10 @@ class pipe_impl {
     uint32_t unref() noexcept { return --_refn; }
 
     struct waitx : co::clink {
+        explicit inline waitx(Coroutine* _co, void* _buf) : co(_co), state(st_wait), buf(_buf) {
+            x.done = 0;
+        }
+        ~waitx() = delete;
         Coroutine* co;
         union {
             std::atomic_uint8_t state;
@@ -413,24 +417,19 @@ class pipe_impl {
             void* dummy;
         };
         void* buf;
-        size_t len;  // total length of the memory
+
     };
 
-    waitx* create_waitx(Coroutine* co, void* buf) {
-        waitx* w;
+    inline waitx* create_waitx(Coroutine* co, void* buf) {
         if (co && xx::current_sched()->on_stack(buf)) {
-            w = (waitx*)::malloc(sizeof(waitx) + _blk_size);
-            w->buf = (char*)w + sizeof(waitx);
-            w->len = sizeof(waitx) + _blk_size;
+            auto p = ::malloc(sizeof(waitx) + _blk_size);
+            assert(p);
+            return new (p) waitx(co, (char*)p + sizeof(waitx));
         } else {
-            w = (waitx*)::malloc(sizeof(waitx));
-            w->buf = buf;
-            w->len = sizeof(waitx);
+            auto p = ::malloc(sizeof(waitx));
+            assert(p);
+            return new (p) waitx(co, buf);
         }
-        w->co = co;
-        w->state = st_wait;
-        w->x.done = 0;
-        return w;
     }
 
   private:

@@ -45,6 +45,8 @@ enum state_t : uint8_t {
 
 // waiting context
 struct waitx_t : co::clink {
+    explicit inline waitx_t(Coroutine* _co) : co(_co), state(st_wait) {}
+    ~waitx_t() = delete;
     Coroutine* co;
     union {
         std::atomic_uint8_t state;
@@ -53,12 +55,9 @@ struct waitx_t : co::clink {
 };
 
 inline waitx_t* make_waitx(void* co, size_t n = sizeof(waitx_t)) {
-    waitx_t* w = (waitx_t*)::malloc(n);
-    assert(w);
-    w->next = w->prev = nullptr;
-    w->co = (Coroutine*)co;
-    w->state = st_wait;
-    return w;
+    auto p = ::malloc(n);
+    assert(p);
+    new (p) waitx_t((Coroutine*)co);
 }
 
 struct Stack {
