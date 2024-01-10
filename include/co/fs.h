@@ -5,7 +5,6 @@
 #include "fastring.h"
 #include "stl.h"
 
-
 namespace fs {
 
 __coapi bool exists(const char* path);
@@ -98,18 +97,18 @@ class __coapi file {
     static const int seek_cur = 1;
     static const int seek_end = 2;
 
-    file() : _p(0) {}
+    inline file() : _p(0) {}
     ~file();
 
     // @n: reserve n bytes of memory for the path
     explicit file(size_t n);
 
-    file(const char* path, char mode) : _p(0) { this->open(path, mode); }
+    inline file(const char* path, char mode) : _p(0) { this->open(path, mode); }
 
-    file(const fastring& path, char mode) : file(path.c_str(), mode) {}
-    file(const std::string& path, char mode) : file(path.c_str(), mode) {}
+    inline file(const fastring& path, char mode) : file(path.c_str(), mode) {}
+    inline file(const std::string& path, char mode) : file(path.c_str(), mode) {}
 
-    file(file&& f) : _p(f._p) { f._p = 0; }
+    inline file(file&& f) : _p(f._p) { f._p = 0; }
 
     file(const file& x) = delete;
     void operator=(const file& x) = delete;
@@ -117,18 +116,18 @@ class __coapi file {
 
     explicit operator bool() const;
 
-    bool operator!() const { return !(bool)(*this); }
+    inline bool operator!() const { return !(bool)(*this); }
 
     const char* path() const;
 
-    int64_t size() const { return fs::fsize(this->path()); }
-    bool exists() const { return fs::exists(this->path()); }
+    inline int64_t size() const { return fs::fsize(this->path()); }
+    inline bool exists() const { return fs::exists(this->path()); }
 
     bool open(const char* path, char mode);
 
-    bool open(const fastring& path, char mode) { return this->open(path.c_str(), mode); }
+    inline bool open(const fastring& path, char mode) { return this->open(path.c_str(), mode); }
 
-    bool open(const std::string& path, char mode) { return this->open(path.c_str(), mode); }
+    inline bool open(const std::string& path, char mode) { return this->open(path.c_str(), mode); }
 
     void close();
 
@@ -140,13 +139,13 @@ class __coapi file {
 
     size_t write(const void* s, size_t n);
 
-    size_t write(const char* s) { return this->write(s, strlen(s)); }
+    inline size_t write(const char* s) { return this->write(s, strlen(s)); }
 
-    size_t write(const fastring& s) { return this->write(s.data(), s.size()); }
+    inline size_t write(const fastring& s) { return this->write(s.data(), s.size()); }
 
-    size_t write(const std::string& s) { return this->write(s.data(), s.size()); }
+    inline size_t write(const std::string& s) { return this->write(s.data(), s.size()); }
 
-    size_t write(char c) { return this->write(&c, 1); }
+    inline size_t write(char c) { return this->write(&c, 1); }
 
   private:
     void* _p;
@@ -157,45 +156,45 @@ class __coapi file {
 //   'w': write        created if not exists, truncated if exists
 class __coapi fstream {
   public:
-    fstream() : _s(8192) {}
-    explicit fstream(size_t cap) : _s(cap) {}
+    inline fstream() : _s(8192) {}
+    explicit inline fstream(size_t cap) : _s(cap) {}
 
-    fstream(const char* path, char mode, size_t cap = 8192)
+    inline fstream(const char* path, char mode, size_t cap = 8192)
         : _s(cap), _f(path, mode == 'w' ? 'w' : 'a') {}
 
-    fstream(const fastring& path, char mode, size_t cap = 8192)
+    inline fstream(const fastring& path, char mode, size_t cap = 8192)
         : fstream(path.c_str(), mode, cap) {}
 
-    fstream(const std::string& path, char mode, size_t cap = 8192)
+    inline fstream(const std::string& path, char mode, size_t cap = 8192)
         : fstream(path.c_str(), mode, cap) {}
 
-    fstream(fstream&& fs) : _s(std::move(fs._s)), _f(std::move(fs._f)) {}
+    inline fstream(fstream&& fs) : _s(std::move(fs._s)), _f(std::move(fs._f)) {}
 
-    ~fstream() { this->close(); }
+    inline ~fstream() { this->close(); }
 
-    explicit operator bool() const { return (bool)_f; }
+    explicit inline operator bool() const { return (bool)_f; }
 
-    bool operator!() const { return !(bool)_f; }
+    inline bool operator!() const { return !(bool)_f; }
 
-    bool open(const char* path, char mode) {
+    inline bool open(const char* path, char mode) {
         this->close();
         return _f.open(path, mode == 'w' ? 'w' : 'a');
     }
 
-    bool open(const fastring& path, char mode) { return this->open(path.c_str(), mode); }
+    inline bool open(const fastring& path, char mode) { return this->open(path.c_str(), mode); }
 
-    bool open(const std::string& path, char mode) { return this->open(path.c_str(), mode); }
+    inline bool open(const std::string& path, char mode) { return this->open(path.c_str(), mode); }
 
-    void reserve(size_t n) { _s.reserve(n); }
+    inline void reserve(size_t n) { _s.reserve(n); }
 
-    void flush() {
+    inline void flush() {
         if (!_s.empty()) {
             _f.write(_s.data(), _s.size());
             _s.clear();
         }
     }
 
-    void close() {
+    inline void close() {
         this->flush();
         _f.close();
     }
@@ -203,22 +202,22 @@ class __coapi fstream {
     // n <= cap - szie         ->   append
     // cap - size < n <= cap   ->   flush and append
     // n > cap                 ->   flush and write
-    fstream& append(const void* s, size_t n) {
+    inline fstream& append(const void* s, size_t n) {
         if (_s.capacity() < _s.size() + n) this->flush();
         n <= _s.capacity() ? ((void)_s.append(s, n)) : ((void)_f.write(s, n));
         return *this;
     }
 
-    fstream& operator<<(const char* s) { return this->append(s, strlen(s)); }
+    inline fstream& operator<<(const char* s) { return this->append(s, strlen(s)); }
 
-    fstream& operator<<(const fastring& s) { return this->append(s.data(), s.size()); }
+    inline fstream& operator<<(const fastring& s) { return this->append(s.data(), s.size()); }
 
-    fstream& operator<<(const std::string& s) { return this->append(s.data(), s.size()); }
+    inline fstream& operator<<(const std::string& s) { return this->append(s.data(), s.size()); }
 
-    fstream& operator<<(const fastream& s) { return this->append(s.data(), s.size()); }
+    inline fstream& operator<<(const fastream& s) { return this->append(s.data(), s.size()); }
 
     template <typename T>
-    fstream& operator<<(T v) {
+    inline fstream& operator<<(T v) {
         if (_s.capacity() < _s.size() + 24) this->flush();
         _s << v;
         return *this;
@@ -233,23 +232,23 @@ class __coapi fstream {
 
 class __coapi dir {
   public:
-    dir() : _p(0) {}
+    inline dir() : _p(0) {}
     ~dir();
 
-    explicit dir(const char* path) : _p(0) { this->open(path); }
+    explicit inline dir(const char* path) : _p(0) { this->open(path); }
 
-    explicit dir(const fastring& path) : dir(path.c_str()) {}
-    explicit dir(const std::string& path) : dir(path.c_str()) {}
+    explicit inline dir(const fastring& path) : dir(path.c_str()) {}
+    explicit inline dir(const std::string& path) : dir(path.c_str()) {}
 
-    dir(dir&& d) : _p(d._p) { d._p = 0; }
+    inline dir(dir&& d) : _p(d._p) { d._p = 0; }
 
     dir(const dir&) = delete;
     void operator=(const dir&) = delete;
     void operator=(dir&&) = delete;
 
     bool open(const char* path);
-    bool open(const fastring& path) { return this->open(path.c_str()); }
-    bool open(const std::string& path) { return this->open(path.c_str()); }
+    inline bool open(const fastring& path) { return this->open(path.c_str()); }
+    inline bool open(const std::string& path) { return this->open(path.c_str()); }
 
     void close();
 
@@ -266,16 +265,16 @@ class __coapi dir {
         fastring operator*() const;
         iterator& operator++();
 
-        bool operator==(const iterator& it) const { return _p == it._p; }
+        inline bool operator==(const iterator& it) const { return _p == it._p; }
 
-        bool operator!=(const iterator& it) const { return !this->operator==(it); }
+        inline bool operator!=(const iterator& it) const { return !this->operator==(it); }
 
       private:
         void* _p;
     };
 
     iterator begin() const;
-    iterator end() const { return iterator(NULL); }
+    inline iterator end() const { return iterator(NULL); }
 
   private:
     void* _p;
