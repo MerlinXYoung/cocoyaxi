@@ -93,12 +93,12 @@ class mutex_impl {
         size_t _size;
     };
 
-    mutex_impl() : _m(), _cv(), _refn(1), _lock(0) {}
+    inline mutex_impl() noexcept : _m(), _cv(), _refn(1), _lock(0) {}
     ~mutex_impl() = default;
 
     void lock();
     void unlock();
-    bool try_lock() noexcept;
+    inline bool try_lock() noexcept;
 
     void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
     uint32_t unref() noexcept { return --_refn; }
@@ -166,7 +166,7 @@ void mutex_impl::unlock() {
 
 class event_impl {
   public:
-    event_impl(bool m, bool s, uint32_t wg = 0)
+    explicit inline event_impl(bool m, bool s, uint32_t wg = 0) noexcept
         : _m(), _cv(), _wt(0), _sn(0), _refn(1), _wg(wg), _signaled(s), _manual_reset(m) {}
     ~event_impl() = default;
 
@@ -356,7 +356,7 @@ class sync_event_impl {
         }
     }
 
-    void reset() {
+    inline void reset() noexcept {
         std::unique_lock<std::mutex> g(_m);
         _signaled = false;
     }
@@ -374,7 +374,8 @@ class sync_event_impl {
 
 class pipe_impl {
   public:
-    pipe_impl(uint32_t buf_size, uint32_t blk_size, uint32_t ms, pipe::C&& c, pipe::D&& d)
+    explicit inline pipe_impl(uint32_t buf_size, uint32_t blk_size, uint32_t ms, pipe::C&& c,
+                              pipe::D&& d)
         : _buf_size(buf_size),
           _blk_size(blk_size),
           _ms(ms),
@@ -390,16 +391,16 @@ class pipe_impl {
         _buf = (char*)::malloc(_buf_size);
     }
 
-    ~pipe_impl() { ::free(_buf); }
+    inline ~pipe_impl() { ::free(_buf); }
 
     void read(void* p);
     void write(void* p, int v);
     bool done() const noexcept { return _done; }
     void close();
-    bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
+    inline bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
 
-    void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    uint32_t unref() noexcept { return --_refn; }
+    inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
+    inline uint32_t unref() noexcept { return --_refn; }
 
     struct waitx : co::clink {
         explicit inline waitx(Coroutine* _co, void* _buf) : co(_co), state(st_wait), buf(_buf) {
@@ -417,7 +418,6 @@ class pipe_impl {
             void* dummy;
         };
         void* buf;
-
     };
 
     inline waitx* create_waitx(Coroutine* co, void* buf) {
