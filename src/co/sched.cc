@@ -110,6 +110,7 @@ void Sched::resume(Coroutine* co) {
     Stack* const s = co->stack;
     _running = co;
     if (s->p == 0) {
+        // init stack
         s->p = (char*)::malloc(_stack_size);
         s->top = s->p + _stack_size;
         s->co = co;
@@ -118,6 +119,7 @@ void Sched::resume(Coroutine* co) {
     if (co->ctx == 0) {
         // resume new coroutine
         if (s->co != co) {
+            // save other co stack
             this->save_stack(s->co);
             s->co = co;
         }
@@ -137,7 +139,9 @@ void Sched::resume(Coroutine* co) {
         // resume suspended coroutine
         SCHEDLOG << "resume co: " << co << " id: " << co->id << " stack: " << co->buf.size();
         if (s->co != co) {
+            // save other co stack
             this->save_stack(s->co);
+            // load co statck
             CHECK_EQ(s->top, (char*)co->ctx + co->buf.size());
             memcpy(co->ctx, co->buf.data(), co->buf.size());  // restore stack data
             s->co = co;
@@ -153,6 +157,7 @@ void Sched::resume(Coroutine* co) {
     } else {
         // the coroutine has terminated, recycle it
         _running->stack->co = 0;
+        SCHEDLOG << "recycle co: " << _running << " id: " << _running->id;
         this->recycle(_running);
     }
 }
@@ -187,10 +192,11 @@ void Sched::loop() {
             auto info = xx::per_io_info(ev.lpOverlapped);
             auto co = (Coroutine*)info->co;
             decltype(info->state) state(st_wait);
-            if(reinterpret_cast<std::atomic_uint8_t*>(&info->state)->compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
-                                std::memory_order_relaxed)){
-            // if (atomic_bool_cas(&info->state, st_wait, st_ready, std::memory_order_relaxed,
-            //                     std::memory_order_relaxed)) {
+            if (reinterpret_cast<std::atomic_uint8_t*>(&info->state)
+                    ->compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                              std::memory_order_relaxed)) {
+                // if (atomic_bool_cas(&info->state, st_wait, st_ready, std::memory_order_relaxed,
+                //                     std::memory_order_relaxed)) {
                 info->n = ev.dwNumberOfBytesTransferred;
                 if (co->sched == this) {
                     this->resume(co);
@@ -198,7 +204,7 @@ void Sched::loop() {
                     co->sched->add_ready_task(co);
                 }
             } else {
-                ::free(info);//, info->mlen);
+                ::free(info);  //, info->mlen);
             }
 #elif defined(__linux__)
             int32_t rco = 0, wco = 0;
@@ -268,7 +274,7 @@ void Sched::loop() {
 
 uint32_t TimerManager::check_timeout(co::vector<Coroutine*>& res) {
     if (_timer.empty()) return (uint32_t)-1;
-// SCHEDLOG << "timer not empty";
+    // SCHEDLOG << "timer not empty";
     int64_t now_ms = now::ms();
     auto it = _timer.begin();
     for (; it != _timer.end(); ++it) {
@@ -402,7 +408,7 @@ const co::vector<co::Sched*>& scheds() {
 
 int sched_num() { return xx::is_active() ? (int)xx::sched_man()->scheds().size() : os::cpunum(); }
 
-co::Sched* sched() { return (co::Sched*)xx::current_sched();/* xx::gSched;*/ }
+co::Sched* sched() { return (co::Sched*)xx::current_sched(); /* xx::gSched;*/ }
 
 co::Sched* next_sched() { return (co::Sched*)xx::sched_man()->next_sched(); }
 
@@ -412,46 +418,46 @@ co::MainSched* main_sched() {
 }
 
 void* coroutine() {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     return s ? s->running() : 0;
 }
 
 int sched_id() {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     return s ? s->id() : -1;
 }
 
 int coroutine_id() {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     return (s && s->running()) ? s->coroutine_id() : -1;
 }
 
 void add_timer(uint32_t ms) {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->add_timer(ms);
 }
 
 bool add_io_event(sock_t fd, _ev_t ev) {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s->add_io_event(fd, ev);
 }
 
 void del_io_event(sock_t fd, _ev_t ev) {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s->del_io_event(fd, ev);
 }
 
 void del_io_event(sock_t fd) {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->del_io_event(fd);
 }
 
 void yield() {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     s->yield();
 }
@@ -462,18 +468,18 @@ void resume(void* p) {
 }
 
 void sleep(uint32_t ms) {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     s ? s->sleep(ms) : sleep::ms(ms);
 }
 
 bool timeout() {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s && s->timeout();
 }
 
 bool on_stack(const void* p) {
-    const auto s = xx::current_sched();//xx::gSched;
+    const auto s = xx::current_sched();  // xx::gSched;
     CHECK(s) << "MUST be called in coroutine..";
     return s->on_stack(p);
 }

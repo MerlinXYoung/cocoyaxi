@@ -100,27 +100,27 @@ class Connection {
 };
 static int g_id = 0;
 void conn_cb(tcp::Connection _conn) {
-    Connection conn(std::move(_conn));
-    conn.start();
+    auto conn = new Connection(std::move(_conn));
+    conn->start();
     char buf[8] = {0};
 
     while (true) {
-        int r = conn.recv(buf, 8);
+        int r = conn->recv(buf, 8);
         if (r == 0) { /* client close the connection */
             LOG << "server recv 0";
-            conn.close();
+            conn->close();
             break;
         } else if (r < 0) { /* error */
-            conn.reset(3000);
+            conn->reset(3000);
             break;
         } else {
             LOG << "server recv(" << r << ") " << fastring(buf, r);
             for (int i = 0; i < 100; ++i) {
                 auto id = ++g_id;
-                GO[i, id, &conn] {
+                GO[i, id, conn] {
                     auto str = new fastring("pong ");
                     *str << i << " id:" << id;
-                    conn.send(str->data(), str->size(), [str](void* p) {
+                    conn->send(str->data(), str->size(), [str](void* p) {
                         LOG << "std:" << (void*)str->data() << " [" << *str << "]"
                             << " p:" << p;
                         delete str;
