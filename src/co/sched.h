@@ -119,8 +119,13 @@ struct Buffer {
 struct Coroutine {
     Coroutine() = delete;
     ~Coroutine() = delete;
-
-    uint32_t id;       // coroutine id
+    union {
+        struct {
+            uint32_t id;  // coroutine id
+            uint32_t use_count;
+        };
+        uint64_t gid;
+    };
     tb_context_t ctx;  // coroutine context, points to the stack bottom
     Closure* cb;       // coroutine function
     Sched* sched;      // scheduler this coroutine runs in
@@ -410,6 +415,7 @@ class Sched {
     // pop a Coroutine from the pool
     Coroutine* new_coroutine(Closure* cb) {
         Coroutine* co = _co_pool.pop();
+        ++co->use_count;
         co->cb = cb;
         if (!co->sched) {
             co->sched = this;
