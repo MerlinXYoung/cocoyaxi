@@ -61,6 +61,27 @@ void use(void* p, int n);
         _g_.res.push_back(bm::xx::Result(_g_.bm, _g_.ns * 1.0 / _g_.iters)); \
     }
 
+#define BM_add1w(_name_) \
+    _g_.bm = #_name_;    \
+    _BM_add1w
+
+#define _BM_add1w(e)                                                         \
+    {                                                                        \
+        auto _f_ = [&]() { e; };                                             \
+        _g_.timer.restart();                                                 \
+        _f_();                                                               \
+        _g_.ns = _g_.timer.ns();                                             \
+        _g_.iters = 10000; /*bm::xx::calc_iters(_g_.ns);*/                   \
+        if (_g_.iters > 1) {                                                 \
+            _g_.timer.restart();                                             \
+            for (int _i_ = 0; _i_ < _g_.iters; ++_i_) {                      \
+                _f_();                                                       \
+            }                                                                \
+            _g_.ns = _g_.timer.ns();                                         \
+        }                                                                    \
+        _g_.res.push_back(bm::xx::Result(_g_.bm, _g_.ns * 1.0 / _g_.iters)); \
+    }
+
 // tell the compiler do not optimize this away
 #define BM_use(v) bm::xx::use(&v, sizeof(v))
 
