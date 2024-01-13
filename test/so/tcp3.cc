@@ -139,7 +139,7 @@ void client_fun() {
 
     bool stop;
 
-    char buf[20] = {0};
+    // char buf[20] = {0};
 
     go([&c, &stop] {
         char buf[20] = {0};

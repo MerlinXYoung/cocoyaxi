@@ -18,7 +18,7 @@ DEF_int32(rpc_send_timeout, 3000, ">>#2 send timeout in ms");
 DEF_int32(rpc_conn_timeout, 3000, ">>#2 connect timeout in ms");
 DEF_int32(rpc_conn_idle_sec, 180,
           ">>#2 connection may be closed if no data was recieved for n seconds");
-DEF_int32(rpc_max_idle_conn, 128, ">>#2 max idle connections");
+DEF_uint32(rpc_max_idle_conn, 128, ">>#2 max idle connections");
 DEF_bool(rpc_log, true, ">>#2 enable rpc log if true");
 DEC_uint32(http_max_header_size);
 

@@ -100,7 +100,7 @@ class __coapi stream {
         _p = cap > 0 ? (char*)::malloc(cap) : 0;
     }
 
-    stream(char* p, size_t cap, size_t size) : _cap(cap), _size(size), _p(p) {}
+    stream(char* p, size_t cap, size_t size) noexcept : _cap(cap), _size(size), _p(p) {}
 
     ~stream() { this->reset(); }
 

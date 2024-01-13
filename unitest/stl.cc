@@ -299,15 +299,15 @@ DEF_test(vector) {
         ::free(p);
     }
 
-    static int gc = 0;
-    static int gd = 0;
+    // static int gc = 0;
+    // static int gd = 0;
 
-    struct A {
-        A() { ++gc; }
-        A(const A&) { ++gc; }
-        A(A&&) { ++gc; }
-        ~A() { ++gd; }
-    };
+    // struct A {
+    //     A() { ++gc; }
+    //     A(const A&) { ++gc; }
+    //     A(A&&) { ++gc; }
+    //     ~A() { ++gd; }
+    // };
 
     // DEF_case(resize) {
     //     co::vector<int> _(8, 3);
