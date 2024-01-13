@@ -1,5 +1,6 @@
 #include "co/flag.h"
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -9,6 +10,7 @@
 #include "co/os.h"
 #include "co/stl.h"
 #include "co/str.h"
+#include "co/vector.h"
 
 DEF_string(help, "", ">>.help info");
 DEF_string(config, "", ">>.path of config file", conf);
@@ -45,6 +47,7 @@ struct Mod {
                                       co::map<fastring, fastring>& kv, co::vector<fastring>& bools);
 
     co::map<const char*, std::shared_ptr<Flag>> flags;
+    co::vector<fastring> alias_holder;
 };
 
 inline Mod& mod() {
@@ -215,16 +218,15 @@ void Mod::add_flag(char iden, const char* name, const char* value, const char* h
         auto v = str::split(alias, ',');
         for (auto& x : v) {
             x.trim();
-            const size_t n = x.size() + 1;
-            // TODO:: release
-            char* s = (char*)::malloc(n);
-            memcpy(s, x.c_str(), n);
+            auto s = x.c_str();
             auto r = flags.insert(std::make_pair(s, f));
             if (!r.second) {
                 std::cout << "alias " << name << " as " << x << " failed, flag " << x
                           << " already exists in " << r.first->second->file << std::endl;
                 ::exit(0);
             }
+            alias_holder.emplace_back(std::move(x));
+            assert(alias_holder.back().c_str() == s);
         }
     }
 }

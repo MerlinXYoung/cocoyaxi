@@ -49,7 +49,7 @@ static std::atomic_bool g_init_done;
 static bool g_dummy = []() {
     // co::atomic_store(&g_init_done, true, co::mo_release);
     g_init_done.store(true, std::memory_order_release);
-    return false;
+    return true;
 }();
 
 namespace _xx { namespace log {
