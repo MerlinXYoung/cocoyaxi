@@ -47,7 +47,7 @@ class Connection {
     template <class F>
     int send(const void* buf, int n, F&& f) {
         LOG << " add msg:" << (char*)buf << " n:" << n;
-        _out_msg << Message{false, buf, n, std::move(f)};
+        _out_msg << Message{false, buf, (size_t)n, std::move(f)};
         return 0;
     }
 

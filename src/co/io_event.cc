@@ -38,7 +38,7 @@ io_event::io_event(sock_t fd, _ev_t ev)
     sched->add_io_event(fd, ev);             // add socket to IOCP
     _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo));//, L1_CACHE_LINE_SIZE);
     memset(_info, 0, sizeof(PerIoInfo));
-    _info->mlen = sizeof(PerIoInfo);
+    // _info->mlen = sizeof(PerIoInfo);
     _info->co = (void*)sched->running();
     sched->running()->waitx = (xx::waitx_t*)_info;
 }
@@ -48,7 +48,7 @@ io_event::io_event(sock_t fd, int n) : _fd(fd), _to(0), _nb_tcp(0), _timeout(fal
     sched->add_io_event(fd, ev_read);        // add socket to IOCP
     _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo) + n);//, L1_CACHE_LINE_SIZE);
     memset(_info, 0, sizeof(PerIoInfo) + n);
-    _info->mlen = sizeof(PerIoInfo) + n;
+    // _info->mlen = sizeof(PerIoInfo) + n;
     _info->co = (void*)sched->running();
     sched->running()->waitx = (xx::waitx_t*)_info;
 }
@@ -60,14 +60,14 @@ io_event::io_event(sock_t fd, _ev_t ev, const void* buf, int size, int n)
     if (!sched->on_stack(buf)) {
         _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo) + n);//, L1_CACHE_LINE_SIZE);
         memset(_info, 0, sizeof(PerIoInfo) + n);
-        _info->mlen = sizeof(PerIoInfo) + n;
+        // _info->mlen = sizeof(PerIoInfo) + n;
         _info->co = (void*)sched->running();
         _info->buf.buf = (char*)buf;
         _info->buf.len = size;
     } else {
         _info = (PerIoInfo*)::malloc(sizeof(PerIoInfo) + n + size);//, L1_CACHE_LINE_SIZE);
         memset(_info, 0, sizeof(PerIoInfo) + n);
-        _info->mlen = sizeof(PerIoInfo) + n + size;
+        // _info->mlen = sizeof(PerIoInfo) + n + size;
         _info->co = (void*)sched->running();
         _info->buf.buf = _info->s + n;
         _info->buf.len = size;
