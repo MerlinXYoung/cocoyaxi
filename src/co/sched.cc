@@ -6,7 +6,7 @@
 #include "co/os.h"
 #include "co/rand.h"
 
-DEF_uint32(co_sched_num, os::cpunum(), ">>#1 number of coroutine schedulers");
+DEF_uint16(co_sched_num, os::cpunum(), ">>#1 number of coroutine schedulers");
 DEF_uint32(co_stack_num, 8, ">>#1 number of stacks per scheduler, must be power of 2");
 DEF_uint32(co_stack_size, 1024 * 1024, ">>#1 size of the stack shared by coroutines");
 DEF_bool(co_sched_log, false, ">>#1 print logs for coroutine schedulers");
@@ -118,11 +118,12 @@ void Sched::resume(Coroutine* co) {
         // resume new coroutine
         if (s->co != co) {
             // save other co stack
+            SCHEDLOG << "save stack co: " << s->co << " id: " << (void*)co->id;
             this->save_stack(s->co);
             s->co = co;
         }
         co->ctx = tb_context_make(s->p, _stack_size, main_func);
-        SCHEDLOG << "resume new co: " << co << " id: " << co->id << " gid:" << (void*)co->gid;
+        SCHEDLOG << "resume new co: " << co << " id: " << (void*)co->id;
         from =
             tb_context_jump(co->ctx, _main_co);  // jump to main_func(from):  from.priv == _main_co
 
@@ -135,10 +136,11 @@ void Sched::resume(Coroutine* co) {
         }
 
         // resume suspended coroutine
-        SCHEDLOG << "resume co: " << co << " id: " << co->id << " gid:" << (void*)co->gid
-                 << " stack: " << co->buf.size();
+        SCHEDLOG << "resume co: " << co << " id: " << (void*)co->id
+                 << "with load stack: " << co->buf.size();
         if (s->co != co) {
             // save other co stack
+            SCHEDLOG << "save stack co: " << s->co << " id: " << (void*)co->id;
             this->save_stack(s->co);
             // load co statck
             CHECK_EQ(s->top, (char*)co->ctx + co->buf.size());
@@ -152,11 +154,11 @@ void Sched::resume(Coroutine* co) {
         // yield() was called in the coroutine, update context for it
         assert(_running == from.priv);
         _running->ctx = from.ctx;
-        SCHEDLOG << "yield co: " << _running << " id: " << _running->id;
+        SCHEDLOG << "yield co: " << _running << " id: " << (void*)_running->id;
     } else {
         // the coroutine has terminated, recycle it
         _running->stack->co = 0;
-        SCHEDLOG << "recycle co: " << _running << " id: " << _running->id;
+        SCHEDLOG << "recycle co: " << _running << " id: " << (void*)_running->id;
         this->recycle(_running);
     }
 }

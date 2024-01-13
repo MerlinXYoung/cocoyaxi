@@ -24,7 +24,7 @@
 #include "epoll/kqueue.h"
 #endif
 
-DEC_uint32(co_sched_num);
+DEC_uint16(co_sched_num);
 DEC_uint32(co_stack_num);
 DEC_uint32(co_stack_size);
 DEC_bool(co_sched_log);
@@ -121,10 +121,11 @@ struct Coroutine {
     ~Coroutine() = delete;
     union {
         struct {
-            uint32_t id;  // coroutine id
-            uint32_t use_count;
+            uint16_t use_count;
+            uint16_t sched_id;
+            uint32_t idx;  // coroutine idx for CoroutinePool
         };
-        uint64_t gid;
+        uint64_t id;
     };
     tb_context_t ctx;  // coroutine context, points to the stack bottom
     Closure* cb;       // coroutine function
@@ -185,7 +186,7 @@ class CoroutinePool {
         }
 
         auto& co = _v[_c][_o];
-        co.id = (_c << E) + _o++;
+        co.idx = (_c << E) + _o++;
         _use_count[_c]++;
         return &co;
     }
@@ -201,16 +202,16 @@ class CoroutinePool {
     }
 
     void push(Coroutine* co) {
-        const int id = co->id;
-        const int q = id >> E;
+        const int idx = co->idx;
+        const int q = idx >> E;
         if (q == 0) {
             if (_v0.capacity() == 0) _v0.reserve(N);
-            _v0.push_back(id);
+            _v0.push_back(idx);
             goto end;
         }
         if (q == _c) {
             if (_vc.capacity() == 0) _vc.reserve(N);
-            _vc.push_back(id);
+            _vc.push_back(idx);
             goto end;
         }
 
@@ -316,7 +317,9 @@ class Sched {
     inline Coroutine* running() const noexcept { return _running; }
 
     // id of the current running coroutine
-    inline int coroutine_id() const noexcept { return _sched_num * (_running->id - 1) + _id; }
+    inline int coroutine_id() const noexcept {
+        return _running->id /*_sched_num * (_running->idx - 1) + _id*/;
+    }
 
     // check if the memory @p points to is on the stack of the coroutine
     inline bool on_stack(const void* p) const {
@@ -367,8 +370,8 @@ class Sched {
         (void)ev;  // we do not care what the event is on windows
         return _x.epoll->add_event(fd);
 #elif defined(__linux__)
-        return ev == ev_read ? _x.epoll->add_ev_read(fd, _running->id)
-                             : _x.epoll->add_ev_write(fd, _running->id);
+        return ev == ev_read ? _x.epoll->add_ev_read(fd, _running->idx)
+                             : _x.epoll->add_ev_write(fd, _running->idx);
 #else
         return ev == ev_read ? _x.epoll->add_ev_read(fd, _running)
                              : _x.epoll->add_ev_write(fd, _running);
@@ -419,7 +422,8 @@ class Sched {
         co->cb = cb;
         if (!co->sched) {
             co->sched = this;
-            co->stack = &_stack[co->id & (_stack_num - 1)];
+            co->sched_id = this->_id;
+            co->stack = &_stack[co->idx & (_stack_num - 1)];
         }
         new (&co->it) timer_id_t(_timer_mgr.end());
         return co;
