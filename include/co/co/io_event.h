@@ -52,7 +52,7 @@ struct PerIoInfo {
     DWORD n;      // bytes transfered
     DWORD flags;  // flags for WSARecv, WSARecvFrom
     WSABUF buf;   // buffer for WSARecv, WSARecvFrom, WSASend, WSASendTo
-    DWORD mlen;   // memory length
+    // DWORD mlen;   // memory length
     char s[];     // extra buffer allocated
 };
 

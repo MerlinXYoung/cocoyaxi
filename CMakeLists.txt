@@ -48,7 +48,7 @@ option(WITH_BACKTRACE "build with libbacktrace" OFF)
 option(FPIC "build with -fPIC" OFF)
 
 # build all projects (libco, gen, test, unitest)
-option(BUILD_ALL "Build all projects" OFF)
+option(BUILD_ALL "Build all projects" ON)
 
 option(DISABLE_HOOK "disable hooks for system APIs" OFF)
 
