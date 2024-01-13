@@ -31,7 +31,7 @@ Coost, **co** for short, is like [boost](https://www.boost.org/), but more light
 
 </td><td width=34% valign=top>
 
-- Atomic operation (atomic)
+- ~~Atomic operation (atomic)~~
 - **Efficient stream (fastream)**
 - Efficient string (fastring)
 - String utility (str)
@@ -47,7 +47,7 @@ Coost, **co** for short, is like [boost](https://www.boost.org/), but more light
 - Path library
 - File utilities (fs)
 - System operations (os)
-- **Fast memory allocator**
+- **~~Fast memory allocator~~**
  
 </td></tr>
 </table>
