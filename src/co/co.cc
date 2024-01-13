@@ -41,8 +41,8 @@ uint32_t thread_id() {
 #endif
 #endif
 struct ref_counter {
-    constexpr ref_counter() noexcept : _refn(1) {}
-    constexpr ref_counter(uint32_t n) noexcept : _refn(n) {}
+    constexpr inline ref_counter() noexcept : _refn(1) {}
+    constexpr inline ref_counter(uint32_t n) noexcept : _refn(n) {}
     ~ref_counter() = default;
     inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
     inline uint32_t unref() noexcept {
@@ -108,21 +108,17 @@ class mutex_impl : public ref_counter {
         size_t _size;
     };
 
-    inline mutex_impl() noexcept : ref_counter(), _m(), _cv(), /* _refn(1),*/ _lock(0) {}
+    inline mutex_impl() noexcept : ref_counter(), _m(), _cv(), _lock(0) {}
     ~mutex_impl() = default;
 
     void lock();
     void unlock();
     inline bool try_lock() noexcept;
 
-    // inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    // inline uint32_t unref() noexcept { return --_refn; }
-
   private:
     std::mutex _m;
     std::condition_variable _cv;
     queue _wq;
-    // std::atomic_uint32_t _refn;
     uint8_t _lock;  // 0: unlocked, 1: locked, 2:notify other thread
 };
 
@@ -182,31 +178,21 @@ void mutex_impl::unlock() {
 class event_impl : public ref_counter {
   public:
     explicit inline event_impl(bool m, bool s, uint32_t wg = 0) noexcept
-        : ref_counter(),
-          _m(),
-          _cv(),
-          _wt(0),
-          _sn(0),
-          /*0 _refn(1),*/ _wg(wg),
-          _signaled(s),
-          _manual_reset(m) {}
+        : ref_counter(), _m(), _cv(), _wt(0), _sn(0), _wg(wg), _signaled(s), _manual_reset(m) {}
     ~event_impl() = default;
 
     bool wait(uint32_t ms);
     void signal();
     void reset();
 
-    // inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    // inline uint32_t unref() noexcept { return --_refn; }
     inline std::atomic_uint32_t& wg() noexcept { return _wg; }
 
   private:
     std::mutex _m;
     std::condition_variable _cv;
-    co::clist _wc;  // wait coroutine
-    uint32_t _wt;   // wait thread num.
-    uint32_t _sn;   // signal num.
-    // std::atomic_uint32_t _refn;
+    co::clist _wc;             // wait coroutine
+    uint32_t _wt;              // wait thread num.
+    uint32_t _sn;              // signal num.
     std::atomic_uint32_t _wg;  // for wait group
     bool _signaled;
     const bool _manual_reset;
@@ -406,7 +392,6 @@ class pipe_impl : public ref_counter {
           _cv(),
           _rx(0),
           _wx(0),
-          //   _refn(1),
           _full(0),
           _closed(0) {
         _buf = (char*)::malloc(_buf_size);
@@ -420,9 +405,6 @@ class pipe_impl : public ref_counter {
     bool done() const noexcept { return _done; }
     void close();
     inline bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
-
-    // inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    // inline uint32_t unref() noexcept { return --_refn; }
 
     struct waitx : co::clink {
         explicit constexpr inline waitx(Coroutine* _co, void* _buf)
@@ -472,7 +454,6 @@ class pipe_impl : public ref_counter {
     co::clist _wq;
     uint32_t _rx;  // read pos
     uint32_t _wx;  // write pos
-    // std::atomic_uint32_t _refn;
     uint8_t _full;
     std::atomic_uint8_t _closed;
 
@@ -793,7 +774,6 @@ class pipe_impl_cap : public ref_counter {
           _d(std::move(d)),
           _m(),
           _cv(),
-          //   _refn(1),
           _closed(0) {}
 
     inline ~pipe_impl_cap() {
@@ -814,9 +794,6 @@ class pipe_impl_cap : public ref_counter {
     bool done() const noexcept { return _done; }
     void close();
     inline bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
-
-    // inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    // inline uint32_t unref() noexcept { return --_refn; }
 
     struct waitx : co::clink {
         explicit inline waitx(Coroutine* _co, void* _buf) : co(_co), state(st_wait), buf(_buf) {
@@ -865,7 +842,6 @@ class pipe_impl_cap : public ref_counter {
     std::condition_variable _cv;
     co::clist _wq;
 
-    // std::atomic_uint32_t _refn;
     std::atomic_uint8_t _closed;
 
   private:
@@ -1185,10 +1161,10 @@ class pool_impl : public ref_counter {
   public:
     typedef co::vector<void*> V;
 
-    pool_impl() : ref_counter(), _maxcap((size_t)-1) /*, _refn(1) */ { this->_make_pools(); }
+    pool_impl() : ref_counter(), _maxcap((size_t)-1) { this->_make_pools(); }
 
     pool_impl(std::function<void*()>&& ccb, std::function<void(void*)>&& dcb, size_t cap)
-        : ref_counter(), _maxcap(cap), /* _refn(1),*/ _ccb(std::move(ccb)), _dcb(std::move(dcb)) {
+        : ref_counter(), _maxcap(cap), _ccb(std::move(ccb)), _dcb(std::move(dcb)) {
         this->_make_pools();
     }
 
@@ -1212,14 +1188,10 @@ class pool_impl : public ref_counter {
         ::free(_pools);
     }
 
-    // inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
-    // inline uint32_t unref() noexcept { return --_refn; }
-
   private:
     V* _pools;
     size_t _size;
     size_t _maxcap;
-    // std::atomic_uint32_t _refn;
     std::function<void*()> _ccb;
     std::function<void(void*)> _dcb;
 };

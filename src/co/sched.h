@@ -250,7 +250,7 @@ class CoroutinePool {
 };
 
 // Task may be added from any thread. We need a mutex here.
-class alignas(L1_CACHE_LINE_SIZE) TaskManager {
+class  TaskManager {
   public:
     TaskManager() : _mtx(), _new_tasks(512), _ready_tasks(512) {}
     ~TaskManager() = default;
@@ -336,20 +336,20 @@ class Sched {
     // add a new task to run as a coroutine later (thread-safe)
     inline void add_new_task(Closure* cb) {
         _task_mgr.add_new_task(cb);
-        _x.epoll->signal();
+        _epoll->signal();
     }
 
     // add a coroutine ready to resume (thread-safe)
     inline void add_ready_task(Coroutine* co) {
         _task_mgr.add_ready_task(co);
-        _x.epoll->signal();
+        _epoll->signal();
     }
 
     // sleep for milliseconds in the current coroutine
     inline void sleep(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
         (void)_timer_mgr.add_timer(ms, _running);
-        SCHEDLOG << "co(" << _running << ") sleep(" << ms << " ms)";
+        SCHEDLOG << "co(" << _running << ")" << (void*)_running->id << " sleep(" << ms << " ms)";
         this->yield();
     }
 
@@ -357,7 +357,8 @@ class Sched {
     inline void add_timer(uint32_t ms) {
         if (_wait_ms > ms) _wait_ms = ms;
         _running->it = _timer_mgr.add_timer(ms, _running);
-        SCHEDLOG << "co(" << _running << ") add timer " << _running->it << " (" << ms << " ms)";
+        SCHEDLOG << "co(" << _running << ")" << (void*)_running->id << " add timer " << _running->it
+                 << " (" << ms << " ms)";
     }
 
     // check whether the current coroutine has timed out
@@ -365,29 +366,31 @@ class Sched {
 
     // add an IO event on a socket to epoll for the current coroutine.
     inline bool add_io_event(sock_t fd, _ev_t ev) {
-        SCHEDLOG << "co(" << _running << ") add io event fd: " << fd << " ev: " << (int)ev;
+        SCHEDLOG << "co(" << _running << ")" << (void*)_running->id << " add io event fd: " << fd
+                 << " ev: " << (int)ev;
 #if defined(_WIN32)
         (void)ev;  // we do not care what the event is on windows
-        return _x.epoll->add_event(fd);
+        return _epoll->add_event(fd);
 #elif defined(__linux__)
-        return ev == ev_read ? _x.epoll->add_ev_read(fd, _running->idx)
-                             : _x.epoll->add_ev_write(fd, _running->idx);
+        return ev == ev_read ? _epoll->add_ev_read(fd, _running->idx)
+                             : _epoll->add_ev_write(fd, _running->idx);
 #else
-        return ev == ev_read ? _x.epoll->add_ev_read(fd, _running)
-                             : _x.epoll->add_ev_write(fd, _running);
+        return ev == ev_read ? _epoll->add_ev_read(fd, _running)
+                             : _epoll->add_ev_write(fd, _running);
 #endif
     }
 
     // delete an IO event on a socket from the epoll for the current coroutine.
     inline void del_io_event(sock_t fd, _ev_t ev) {
-        SCHEDLOG << "co(" << _running << ") del io event, fd: " << fd << " ev: " << (int)ev;
-        ev == ev_read ? _x.epoll->del_ev_read(fd) : _x.epoll->del_ev_write(fd);
+        SCHEDLOG << "co(" << _running << ")" << (void*)_running->id << " del io event, fd: " << fd
+                 << " ev: " << (int)ev;
+        ev == ev_read ? _epoll->del_ev_read(fd) : _epoll->del_ev_write(fd);
     }
 
     // delete all IO events on a socket from the epoll.
     inline void del_io_event(sock_t fd) {
-        SCHEDLOG << "co(" << _running << ") del io event, fd: " << fd;
-        _x.epoll->del_event(fd);
+        SCHEDLOG << "co(" << _running << ")" << (void*)_running->id << " del io event, fd: " << fd;
+        _epoll->del_event(fd);
     }
 
     // cputime of this scheduler (us)
@@ -409,6 +412,8 @@ class Sched {
     // save stack for the coroutine
     inline void save_stack(Coroutine* co) {
         if (co) {
+            SCHEDLOG << "co(" << co << ")" << (void*)co->id
+                     << " save stack: " << co->stack->top - (char*)co->ctx;
             if (!co->pbuf && !_bufs.empty()) co->pbuf = _bufs.pop_back();
             co->buf.clear();
             co->buf.append(co->ctx, co->stack->top - (char*)co->ctx);
@@ -445,20 +450,12 @@ class Sched {
     }
 
   private:
-    union {
-        std::atomic_int64_t _cputime;
-        char _c0[L1_CACHE_LINE_SIZE];
-    };
-    union {
-        struct {
-            co::sync_event ev;
-            Epoll* epoll;
-            std::atomic_bool stopped;
-        } _x;
-        char _c1[L1_CACHE_LINE_SIZE];
-    };
-    TaskManager _task_mgr;
+    std::atomic_int64_t _cputime{0};
+    co::sync_event _ev;
+    Epoll* _epoll;
+    std::atomic_bool _stopped{false};
 
+    TaskManager _task_mgr;
     TimerManager _timer_mgr;
     uint32_t _wait_ms;  // time the epoll to wait for
     bool _timeout;
@@ -466,8 +463,8 @@ class Sched {
     CoroutinePool _co_pool;
     Coroutine* _running;   // the current running coroutine
     Coroutine* _main_co;   // save the main context
-    uint32_t _id;          // scheduler id
-    uint32_t _sched_num;   // number of schedulers
+    uint16_t _id;          // scheduler id
+    uint16_t _sched_num;   // number of schedulers
     uint32_t _stack_num;   // number of stacks per scheduler
     uint32_t _stack_size;  // size of the stack
     Stack* _stack;         // stack array
@@ -489,7 +486,7 @@ class SchedManager {
     co::vector<Sched*> _scheds;
 };
 
-inline std::atomic_bool& is_active() {
+inline std::atomic_bool& is_active() noexcept {
     static std::atomic_bool _is_active;
     return _is_active;
 }
@@ -498,6 +495,5 @@ inline Sched*& current_sched() noexcept {
     static thread_local Sched* _sched;
     return _sched;
 }
-// extern thread_local Sched* gSched;
 
 }}  // namespace co::xx

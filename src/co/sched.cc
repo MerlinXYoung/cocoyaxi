@@ -29,6 +29,8 @@ namespace xx {
 
 Sched::Sched(uint32_t id, uint32_t sched_num, uint32_t stack_num, uint32_t stack_size)
     : _cputime(0),
+      _ev(),
+      _epoll(new Epoll(id)),
       _task_mgr(),
       _timer_mgr(),
       _wait_ms(-1),
@@ -40,9 +42,6 @@ Sched::Sched(uint32_t id, uint32_t sched_num, uint32_t stack_num, uint32_t stack
       _sched_num(sched_num),
       _stack_num(stack_num),
       _stack_size(stack_size) {
-    new (&_x.ev) co::sync_event();
-    _x.epoll = new Epoll(id);
-    _x.stopped = false;
     _main_co = _co_pool.pop();  // id 0 is reserved for _main_co
     _main_co->sched = this;
     _stack = (Stack*)::calloc(stack_num, sizeof(Stack));
@@ -50,8 +49,7 @@ Sched::Sched(uint32_t id, uint32_t sched_num, uint32_t stack_num, uint32_t stack
 
 Sched::~Sched() {
     this->stop();
-    delete _x.epoll;
-    _x.ev.~sync_event();
+    delete _epoll;
     for (size_t i = 0; i < _bufs.size(); ++i) {
         void* p = _bufs[i];
         god::cast<Buffer*>(&p)->reset();
@@ -61,19 +59,19 @@ Sched::~Sched() {
 }
 
 void Sched::stop() {
-    if (!_x.stopped.exchange(true)) {
-        _x.epoll->signal();
+    if (!_stopped.exchange(true)) {
+        _epoll->signal();
 #if defined(_WIN32) && defined(BUILDING_CO_SHARED)
         static std::atomic_int _cnt{0};
         const int n = _cnt.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n == 1) {
             // the thread may not respond in dll, wait at most 64ms here
             co::Timer t;
-            while (!_x.ev.wait(1) && t.ms() < 64)
+            while (!_ev.wait(1) && t.ms() < 64)
                 ;
         }
 #else
-        _x.ev.wait();
+        _ev.wait();
 #endif
     }
 }
@@ -118,12 +116,11 @@ void Sched::resume(Coroutine* co) {
         // resume new coroutine
         if (s->co != co) {
             // save other co stack
-            SCHEDLOG << "save stack co: " << s->co << " id: " << (void*)co->id;
             this->save_stack(s->co);
             s->co = co;
         }
         co->ctx = tb_context_make(s->p, _stack_size, main_func);
-        SCHEDLOG << "resume new co: " << co << " id: " << (void*)co->id;
+        SCHEDLOG << "resume new co(" << co << ")" << (void*)co->id;
         from =
             tb_context_jump(co->ctx, _main_co);  // jump to main_func(from):  from.priv == _main_co
 
@@ -136,11 +133,10 @@ void Sched::resume(Coroutine* co) {
         }
 
         // resume suspended coroutine
-        SCHEDLOG << "resume co: " << co << " id: " << (void*)co->id
-                 << "with load stack: " << co->buf.size();
+        SCHEDLOG << "resume co(" << co << ")" << (void*)co->id
+                 << " with load stack: " << co->buf.size();
         if (s->co != co) {
             // save other co stack
-            SCHEDLOG << "save stack co: " << s->co << " id: " << (void*)co->id;
             this->save_stack(s->co);
             // load co statck
             CHECK_EQ(s->top, (char*)co->ctx + co->buf.size());
@@ -154,11 +150,11 @@ void Sched::resume(Coroutine* co) {
         // yield() was called in the coroutine, update context for it
         assert(_running == from.priv);
         _running->ctx = from.ctx;
-        SCHEDLOG << "yield co: " << _running << " id: " << (void*)_running->id;
+        SCHEDLOG << "yield co(" << _running << ")" << (void*)_running->id;
     } else {
         // the coroutine has terminated, recycle it
         _running->stack->co = 0;
-        SCHEDLOG << "recycle co: " << _running << " id: " << (void*)_running->id;
+        SCHEDLOG << "recycle co(" << _running << ")" << (void*)_running->id;
         this->recycle(_running);
     }
 }
@@ -170,9 +166,9 @@ void Sched::loop() {
     co::vector<Coroutine*> ready_tasks(512);
     co::Timer timer;
 
-    while (!_x.stopped) {
-        int n = _x.epoll->wait(_wait_ms);
-        if (_x.stopped) break;
+    while (!_stopped) {
+        int n = _epoll->wait(_wait_ms);
+        if (_stopped) break;
 
         if (unlikely(n == -1)) {
             if (co::error() != EINTR) ELOG << "epoll wait error: " << co::strerror();
@@ -183,9 +179,9 @@ void Sched::loop() {
         SCHEDLOG << "> check I/O tasks ready to resume, num: " << n;
 
         for (int i = 0; i < n; ++i) {
-            auto& ev = (*_x.epoll)[i];
-            if (_x.epoll->is_ev_pipe(ev)) {
-                _x.epoll->handle_ev_pipe();
+            auto& ev = (*_epoll)[i];
+            if (_epoll->is_ev_pipe(ev)) {
+                _epoll->handle_ev_pipe();
                 continue;
             }
 
@@ -209,14 +205,14 @@ void Sched::loop() {
             }
 #elif defined(__linux__)
             int32_t rco = 0, wco = 0;
-            auto& ctx = co::get_sock_ctx(_x.epoll->user_data(ev));
+            auto& ctx = co::get_sock_ctx(_epoll->user_data(ev));
             if ((ev.events & EPOLLIN) || !(ev.events & EPOLLOUT)) rco = ctx.get_ev_read(this->id());
             if ((ev.events & EPOLLOUT) || !(ev.events & EPOLLIN))
                 wco = ctx.get_ev_write(this->id());
             if (rco) this->resume(&_co_pool[rco]);
             if (wco) this->resume(&_co_pool[wco]);
 #else
-            this->resume((Coroutine*)_x.epoll->user_data(ev));
+            this->resume((Coroutine*)_epoll->user_data(ev));
 #endif
         }
 
@@ -270,7 +266,7 @@ void Sched::loop() {
         if (_sched_num > 1) _cputime.fetch_add(timer.us(), std::memory_order_relaxed);
     }
 
-    _x.ev.signal();
+    _ev.signal();
 }
 
 uint32_t TimerManager::check_timeout(co::vector<Coroutine*>& res) {
@@ -389,6 +385,7 @@ void SchedManager::stop() {
     for (size_t i = 0; i < _scheds.size(); ++i) {
         delete _scheds[i];
     }
+    _scheds.clear();
 
     is_active().exchange(false);
 }
@@ -407,7 +404,7 @@ const co::vector<co::Sched*>& scheds() {
 
 int sched_num() { return xx::is_active() ? (int)xx::sched_man()->scheds().size() : os::cpunum(); }
 
-co::Sched* sched() { return (co::Sched*)xx::current_sched(); /* xx::gSched;*/ }
+co::Sched* sched() { return (co::Sched*)xx::current_sched(); }
 
 co::Sched* next_sched() { return (co::Sched*)xx::sched_man()->next_sched(); }
 
