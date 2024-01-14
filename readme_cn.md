@@ -31,7 +31,7 @@ coost 简称为 co，曾被称为小型 [boost](https://www.boost.org/) 库，�
 
 </td><td width=34% valign=top>
 
-- 原子操作(atomic)
+- ~~原子操作(atomic)~~
 - **高效字符流(fastream)**
 - 高效字符串(fastring)
 - 字符串操作(str)
@@ -47,7 +47,7 @@ coost 简称为 co，曾被称为小型 [boost](https://www.boost.org/) 库，�
 - path 库
 - 文件系统操作(fs)
 - 系统操作(os)
-- **高性能内存分配器**
+- **~~高性能内存分配器~~**
 
 </td></tr>
 </table>

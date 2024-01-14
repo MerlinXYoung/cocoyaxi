@@ -1,13 +1,16 @@
 #include "co/flag.h"
 
+#include <cassert>
 #include <iostream>
 #include <memory>
+#include <utility>
 
 #include "co/color.h"
 #include "co/fs.h"
 #include "co/os.h"
 #include "co/stl.h"
 #include "co/str.h"
+#include "co/vector.h"
 
 DEF_string(help, "", ">>.help info");
 DEF_string(config, "", ">>.path of config file", conf);
@@ -27,7 +30,7 @@ struct Mod {
     void add_flag(char iden, const char* name, const char* value, const char* help,
                   const char* file, int line, void* addr, const char* alias);
 
-    Flag* find_flag(const char* name);
+    std::shared_ptr<Flag> find_flag(const char* name);
 
     fastring set_flag_value(const char* name, const fastring& value);
     fastring set_bool_flags(const char* name);
@@ -44,6 +47,7 @@ struct Mod {
                                       co::map<fastring, fastring>& kv, co::vector<fastring>& bools);
 
     co::map<const char*, std::shared_ptr<Flag>> flags;
+    co::vector<fastring> alias_holder;
 };
 
 inline Mod& mod() {
@@ -203,7 +207,7 @@ inline void Flag::print() const {
 void Mod::add_flag(char iden, const char* name, const char* value, const char* help,
                    const char* file, int line, void* addr, const char* alias) {
     auto f = std::make_shared<Flag>(iden, name, alias, value, help, file, line, addr);
-    auto r = flags.emplace(name, f);
+    auto r = flags.insert(std::make_pair(name, f));
     if (!r.second) {
         std::cout << "multiple definitions of flag: " << name << ", from " << r.first->second->file
                   << " and " << file << std::endl;
@@ -214,23 +218,22 @@ void Mod::add_flag(char iden, const char* name, const char* value, const char* h
         auto v = str::split(alias, ',');
         for (auto& x : v) {
             x.trim();
-            const size_t n = x.size() + 1;
-            // TODO:: release
-            char* s = (char*)::malloc(n);
-            memcpy(s, x.c_str(), n);
-            auto r = flags.emplace(s, f);
+            auto s = x.c_str();
+            auto r = flags.insert(std::make_pair(s, f));
             if (!r.second) {
                 std::cout << "alias " << name << " as " << x << " failed, flag " << x
                           << " already exists in " << r.first->second->file << std::endl;
                 ::exit(0);
             }
+            alias_holder.emplace_back(std::move(x));
+            assert(alias_holder.back().c_str() == s);
         }
     }
 }
 
-inline Flag* Mod::find_flag(const char* name) {
+inline std::shared_ptr<Flag> Mod::find_flag(const char* name) {
     auto it = flags.find(name);
-    return it != flags.end() ? it->second.get() : nullptr;
+    return it != flags.end() ? it->second : nullptr;
 }
 
 fastring Mod::alias(const char* name, const char* new_name) {
@@ -246,7 +249,7 @@ fastring Mod::alias(const char* name, const char* new_name) {
         return e;
     }
 
-    auto r = flags.emplace(new_name, f);
+    auto r = flags.insert(std::make_pair(new_name, f));
     if (!r.second) {
         e << "name already exists: " << new_name;
         return e;
@@ -258,7 +261,7 @@ fastring Mod::alias(const char* name, const char* new_name) {
 
 fastring Mod::set_flag_value(const char* name, const fastring& value) {
     fastring e;
-    Flag* f = this->find_flag(name);
+    auto f = this->find_flag(name);
     if (f) {
         e = f->set_value(value);
         if (!e.empty()) e << ": " << value;
@@ -271,7 +274,7 @@ fastring Mod::set_flag_value(const char* name, const fastring& value) {
 // set_bool_flags("abc"):  -abc -> true  or  -a, -b, -c -> true
 fastring Mod::set_bool_flags(const char* name) {
     fastring e;
-    Flag* f = this->find_flag(name);
+    auto f = this->find_flag(name);
     if (f) {
         if (f->iden == 'b') {
             *static_cast<bool*>(f->addr) = true;
@@ -446,7 +449,7 @@ co::vector<fastring> Mod::analyze_args(const co::vector<fastring>& args,
 
         // flag: -a, -a b, or -j4
         {
-            Flag* f = 0;
+            std::shared_ptr<Flag> f;
             fastring next;
             fastring name = arg.substr(bp);
 

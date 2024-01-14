@@ -49,7 +49,7 @@ static std::atomic_bool g_init_done;
 static bool g_dummy = []() {
     // co::atomic_store(&g_init_done, true, co::mo_release);
     g_init_done.store(true, std::memory_order_release);
-    return false;
+    return true;
 }();
 
 namespace _xx { namespace log {
@@ -546,7 +546,7 @@ void Logger::stop(bool signal_safe) {
 
 // std::once_flag g_flag;
 // static std::atomic_bool g_thread_started;
-static std::atomic_flag g_thread_started{ATOMIC_FLAG_INIT};
+static std::atomic_flag g_thread_started ATOMIC_FLAG_INIT;
 
 void Logger::push_level_log(char* s, size_t n) {
     // if (unlikely(!g_thread_started)) {
@@ -655,7 +655,7 @@ void Logger::write_topic_logs(LogFile& f, const char* topic, const char* p, size
 }
 
 void Logger::thread_fun() {
-    ::printf("run in logger thread\n");
+    ::printf("run in logger thread, %d\n", g_dummy);
     bool signaled;
     int64_t sec;
     while (g_init_done.load(std::memory_order_acquire) != true) {

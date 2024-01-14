@@ -41,8 +41,10 @@ __coapi void add_flag(char type, const char* name, const char* value, const char
 // DEC_bool(b);    ->  extern bool FLG_b;
 // DEC_string(s);  ->  extern fastring& FLG_s;
 #define DEC_bool(name) _CO_DEC_FLAG(bool, name)
+#define DEC_int16(name) _CO_DEC_FLAG(int16_t, name)
 #define DEC_int32(name) _CO_DEC_FLAG(int32_t, name)
 #define DEC_int64(name) _CO_DEC_FLAG(int64_t, name)
+#define DEC_uint16(name) _CO_DEC_FLAG(uint16_t, name)
 #define DEC_uint32(name) _CO_DEC_FLAG(uint32_t, name)
 #define DEC_uint64(name) _CO_DEC_FLAG(uint64_t, name)
 #define DEC_double(name) _CO_DEC_FLAG(double, name)
@@ -59,8 +61,11 @@ __coapi void add_flag(char type, const char* name, const char* value, const char
 // DEF_int32(i, 23, "xxx");         ->  int32_t FLG_i = 23;
 // DEF_bool(debug, false, "x", d);  ->  define a flag with an alias
 #define DEF_bool(name, value, help, ...) _CO_DEF_FLAG(bool, 'b', name, value, help, __VA_ARGS__)
+#define DEF_int16(name, value, help, ...) _CO_DEF_FLAG(int16_t, 'i', name, value, help, __VA_ARGS__)
 #define DEF_int32(name, value, help, ...) _CO_DEF_FLAG(int32_t, 'i', name, value, help, __VA_ARGS__)
 #define DEF_int64(name, value, help, ...) _CO_DEF_FLAG(int64_t, 'I', name, value, help, __VA_ARGS__)
+#define DEF_uint16(name, value, help, ...) \
+    _CO_DEF_FLAG(uint16_t, 'u', name, value, help, __VA_ARGS__)
 #define DEF_uint32(name, value, help, ...) \
     _CO_DEF_FLAG(uint32_t, 'u', name, value, help, __VA_ARGS__)
 #define DEF_uint64(name, value, help, ...) \
