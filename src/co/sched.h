@@ -319,7 +319,7 @@ class Sched {
     inline Coroutine* running() const noexcept { return _running; }
 
     // id of the current running coroutine
-    inline int coroutine_id() const noexcept {
+    inline uint64_t coroutine_id() const noexcept {
         return _running->id /*_sched_num * (_running->idx - 1) + _id*/;
     }
 

@@ -185,7 +185,7 @@ __coapi void* coroutine();
 __coapi int sched_id();
 
 // return id of the current coroutine, or -1 if called from non-coroutine
-__coapi int coroutine_id();
+__coapi uint64_t coroutine_id();
 
 // add a timer for the current coroutine
 //   - It MUST be called in coroutine.

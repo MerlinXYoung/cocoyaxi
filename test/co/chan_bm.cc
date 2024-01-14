@@ -36,7 +36,7 @@ void test_chan(CHAN& ch, co::wait_group& wg) {
                     break;
                 }
             };
-            LOG << "send finish";
+            LOG << i << " send finish";
             wg.done();
         });
     }

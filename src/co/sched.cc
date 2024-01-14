@@ -426,9 +426,9 @@ int sched_id() {
     return s ? s->id() : -1;
 }
 
-int coroutine_id() {
+uint64_t coroutine_id() {
     const auto s = xx::current_sched();
-    return (s && s->running()) ? s->coroutine_id() : -1;
+    return (s && s->running()) ? s->coroutine_id() : (uint64_t)-1;
 }
 
 void add_timer(uint32_t ms) {
