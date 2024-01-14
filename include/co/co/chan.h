@@ -1,8 +1,10 @@
 #pragma once
 
-#include <functional>
 #include <algorithm>
+#include <functional>
+
 #include "../def.h"
+
 namespace co {
 namespace xx {
 
@@ -67,7 +69,7 @@ class chan {
     // @ms   timeout in milliseconds, -1 by default.
     explicit chan(uint32_t cap = 1, uint32_t ms = (uint32_t)-1)
         : _p(
-              (std::max)(cap, 1U) * sizeof(T), sizeof(T), ms,
+              cap * sizeof(T), sizeof(T), ms,
               [](void* dst, void* src, int o) {
                   switch (o) {
                       case 0:
@@ -181,6 +183,5 @@ class chan1 {
 
 template <typename T>
 using Chan1 = chan1<T>;
-
 
 }  // namespace co

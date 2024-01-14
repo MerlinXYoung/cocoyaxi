@@ -12,8 +12,6 @@ struct Message {
 };
 co::chan<Message> g_chan(2);
 
-co::chan1<Message> g_chan1(0);
-
 void z() {
     co::chan<int> ch(0);
     go([ch]() {
@@ -62,6 +60,7 @@ void g() {
     if (ch.done()) co::print("v: ", v);
 }
 void test_chan(co::wait_group& wg) {
+    wg.add(3);
     for (int i = 0; i < 3; ++i) {
         go([i, &wg] {
             while (true) {
@@ -78,8 +77,8 @@ void test_chan(co::wait_group& wg) {
             LOG << "send finish";
             wg.done();
         });
-        wg.add();
     }
+    wg.add(FLG_n);
     for (int i = 0; i < FLG_n; ++i) {
         go([i, &wg] {
             auto str = new fastring("provider");
@@ -92,56 +91,23 @@ void test_chan(co::wait_group& wg) {
                               }};
             wg.done();
         });
-        wg.add();
     }
-}
 
-void test_chan1(co::wait_group& wg) {
-    for (int i = 0; i < 3; ++i) {
-        go([i, &wg] {
-            while (true) {
-                Message msg;
-                g_chan1 >> msg;
-                if (!g_chan1.done()) break;
-                if (msg.close) {
-                    g_chan1.close();
-                    break;
-                }
-                LOG << "consume(" << i << "):" << msg.data << " size:" << msg.size;
-                msg.D((void*)msg.data);
-            };
-            LOG << "send finish";
-            wg.done();
-        });
-        wg.add();
-    }
-    for (int i = 0; i < FLG_n; ++i) {
-        go([i, &wg] {
-            auto str = new fastring("provider");
-            *str << " " << i;
-
-            g_chan1 << Message{false, str->data(), str->size(), [str](void* p) {
-                                   LOG << "std:" << (void*)str->data() << " [" << *str << "]"
-                                       << " p:" << p;
-                                   delete str;
-                               }};
-            wg.done();
-        });
-        wg.add();
-    }
+    GO[&wg] {
+        while (wg.load() > 3) co::sleep(1);
+        g_chan << Message{true, nullptr, 0, nullptr};
+    };
 }
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
-    // z();
-    // f();
-    // g();
+    z();
+    f();
+    g();
     co::wait_group wg(0);
-    // test_chan(wg);
-    test_chan1(wg);
+    test_chan(wg);
     co::sleep(1000);
-    // go([] { g_chan << Message{true, nullptr, 0, nullptr}; });
-    go([] { g_chan1 << Message{true, nullptr, 0, nullptr}; });
+    go([] { g_chan << Message{true, nullptr, 0, nullptr}; });
     wg.wait();
     return 0;
 }

@@ -30,6 +30,9 @@ class __coapi wait_group {
     // blocks until the counter becomes 0
     void wait() const;
 
+    // current counter
+    uint32_t load() const;
+
   private:
     void* _p;
 };

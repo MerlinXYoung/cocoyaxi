@@ -395,7 +395,7 @@ class pipe_impl : public ref_counter {
           _wx(0),
           _full(buf_size == 0),
           _closed(0) {
-        assert(_buf);
+        if (_buf_size) assert(_buf);
     }
 
     inline ~pipe_impl() { ::free(_buf); }
@@ -404,7 +404,6 @@ class pipe_impl : public ref_counter {
     void write(void* p, int v);
     bool done() const noexcept { return _done; }
     void close();
-    inline bool full() const noexcept { return _buf_size == 0 || _full; }
     inline bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
 
     struct waitx : co::clink {
@@ -487,40 +486,66 @@ void pipe_impl::read(void* p) {
         _m.unlock();
         goto done;
     }
-
     // buffer is full
     if (_full) {
-        this->_read_block(p);
+        if (_buf) {
+            this->_read_block(p);
 
-        while (!_wq.empty()) {
-            waitx* w = (waitx*)_wq.pop_front();  // wait for write
-            decltype(w->state)::value_type state(st_wait);
-            if (_ms == (uint32_t)-1 ||
-                w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
-                                                 std::memory_order_relaxed)) {
-                this->_write_block(w->buf, w->x.v & 1);
-                if (w->x.v & 2) _d(w->buf);
-                w->x.done = 1;
-                if (w->co) {
-                    _m.unlock();
-                    w->co->sched->add_ready_task(w->co);
-                } else {
-                    _cv.notify_all();
-                    _m.unlock();
+            while (!_wq.empty()) {
+                waitx* w = (waitx*)_wq.pop_front();  // wait for write
+                decltype(w->state)::value_type state(st_wait);
+                if (_ms == (uint32_t)-1 ||
+                    w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
+                    this->_write_block(w->buf, w->x.v & 1);
+                    if (w->x.v & 2) _d(w->buf);
+                    w->x.done = 1;
+                    if (w->co) {
+                        _m.unlock();
+                        w->co->sched->add_ready_task(w->co);
+                    } else {
+                        _cv.notify_all();
+                        _m.unlock();
+                    }
+                    goto done;
+
+                } else { /* timeout */
+                    if (w->x.v & 2) _d(w->buf);
+                    ::free(w);
                 }
-                goto done;
-
-            } else { /* timeout */
-                if (w->x.v & 2) _d(w->buf);
-                ::free(w);
             }
+
+            _full = 0;
+            _m.unlock();
+            goto done;
+        } else {
+            while (!_wq.empty()) {
+                waitx* w = (waitx*)_wq.pop_front();  // wait for write
+                decltype(w->state)::value_type state(st_wait);
+                if (_ms == (uint32_t)-1 ||
+                    w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
+                    _c(p, w->buf, w->x.v & 1);
+                    if (w->x.v & 2) _d(w->buf);
+                    w->x.done = 1;
+                    if (w->co) {
+                        _m.unlock();
+                        w->co->sched->add_ready_task(w->co);
+                    } else {
+                        _cv.notify_all();
+                        _m.unlock();
+                    }
+                    goto done;
+
+                } else { /* timeout */
+                    if (w->x.v & 2) _d(w->buf);
+                    ::free(w);
+                }
+            }
+            // _m.unlock();
+            // goto done;
         }
-
-        _full = 0;
-        _m.unlock();
-        goto done;
     }
-
     // buffer is empty
     if (this->is_closed()) {
         _m.unlock();
@@ -530,7 +555,7 @@ void pipe_impl::read(void* p) {
         auto co = sched->running();
         waitx* w = this->create_waitx(co, p);
         w->x.v = (w->buf != p ? 0 : 2);
-        _wq.push_back(w);
+        _wq.push_back(w);  // wait queue for read
         _m.unlock();
 
         co->waitx = (waitx_t*)w;
@@ -558,7 +583,7 @@ void pipe_impl::read(void* p) {
     } else {
         bool r = true;
         waitx* w = this->create_waitx(nullptr, p);
-        _wq.push_back(w);
+        _wq.push_back(w);  // wait for read queue
 
         std::unique_lock<std::mutex> g(_m, std::adopt_lock);
         for (;;) {
@@ -610,7 +635,7 @@ void pipe_impl::write(void* p, int v) {
     }
 
     // buffer is empty
-    if (!_full) {
+    if (!_buf || !_full) {
         while (!_wq.empty()) {
             waitx* w = (waitx*)_wq.pop_front();  // wait for read
             decltype(w->state)::value_type state(st_wait);
@@ -635,11 +660,12 @@ void pipe_impl::write(void* p, int v) {
                 ::free(w);
             }
         }
-
-        this->_write_block(p, v);
-        if (_rx == _wx) _full = 1;
-        _m.unlock();
-        goto done;
+        if (_buf) {
+            this->_write_block(p, v);
+            if (_rx == _wx) _full = 1;
+            _m.unlock();
+            goto done;
+        }
     }
 
     // buffer is full
@@ -1318,7 +1344,9 @@ wait_group::~wait_group() {
         _p = nullptr;
     }
 }
-
+uint32_t wait_group::load() const {
+    return reinterpret_cast<xx::event_impl*>(_p)->wg().load(std::memory_order_relaxed);
+}
 void wait_group::add(uint32_t n) const {
     reinterpret_cast<xx::event_impl*>(_p)->wg().fetch_add(n, std::memory_order_relaxed);
 }
