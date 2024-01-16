@@ -1,5 +1,6 @@
-#include "co/unitest.h"
 #include "co/fs.h"
+
+#include "co/unitest.h"
 
 namespace test {
 
@@ -55,7 +56,7 @@ DEF_test(fs) {
         r = fo.read(buf, 8);
         EXPECT_EQ(r, 8);
 
-        fo.seek(fo.size()); // seek to tail
+        fo.seek(fo.size());  // seek to tail
         fo.write("456");
 
         fo.seek(8);
@@ -126,7 +127,7 @@ DEF_test(fs) {
         EXPECT_EQ(fs::mv("xxs", "xxd/xxs"), false);
     }
 
-  #ifndef _WIN32
+#ifndef _WIN32
     DEF_case(symlink) {
         fs::symlink("xxx", "xxx.lnk");
         fs::symlink("xxd", "xxd.lnk");
@@ -135,7 +136,7 @@ DEF_test(fs) {
         EXPECT_EQ(fs::symlink("xxx", "xxx.lnk"), true);
         EXPECT_EQ(fs::symlink("xxd", "xxd.lnk"), true);
     }
-  #endif
+#endif
 
     DEF_case(remove) {
         EXPECT(fs::remove("xxx"));
@@ -154,4 +155,4 @@ DEF_test(fs) {
     }
 }
 
-} // namespace test
+}  // namespace test

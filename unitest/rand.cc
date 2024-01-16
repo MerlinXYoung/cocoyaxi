@@ -1,5 +1,6 @@
-#include "co/unitest.h"
 #include "co/rand.h"
+
+#include "co/unitest.h"
 
 namespace test {
 
@@ -41,4 +42,4 @@ DEF_test(rand) {
     EXPECT(!s.contains('a') && !s.contains('b') && !s.contains('3'));
 }
 
-} // test
+}  // namespace test

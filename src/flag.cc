@@ -1,9 +1,16 @@
 #include "co/flag.h"
-#include "co/cout.h"
+
+#include <cassert>
+#include <iostream>
+#include <memory>
+#include <utility>
+
+#include "co/color.h"
 #include "co/fs.h"
 #include "co/os.h"
-#include "co/str.h"
 #include "co/stl.h"
+#include "co/str.h"
+#include "co/vector.h"
 
 DEF_string(help, "", ">>.help info");
 DEF_string(config, "", ">>.path of config file", conf);
@@ -20,12 +27,10 @@ struct Mod {
     Mod() = default;
     ~Mod() = default;
 
-    void add_flag(
-        char iden, const char* name, const char* value, const char* help,
-        const char* file, int line, void* addr, const char* alias
-    );
+    void add_flag(char iden, const char* name, const char* value, const char* help,
+                  const char* file, int line, void* addr, const char* alias);
 
-    Flag* find_flag(const char* name);
+    std::shared_ptr<Flag> find_flag(const char* name);
 
     fastring set_flag_value(const char* name, const fastring& value);
     fastring set_bool_flags(const char* name);
@@ -38,23 +43,21 @@ struct Mod {
     void make_config(const fastring& exe);
     void parse_config(const fastring& config);
     co::vector<fastring> parse_commandline(int argc, char** argv);
-    co::vector<fastring> analyze_args(
-        const co::vector<fastring>& args, co::map<fastring, fastring>& kv,
-        co::vector<fastring>& bools
-    );
+    co::vector<fastring> analyze_args(const co::vector<fastring>& args,
+                                      co::map<fastring, fastring>& kv, co::vector<fastring>& bools);
 
-    co::map<const char*, Flag*> flags;
+    co::map<const char*, std::shared_ptr<Flag>> flags;
+    co::vector<fastring> alias_holder;
 };
 
-static Mod* g_mod;
-
 inline Mod& mod() {
-    return g_mod ? *g_mod : *(g_mod = co::_make_static<Mod>());
+    static Mod _mod;
+    return _mod;
 }
 
 struct Flag {
-    Flag(char iden, const char* name, const char* alias, const char* value,
-         const char* help, const char* file, int line, void* addr);
+    Flag(char iden, const char* name, const char* alias, const char* value, const char* help,
+         const char* file, int line, void* addr);
 
     fastring set_value(const fastring& v);
     fastring get_value() const;
@@ -62,8 +65,8 @@ struct Flag {
     const char* type() const;
 
     char iden;
-    char lv;            // level: 0-9
-    bool inco;          // flag inside co (comment starts with >>)
+    char lv;    // level: 0-9
+    bool inco;  // flag inside co (comment starts with >>)
     const char* name;
     const char* alias;  // alias for this flag
     const char* value;  // default value
@@ -73,11 +76,18 @@ struct Flag {
     void* addr;         // point to the flag variable
 };
 
-Flag::Flag(
-    char iden, const char* name, const char* alias, const char* value, 
-    const char* help, const char* file, int line, void* addr
-) : iden(iden), lv('5'), inco(false), name(name), alias(alias), value(value),
-    help(help), file(file), line(line), addr(addr) {
+Flag::Flag(char iden, const char* name, const char* alias, const char* value, const char* help,
+           const char* file, int line, void* addr)
+    : iden(iden),
+      lv('5'),
+      inco(false),
+      name(name),
+      alias(alias),
+      value(value),
+      help(help),
+      file(file),
+      line(line),
+      addr(addr) {
     if (help[0] == '>' && help[1] == '>') { /* flag defined in co */
         this->inco = true;
         this->help += 2;
@@ -93,42 +103,42 @@ Flag::Flag(
 
 fastring Flag::set_value(const fastring& v) {
     switch (this->iden) {
-      case 's':
-        *static_cast<fastring*>(this->addr) = v;
-        return fastring();
-      case 'b':
-        *static_cast<bool*>(this->addr) = str::to_bool(v);
-        break;
-      case 'i':
-        *static_cast<int32*>(this->addr) = str::to_int32(v);
-        break;
-      case 'u':
-        *static_cast<uint32*>(this->addr) = str::to_uint32(v);
-        break;
-      case 'I':
-        *static_cast<int64*>(this->addr) = str::to_int64(v);
-        break;
-      case 'U':
-        *static_cast<uint64*>(this->addr) = str::to_uint64(v);
-        break;
-      case 'd':
-        *static_cast<double*>(this->addr) = str::to_double(v);
-        break;
-      default:
-        return "unknown flag type";
+        case 's':
+            *static_cast<fastring*>(this->addr) = v;
+            return fastring();
+        case 'b':
+            *static_cast<bool*>(this->addr) = str::to_bool(v);
+            break;
+        case 'i':
+            *static_cast<int32_t*>(this->addr) = str::to_int32(v);
+            break;
+        case 'u':
+            *static_cast<uint32_t*>(this->addr) = str::to_uint32(v);
+            break;
+        case 'I':
+            *static_cast<int64_t*>(this->addr) = str::to_int64(v);
+            break;
+        case 'U':
+            *static_cast<uint64_t*>(this->addr) = str::to_uint64(v);
+            break;
+        case 'd':
+            *static_cast<double*>(this->addr) = str::to_double(v);
+            break;
+        default:
+            return "unknown flag type";
     }
 
     switch (co::error()) {
-      case 0:
-        return fastring();
-      case ERANGE:
-        return "out of range";
-      default:
-        return "invalid value";
+        case 0:
+            return fastring();
+        case ERANGE:
+            return "out of range";
+        default:
+            return "invalid value";
     }
 }
 
-template<typename T>
+template <typename T>
 fastring int2str(T t) {
     if ((0 <= t && t <= 8192) || (t < 0 && t >= -8192)) return str::from(t);
 
@@ -145,57 +155,62 @@ fastring int2str(T t) {
 
 fastring Flag::get_value() const {
     switch (this->iden) {
-      case 's':
-        return *static_cast<fastring*>(this->addr);
-      case 'b':
-        return str::from(*static_cast<bool*>(this->addr));
-      case 'i':
-        return int2str(*static_cast<int32*>(this->addr));
-      case 'u':
-        return int2str(*static_cast<uint32*>(this->addr));
-      case 'I':
-        return int2str(*static_cast<int64*>(this->addr));
-      case 'U':
-        return int2str(*static_cast<uint64*>(this->addr));
-      case 'd':
-        return str::from(*static_cast<double*>(this->addr));
-      default:
-        return "unknown flag type";
+        case 's':
+            return *static_cast<fastring*>(this->addr);
+        case 'b':
+            return str::from(*static_cast<bool*>(this->addr));
+        case 'i':
+            return int2str(*static_cast<int32_t*>(this->addr));
+        case 'u':
+            return int2str(*static_cast<uint32_t*>(this->addr));
+        case 'I':
+            return int2str(*static_cast<int64_t*>(this->addr));
+        case 'U':
+            return int2str(*static_cast<uint64_t*>(this->addr));
+        case 'd':
+            return str::from(*static_cast<double*>(this->addr));
+        default:
+            return "unknown flag type";
     }
 }
 
 inline const char* Flag::type() const {
     switch (this->iden) {
-      case 's': return "string";
-      case 'b': return "bool";
-      case 'i': return "int32";
-      case 'u': return "uint32";
-      case 'I': return "int64";
-      case 'U': return "uint64";
-      case 'd': return "double";
-      default:  return "unknown";
+        case 's':
+            return "string";
+        case 'b':
+            return "bool";
+        case 'i':
+            return "int32_t";
+        case 'u':
+            return "uint32_t";
+        case 'I':
+            return "int64_t";
+        case 'U':
+            return "uint64_t";
+        case 'd':
+            return "double";
+        default:
+            return "unknown";
     }
 }
 
 inline void Flag::print() const {
-    cout << color::green << "    -" << this->name;
-    if (*this->alias) cout << ", " << this->alias;
-    cout.flush();
-    cout << color::blue << "  " << this->help << '\n' << color::deflt
-         << "\ttype: " << this->type()
-         << "\t  default: " << this->value
-         << "\n\tfrom: " << this->file
-         << endl;
+    std::cout << co::Color::green << "    -" << this->name;
+    if (*this->alias) std::cout << ", " << this->alias;
+    std::cout.flush();
+    std::cout << co::Color::blue << "  " << this->help << '\n'
+              << co::Color::deflt << "\ttype: " << this->type() << "\t  default: " << this->value
+              << "\n\tfrom: " << this->file << std::endl;
 }
 
-void Mod::add_flag(
-    char iden, const char* name, const char* value, const char* help, 
-    const char* file, int line, void* addr, const char* alias) {
-    auto f = co::_make_static<Flag>(iden, name, alias, value, help, file, line, addr);
-    auto r = flags.emplace(name, f);
+void Mod::add_flag(char iden, const char* name, const char* value, const char* help,
+                   const char* file, int line, void* addr, const char* alias) {
+    auto f = std::make_shared<Flag>(iden, name, alias, value, help, file, line, addr);
+    auto r = flags.insert(std::make_pair(name, f));
     if (!r.second) {
-        cout << "multiple definitions of flag: " << name << ", from "
-             << r.first->second->file << " and " << file << endl;
+        std::cout << "multiple definitions of flag: " << name << ", from " << r.first->second->file
+                  << " and " << file << std::endl;
         ::exit(0);
     }
 
@@ -203,22 +218,22 @@ void Mod::add_flag(
         auto v = str::split(alias, ',');
         for (auto& x : v) {
             x.trim();
-            const size_t n = x.size() + 1;
-            char* s = (char*) co::_salloc(n);
-            memcpy(s, x.c_str(), n);
-            auto r = flags.emplace(s, f);
+            auto s = x.c_str();
+            auto r = flags.insert(std::make_pair(s, f));
             if (!r.second) {
-                cout << "alias " << name << " as " << x << " failed, flag " << x
-                     << " already exists in " << r.first->second->file << endl;
+                std::cout << "alias " << name << " as " << x << " failed, flag " << x
+                          << " already exists in " << r.first->second->file << std::endl;
                 ::exit(0);
             }
+            alias_holder.emplace_back(std::move(x));
+            assert(alias_holder.back().c_str() == s);
         }
     }
 }
 
-inline Flag* Mod::find_flag(const char* name) {
+inline std::shared_ptr<Flag> Mod::find_flag(const char* name) {
     auto it = flags.find(name);
-    return it != flags.end() ? it->second : NULL;
+    return it != flags.end() ? it->second : nullptr;
 }
 
 fastring Mod::alias(const char* name, const char* new_name) {
@@ -234,7 +249,7 @@ fastring Mod::alias(const char* name, const char* new_name) {
         return e;
     }
 
-    auto r = flags.emplace(new_name, f);
+    auto r = flags.insert(std::make_pair(new_name, f));
     if (!r.second) {
         e << "name already exists: " << new_name;
         return e;
@@ -246,7 +261,7 @@ fastring Mod::alias(const char* name, const char* new_name) {
 
 fastring Mod::set_flag_value(const char* name, const fastring& value) {
     fastring e;
-    Flag* f = this->find_flag(name);
+    auto f = this->find_flag(name);
     if (f) {
         e = f->set_value(value);
         if (!e.empty()) e << ": " << value;
@@ -259,7 +274,7 @@ fastring Mod::set_flag_value(const char* name, const fastring& value) {
 // set_bool_flags("abc"):  -abc -> true  or  -a, -b, -c -> true
 fastring Mod::set_bool_flags(const char* name) {
     fastring e;
-    Flag* f = this->find_flag(name);
+    auto f = this->find_flag(name);
     if (f) {
         if (f->iden == 'b') {
             *static_cast<bool*>(f->addr) = true;
@@ -275,7 +290,7 @@ fastring Mod::set_bool_flags(const char* name) {
         return e;
     }
 
-    char sub[2] = { 0 };
+    char sub[2] = {0};
     for (size_t i = 0; i < n; ++i) {
         sub[0] = name[i];
         f = this->find_flag(sub);
@@ -302,7 +317,7 @@ void Mod::print_flags() {
         if (!f.inco && *f.help && (!*f.alias || strcmp(it->first, f.name) == 0)) {
             if (the_first_one) {
                 the_first_one = false;
-                cout << "flags:\n";
+                std::cout << "flags:\n";
             }
             f.print();
         }
@@ -310,7 +325,7 @@ void Mod::print_flags() {
 }
 
 void Mod::print_all_flags() {
-    cout << "flags:\n";
+    std::cout << "flags:\n";
     for (auto it = flags.begin(); it != flags.end(); ++it) {
         const auto& f = *it->second;
         if (*f.help && (!*f.alias || strcmp(it->first, f.name) == 0)) {
@@ -320,11 +335,15 @@ void Mod::print_all_flags() {
 }
 
 inline void Mod::print_help() {
-    cout << "usage:  " << color::blue << "$exe [-flag] [value]\n" << color::deflt
-         << "\t" << "$exe -x -i 8k -s ok        # x=true, i=8192, s=\"ok\"\n"
-         << "\t" << "$exe --                    # print all flags\n"
-         << "\t" << "$exe -mkconf               # generate config file\n"
-         << "\t" << "$exe -conf xx.conf         # run with config file\n\n";
+    std::cout << "usage:  " << co::Color::blue << "$exe [-flag] [value]\n"
+              << co::Color::deflt << "\t"
+              << "$exe -x -i 8k -s ok        # x=true, i=8192, s=\"ok\"\n"
+              << "\t"
+              << "$exe --                    # print all flags\n"
+              << "\t"
+              << "$exe -mkconf               # generate config file\n"
+              << "\t"
+              << "$exe -conf xx.conf         # run with config file\n\n";
 
     this->print_flags();
 }
@@ -336,8 +355,14 @@ void format_str(fastring& s) {
     if (a == s.npos && b == s.npos) return;
 
     fastring r(std::move(s));
-    if (a == s.npos || !r.contains('"')) { s << '"' << r << '"'; return; }
-    if (!r.contains('\'')) { s << '\'' << r << '\''; return; }
+    if (a == s.npos || !r.contains('"')) {
+        s << '"' << r << '"';
+        return;
+    }
+    if (!r.contains('\'')) {
+        s << '\'' << r << '\'';
+        return;
+    }
     s << "```" << r << "```";
 }
 
@@ -345,8 +370,8 @@ void Mod::make_config(const fastring& exe) {
     // order flags by lv, file, line
     co::map<int, co::map<const char*, co::map<int, Flag*>>> o;
     for (auto it = flags.begin(); it != flags.end(); ++it) {
-        Flag* f = it->second;
-        if (f->help[0] == '.' || f->help[0] == '\0') continue; // ignore hidden flags.
+        Flag* f = it->second.get();
+        if (f->help[0] == '.' || f->help[0] == '\0') continue;  // ignore hidden flags.
         o[f->lv][f->file][f->line] = f;
     }
 
@@ -356,7 +381,7 @@ void Mod::make_config(const fastring& exe) {
 
     fs::fstream f(fname.c_str(), 'w');
     if (!f) {
-        cout << "can't open config file: " << fname << endl;
+        std::cout << "can't open config file: " << fname << std::endl;
         return;
     }
 
@@ -370,7 +395,7 @@ void Mod::make_config(const fastring& exe) {
         const auto& x = it->second;
         for (auto xit = x.begin(); xit != x.end(); ++xit) {
             const auto& y = xit->second;
-            //f << "# >> " << str::replace(xit->first, "\\", "/") << '\n';
+            // f << "# >> " << str::replace(xit->first, "\\", "/") << '\n';
             f << "#" << fastring(COMMENT_LINE_LEN - 1, '=') << '\n';
             for (auto yit = y.begin(); yit != y.end(); ++yit) {
                 const Flag& flag = *yit->second;
@@ -389,9 +414,8 @@ void Mod::make_config(const fastring& exe) {
 // @kv:  for -a=b, or -a b, or a=b
 // @k:   for -a, -xyz
 // return non-flag elements (etc. hello, -8, -8k, -, --, --- ...)
-co::vector<fastring> Mod::analyze_args(
-    const co::vector<fastring>& args, co::map<fastring, fastring>& kv, co::vector<fastring>& k 
-) {
+co::vector<fastring> Mod::analyze_args(const co::vector<fastring>& args,
+                                       co::map<fastring, fastring>& kv, co::vector<fastring>& k) {
     co::vector<fastring> res;
 
     for (size_t i = 0; i < args.size(); ++i) {
@@ -406,7 +430,8 @@ co::vector<fastring> Mod::analyze_args(
         }
 
         if (ep <= bp) {
-            cout << "invalid parameter" << ": " << arg << endl;
+            std::cout << "invalid parameter"
+                      << ": " << arg << std::endl;
             ::exit(0);
         }
 
@@ -424,13 +449,13 @@ co::vector<fastring> Mod::analyze_args(
 
         // flag: -a, -a b, or -j4
         {
-            Flag* f = 0;
+            std::shared_ptr<Flag> f;
             fastring next;
             fastring name = arg.substr(bp);
 
             // for -j4
             if (name.size() > 1 && (('0' <= name[1] && name[1] <= '9') || name[1] == '-')) {
-                char sub[2] = { name[0], '\0' };
+                char sub[2] = {name[0], '\0'};
                 if (!find_flag(name.c_str()) && find_flag(sub)) {
                     kv[name.substr(0, 1)] = name.substr(1);
                     continue;
@@ -450,11 +475,11 @@ co::vector<fastring> Mod::analyze_args(
             if (f->iden != 'b') goto has_value;
             if (next == "0" || next == "1" || next == "false" || next == "true") goto has_value;
 
-          no_value:
+        no_value:
             k.push_back(name);
             continue;
 
-          has_value:
+        has_value:
             kv[name] = next;
             ++i;
             continue;
@@ -485,9 +510,15 @@ co::vector<fastring> Mod::parse_commandline(int argc, char** argv) {
         auto f = this->find_flag(name.c_str());
         if (f && f->iden == 's') {
             auto& s = *static_cast<fastring*>(f->addr);
-            if (!s.empty()) { cout << s << endl; ::exit(0); }
-            if (name == "help") { this->print_help(); ::exit(0); }
-            cout << name << ": value not set" << endl;
+            if (!s.empty()) {
+                std::cout << s << std::endl;
+                ::exit(0);
+            }
+            if (name == "help") {
+                this->print_help();
+                ::exit(0);
+            }
+            std::cout << name << ": value not set" << std::endl;
             ::exit(0);
         }
     }
@@ -507,7 +538,7 @@ co::vector<fastring> Mod::parse_commandline(int argc, char** argv) {
     for (it = kv.begin(); it != kv.end(); ++it) {
         fastring e = this->set_flag_value(it->first.c_str(), it->second);
         if (!e.empty()) {
-            cout << e << endl;
+            std::cout << e << std::endl;
             ::exit(0);
         }
     }
@@ -515,7 +546,7 @@ co::vector<fastring> Mod::parse_commandline(int argc, char** argv) {
     for (size_t i = 0; i < k.size(); ++i) {
         fastring e = this->set_bool_flags(k[i].c_str());
         if (!e.empty()) {
-            cout << e << endl;
+            std::cout << e << std::endl;
             ::exit(0);
         }
     }
@@ -554,7 +585,7 @@ void remove_quotes_and_comments(fastring& s) {
         return;
     }
 
-  no_quotes:
+no_quotes:
     p = s.find('#');
     q = s.find("//");
     if (p != s.npos || q != s.npos) {
@@ -581,7 +612,7 @@ fastring getline(co::vector<fastring>& lines, size_t& n) {
 void Mod::parse_config(const fastring& config) {
     fs::file f(config, 'r');
     if (!f) {
-        cout << "can't open config file: " << config << endl;
+        std::cout << "can't open config file: " << config << std::endl;
         ::exit(0);
     }
 
@@ -590,7 +621,7 @@ void Mod::parse_config(const fastring& config) {
     if (data.find('\n') == data.npos && data.find('\r') != data.npos) sep = '\r';
 
     auto lines = str::split(data, sep);
-    size_t lineno = 0; // line number
+    size_t lineno = 0;  // line number
 
     for (size_t i = 0; i < lines.size();) {
         lineno = i;
@@ -599,7 +630,8 @@ void Mod::parse_config(const fastring& config) {
 
         size_t p = s.find('=');
         if (p == 0 || p == s.npos) {
-            cout << "invalid config: " << s << ", at " << config << ':' << (lineno + 1) << endl;
+            std::cout << "invalid config: " << s << ", at " << config << ':' << (lineno + 1)
+                      << std::endl;
             ::exit(0);
         }
 
@@ -610,23 +642,22 @@ void Mod::parse_config(const fastring& config) {
         fastring e = this->set_flag_value(flg.c_str(), val);
         if (!e.empty()) {
             if (!e.starts_with("flag not defined")) {
-                cout << e << ", at " << config << ':' << (lineno + 1) << endl;
+                std::cout << e << ", at " << config << ':' << (lineno + 1) << std::endl;
                 ::exit(0);
             } else {
-                cout << "WARNING: " << e << ", at " << config << ':' << (lineno + 1) << endl;
+                std::cout << "WARNING: " << e << ", at " << config << ':' << (lineno + 1)
+                          << std::endl;
             }
         }
     }
 }
 
-void add_flag(
-    char iden, const char* name, const char* value, const char* help, 
-    const char* file, int line, void* addr, const char* alias
-) {
+void add_flag(char iden, const char* name, const char* value, const char* help, const char* file,
+              int line, void* addr, const char* alias) {
     mod().add_flag(iden, name, value, help, file, line, addr, alias);
 }
 
-} // namespace xx
+}  // namespace xx
 
 co::vector<fastring> parse(int argc, char** argv) {
     auto& mod = xx::mod();
@@ -639,16 +670,12 @@ co::vector<fastring> parse(int argc, char** argv) {
     return v;
 }
 
-void parse(const fastring& path) {
-    xx::mod().parse_config(path);
-}
+void parse(const fastring& path) { xx::mod().parse_config(path); }
 
 fastring set_value(const char* name, const fastring& value) {
     return xx::mod().set_flag_value(name, value);
 }
 
-fastring alias(const char* name, const char* new_name) {
-    return xx::mod().alias(name, new_name);
-}
+fastring alias(const char* name, const char* new_name) { return xx::mod().alias(name, new_name); }
 
-} // namespace flag
+}  // namespace flag

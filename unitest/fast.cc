@@ -1,5 +1,6 @@
-#include "co/unitest.h"
 #include "co/fast.h"
+
+#include "co/unitest.h"
 
 namespace test {
 
@@ -36,7 +37,8 @@ DEF_test(fast) {
         EXPECT_EQ(fastring(buf, fast::u64toa(12345678901234567ULL, buf)), "12345678901234567");
         EXPECT_EQ(fastring(buf, fast::u64toa(123456789012345678ULL, buf)), "123456789012345678");
         EXPECT_EQ(fastring(buf, fast::u64toa(1234567890123456789ULL, buf)), "1234567890123456789");
-        EXPECT_EQ(fastring(buf, fast::u64toa(12345678901234567890ULL, buf)), "12345678901234567890");
+        EXPECT_EQ(fastring(buf, fast::u64toa(12345678901234567890ULL, buf)),
+                  "12345678901234567890");
     }
 
     DEF_case(i32toa) {
@@ -107,8 +109,9 @@ DEF_test(fast) {
     DEF_case(ptoh) {
         EXPECT_EQ(fastring(buf, fast::ptoh((void*)0x123456, buf)), "0x123456");
         EXPECT_EQ(fastring(buf, fast::ptoh((void*)0x12345678, buf)), "0x12345678");
-        if (sizeof(void*) >= sizeof(uint64)) {
-            EXPECT_EQ(fastring(buf, fast::ptoh((void*)(size_t)0x1234567890abcdefULL, buf)), "0x1234567890abcdef");
+        if (sizeof(void*) >= sizeof(uint64_t)) {
+            EXPECT_EQ(fastring(buf, fast::ptoh((void*)(size_t)0x1234567890abcdefULL, buf)),
+                      "0x1234567890abcdef");
         }
     }
 
@@ -136,7 +139,8 @@ DEF_test(fast) {
         EXPECT_EQ(fastring(buf, fast::dtoa(-79.39773355813419, buf)), "-79.39773355813419");
         EXPECT_EQ(fastring(buf, fast::dtoa(1.234567890123456e30, buf)), "1.234567890123456e30");
         EXPECT_EQ(fastring(buf, fast::dtoa(2.225073858507201e-308, buf)), "2.225073858507201e-308");
-        EXPECT_EQ(fastring(buf, fast::dtoa(2.2250738585072014e-308, buf)), "2.2250738585072014e-308");
+        EXPECT_EQ(fastring(buf, fast::dtoa(2.2250738585072014e-308, buf)),
+                  "2.2250738585072014e-308");
         EXPECT_EQ(fastring(buf, fast::dtoa(1.7976931348623157e308, buf)), "1.7976931348623157e308");
 
         EXPECT_EQ(fastring(buf, fast::dtoa(0.123456, buf, 6)), "0.123456");
@@ -172,4 +176,4 @@ DEF_test(fast) {
     }
 }
 
-} // namespace test
+}  // namespace test

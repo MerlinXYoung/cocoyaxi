@@ -1,227 +1,134 @@
-#include "sched.h"
+#include <atomic>
+#include <cassert>
+#include <chrono>
+#include <condition_variable>
+#include <cstdint>
+#include <mutex>
+
 #include "co/stl.h"
+#include "sched.h"
 
 #ifndef _WIN32
 #ifdef __linux__
-#include <unistd.h>       // for syscall()
 #include <sys/syscall.h>  // for SYS_xxx definitions
 #include <time.h>         // for clock_gettime
+#include <unistd.h>       // for syscall()
+
 #else
-#include <sys/time.h>     // for gettimeofday
+#include <sys/time.h>  // for gettimeofday
 #endif
 #endif
 
 namespace co {
 namespace xx {
 
-#ifdef _WIN32
-typedef CRITICAL_SECTION mutex_t;
-typedef CONDITION_VARIABLE cv_t;
-
-inline void cv_init(cv_t* c) { InitializeConditionVariable(c); }
-inline void cv_free(cv_t*) {}
-inline void cv_wait(cv_t* c, mutex_t* m) { SleepConditionVariableCS(c, m, INFINITE); }
-inline bool cv_wait(cv_t* c, mutex_t* m, uint32 ms) { return SleepConditionVariableCS(c, m, ms) == TRUE; }
-inline void cv_notify_one(cv_t* c) { WakeConditionVariable(c); }
-inline void cv_notify_all(cv_t* c) { WakeAllConditionVariable(c); }
-
-class mutex {
-  public:
-    mutex() { InitializeCriticalSection(&_m); }
-    ~mutex() { DeleteCriticalSection(&_m); }
-
-    void lock() { EnterCriticalSection(&_m); }
-    void unlock() { LeaveCriticalSection(&_m); }
-    bool try_lock() { return TryEnterCriticalSection(&_m) != FALSE; }
-    mutex_t* native_handle() { return &_m; } 
-
-  private:
-    mutex_t _m;
-    DISALLOW_COPY_AND_ASSIGN(mutex);
-};
-
-#else
-typedef pthread_mutex_t mutex_t;
-typedef pthread_cond_t cv_t;
-
-inline void cv_init(cv_t* c) {
-  #ifdef __linux__
-    pthread_condattr_t attr;
-    int r = pthread_condattr_init(&attr); assert(r == 0);
-    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
-    r = pthread_cond_init(c, &attr); assert(r == 0);
-    pthread_condattr_destroy(&attr);
-  #else
-    int r = pthread_cond_init(c, 0); (void)r; assert(r == 0);
-  #endif
-}
-
-bool cv_wait(cv_t* c, mutex_t* m, uint32 ms) {
-  #ifdef __linux__
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-  #else
-    struct timespec ts;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    ts.tv_sec = tv.tv_sec;
-    ts.tv_nsec = tv.tv_usec * 1000;
-  #endif
-
-    if (ms < 1000) {
-        ts.tv_nsec += ms * 1000000;
-    } else {
-        const uint32 x = ms / 1000;
-        ts.tv_nsec += (ms - x * 1000) * 1000000;
-        ts.tv_sec += x;
-    }
-
-    if (ts.tv_nsec > 999999999) {
-        ts.tv_nsec -= 1000000000;
-        ++ts.tv_sec;
-    }
-
-    return pthread_cond_timedwait(c, m, &ts) == 0;
-}
-
-inline void cv_free(cv_t* c) { pthread_cond_destroy(c); }
-inline void cv_wait(cv_t* c, mutex_t* m) { pthread_cond_wait(c, m); }
-inline void cv_notify_one(cv_t* c) { pthread_cond_signal(c); }
-inline void cv_notify_all(cv_t* c) { pthread_cond_broadcast(c); }
-
-__thread uint32 g_tid;
-
+// typedef std::mutex mutex_t;
+// typedef std::condition_variable cv_t;
+// typedef std::unique_lock<std::mutex> mutex_guard_t;
+#ifndef _WIN32
 #ifdef __linux__
 #ifndef SYS_gettid
 #define SYS_gettid __NR_gettid
 #endif
-uint32 thread_id() { return syscall(SYS_gettid); }
+uint32_t thread_id() { return syscall(SYS_gettid); }
 
 #else /* for mac, bsd.. */
-uint32 thread_id() {
-    uint64 x;
+uint32_t thread_id() {
+    uint64_t x;
     pthread_threadid_np(0, &x);
-    return (uint32)x;
+    return (uint32_t)x;
 }
 #endif
-
-class mutex {
-  public:
-    mutex() { const int r = pthread_mutex_init(&_m, 0); (void)r; assert(r == 0); }
-    ~mutex() { const int r = pthread_mutex_destroy(&_m); (void)r; assert(r == 0); }
-
-    void lock() { const int r = pthread_mutex_lock(&_m); (void)r; assert(r == 0); }
-    void unlock() { const int r = pthread_mutex_unlock(&_m); (void)r; assert(r == 0); }
-    bool try_lock() { return pthread_mutex_trylock(&_m) == 0; }
-    mutex_t* native_handle() { return &_m; }
-
-  private:
-    mutex_t _m;
-    DISALLOW_COPY_AND_ASSIGN(mutex);
-};
 #endif
-
-class mutex_guard {
-  public:
-    explicit mutex_guard(mutex& lock) : _lock(lock) { _lock.lock(); }
-    ~mutex_guard() { _lock.unlock(); }
+struct ref_counter {
+    constexpr inline ref_counter() noexcept : _refn(1) {}
+    constexpr inline ref_counter(uint32_t n) noexcept : _refn(n) {}
+    ~ref_counter() = default;
+    inline void ref() noexcept { _refn.fetch_add(1, std::memory_order_relaxed); }
+    inline uint32_t unref() noexcept {
+        //--_refn;memory_order_seq_cst
+        return _refn.fetch_sub(1, std::memory_order_acq_rel) - 1;
+    }
 
   private:
-    xx::mutex& _lock;
-    DISALLOW_COPY_AND_ASSIGN(mutex_guard);
+    std::atomic_uint32_t _refn;
 };
-
-class mutex_impl {
+class mutex_impl : public ref_counter {
   public:
     struct queue {
-        static const int N = 12;
+        static constexpr int N = 13;
         struct _memb : co::clink {
-            size_t size;
-            uint8 rx;
-            uint8 wx;
-            void* q[];
+            uint8_t rx{0};
+            uint8_t wx{0};
+            void* q[N];
         };
-
-        _memb* _make_memb() {
-            _memb* m = (_memb*) co::alloc(sizeof(_memb) + N * sizeof(void*), co::cache_line_size);
-            m->size = 0;
-            m->rx = 0;
-            m->wx = 0;
-            return m;
-        }
-
-        queue() noexcept : _m(0) {}
+        static_assert(sizeof(_memb) == 128, "_memb size should be 128");
+        inline queue() noexcept : _q(), _size(0) {}
 
         ~queue() {
-            for (auto h = _q.front(); h;) {
+            auto h = _q.front();
+            while (h) {
                 const auto m = (_memb*)h;
                 h = h->next;
-                co::free(m, sizeof(_memb) + N * sizeof(void*));
+                ::free(m);
             }
         }
 
-        size_t size() const noexcept { return _m ? _m->size : 0; }
-        bool empty() const noexcept { return this->size() == 0; }
+        inline size_t size() const noexcept { return _size; }
+        inline bool empty() const noexcept { return this->size() == 0; }
 
         void push_back(void* x) {
-            _memb* m = (_memb*) _q.back();
+            _memb* m = (_memb*)_q.back();
             if (!m || m->wx == N) {
-                m = this->_make_memb();
+                m = new _memb;
                 _q.push_back(m);
             }
             m->q[m->wx++] = x;
-            ++_m->size;
+            ++_size;
         }
 
         void* pop_front() {
-            void* x = 0;
-            if (_m && _m->rx < _m->wx) {
-                x = _m->q[_m->rx++];
-                --_m->size;
-                if (_m->rx == _m->wx) {
-                    _m->rx = _m->wx = 0;
-                    if (_q.back() != _m) {
-                        _memb* const m = (_memb*) _q.pop_front();
-                        _m->size = m->size;
-                        co::free(m, sizeof(_memb) + N * sizeof(void*));
+            void* x = nullptr;
+
+            auto m = (_memb*)_q.front();
+            if (m && m->rx < m->wx) {
+                x = m->q[m->rx++];
+                --_size;
+                if (m->rx == m->wx) {
+                    m->rx = m->wx = 0;
+                    if (_q.back() != m) {
+                        _q.pop_front();
+                        delete m;
                     }
                 }
             }
             return x;
         }
-
-        union {
-            _memb* _m;
-            co::clist _q;
-        };
+        co::clist _q;
+        size_t _size;
     };
 
-    mutex_impl() : _refn(1), _lock(0), _has_cv(false) {}
-    ~mutex_impl() { if (_has_cv) xx::cv_free(&_cv); }
+    inline mutex_impl() noexcept : ref_counter(), _m(), _cv(), _lock(0) {}
+    ~mutex_impl() = default;
 
     void lock();
     void unlock();
-    bool try_lock();
-
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
+    inline bool try_lock() noexcept;
 
   private:
-    xx::mutex _m;
-    xx::cv_t _cv;
+    std::mutex _m;
+    std::condition_variable _cv;
     queue _wq;
-    uint32 _refn;
-    uint8 _lock;
-    bool _has_cv;
+    uint8_t _lock;  // 0: unlocked, 1: locked, 2:notify other thread
 };
 
-inline bool mutex_impl::try_lock() {
-    xx::mutex_guard g(_m);
+inline bool mutex_impl::try_lock() noexcept {
+    std::unique_lock<std::mutex> g(_m);
     return _lock ? false : (_lock = 1);
 }
 
 void mutex_impl::lock() {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();
     if (sched) { /* in coroutine */
         _m.lock();
         if (!_lock) {
@@ -233,17 +140,18 @@ void mutex_impl::lock() {
             _m.unlock();
             sched->yield();
         }
-
     } else { /* non-coroutine */
-        xx::mutex_guard g(_m);
+        std::unique_lock<std::mutex> g(_m);
         if (!_lock) {
             _lock = 1;
         } else {
             _wq.push_back(nullptr);
-            if (!_has_cv) { xx::cv_init(&_cv); _has_cv = true; }
             for (;;) {
-                xx::cv_wait(&_cv, _m.native_handle());
-                if (_lock == 2) { _lock = 1; break; }
+                _cv.wait(g);
+                if (_lock == 2) {
+                    _lock = 1;
+                    break;
+                }
             }
         }
     }
@@ -255,52 +163,47 @@ void mutex_impl::unlock() {
         _lock = 0;
         _m.unlock();
     } else {
-        Coroutine* const co = (Coroutine*) _wq.pop_front();
+        Coroutine* const co = (Coroutine*)_wq.pop_front();
         if (co) {
             _m.unlock();
             co->sched->add_ready_task(co);
         } else {
             _lock = 2;
             _m.unlock();
-            xx::cv_notify_one(&_cv);
+            _cv.notify_one();
         }
     }
 }
 
-class event_impl {
+class event_impl : public ref_counter {
   public:
-    event_impl(bool m, bool s, uint32 wg=0)
-        : _wt(0), _sn(0), _refn(1), _wg(wg), _signaled(s), _manual_reset(m), _has_cv(false) {
-    }
-    ~event_impl() { if (_has_cv) xx::cv_free(&_cv); }
+    explicit inline event_impl(bool m, bool s, uint32_t wg = 0) noexcept
+        : ref_counter(), _m(), _cv(), _wt(0), _sn(0), _wg(wg), _signaled(s), _manual_reset(m) {}
+    ~event_impl() = default;
 
-    bool wait(uint32 ms);
+    bool wait(uint32_t ms);
     void signal();
     void reset();
 
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
-    uint32* wg() noexcept { return &_wg; }
+    inline std::atomic_uint32_t& wg() noexcept { return _wg; }
 
   private:
-    xx::mutex _m;
-    xx::cv_t _cv;
-    co::clist _wc;
-    uint32 _wt;
-    uint32 _sn;
-    uint32 _refn;
-    uint32 _wg; // for wait group
+    std::mutex _m;
+    std::condition_variable _cv;
+    co::clist _wc;             // wait coroutine
+    uint32_t _wt;              // wait thread num.
+    uint32_t _sn;              // signal num.
+    std::atomic_uint32_t _wg;  // for wait group
     bool _signaled;
     const bool _manual_reset;
-    bool _has_cv;
 };
 
-bool event_impl::wait(uint32 ms) {
-    const auto sched = gSched;
-    if (sched) { /* in coroutine */
+bool event_impl::wait(uint32_t ms) {
+    const auto sched = xx::current_sched();  //  gSched;
+    if (sched) {                             /* in coroutine */
         Coroutine* co = sched->running();
         {
-            xx::mutex_guard g(_m);
+            std::unique_lock<std::mutex> g(_m);
             if (_signaled) {
                 if (!_manual_reset) _signaled = false;
                 return true;
@@ -309,39 +212,47 @@ bool event_impl::wait(uint32 ms) {
 
             waitx_t* x = 0;
             while (!_wc.empty()) {
-                waitx_t* const w = (waitx_t*) _wc.front();
+                waitx_t* const w = (waitx_t*)_wc.front();
                 if (w->state != st_timeout) break;
                 _wc.pop_front();
-                !x ? (void)(x = w) : co::free(w, sizeof(*w));
+                if (!x)
+                    x = w;
+                else
+                    ::free(w);
             }
-            x ? (void)(x->state = st_wait) : (void)(x = make_waitx(co));
+            if (x)
+                x->state = st_wait;
+            else
+                x = make_waitx(co);
             co->waitx = x;
             _wc.push_back(x);
         }
 
-        if (ms != (uint32)-1) sched->add_timer(ms);
+        if (ms != (uint32_t)-1) sched->add_timer(ms);
         sched->yield();
-        if (!sched->timeout()) co::free(co->waitx, sizeof(waitx_t));
+        if (!sched->timeout()) ::free(co->waitx);
         co->waitx = nullptr;
         return !sched->timeout();
-
     } else { /* not in coroutine */
-        xx::mutex_guard g(_m);
+        std::unique_lock<std::mutex> g(_m);
         if (_signaled) {
             if (!_manual_reset) _signaled = false;
             return true;
         }
         if (ms == 0) return false;
 
-        const uint32 sn = _sn;
+        const uint32_t sn = _sn;
         ++_wt;
-        if (!_has_cv) { xx::cv_init(&_cv); _has_cv = true; }
-        if (ms != (uint32)-1) {
-            const bool r = xx::cv_wait(&_cv, _m.native_handle(), ms);
-            if (!r && sn == _sn) { assert(_wt > 0); --_wt; }
+        if (ms != (uint32_t)-1) {
+            const auto r =
+                _cv.wait_for(g, std::chrono::milliseconds(ms)) == std::cv_status::no_timeout;
+            if (!r && sn == _sn) {
+                assert(_wt > 0);
+                --_wt;
+            }
             return r;
         } else {
-            xx::cv_wait(&_cv, _m.native_handle());
+            _cv.wait(g);
             return true;
         }
     }
@@ -351,7 +262,8 @@ void event_impl::signal() {
     co::clink* h = 0;
     {
         bool has_wt = false, has_wc = false;
-        xx::mutex_guard g(_m);
+
+        std::unique_lock<std::mutex> g(_m);
         if (_wt > 0) {
             _wt = 0;
             has_wt = true;
@@ -364,12 +276,14 @@ void event_impl::signal() {
                 do {
                     waitx_t* const w = (waitx_t*)h;
                     h = h->next;
-                    if (atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+                    decltype(w->state)::value_type state(st_wait);
+                    if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                         std::memory_order_relaxed)) {
                         has_wc = true;
                         w->co->sched->add_ready_task(w->co);
                         break;
                     } else { /* timeout */
-                        co::free(w, sizeof(*w));
+                        ::free(w);
                     }
                 } while (h);
             }
@@ -377,144 +291,150 @@ void event_impl::signal() {
 
         if (has_wt || has_wc) {
             if (_signaled && !_manual_reset) _signaled = false;
-            if (has_wt) { ++_sn; xx::cv_notify_all(&_cv); }
+            if (has_wt) {
+                ++_sn;
+                _cv.notify_all();
+            }
         } else {
-            if (!_signaled ) _signaled = true;
+            if (!_signaled) _signaled = true;
         }
     }
 
     while (h) {
-        waitx_t* const w = (waitx_t*) h;
+        waitx_t* const w = (waitx_t*)h;
         h = h->next;
-        if (atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+        decltype(w->state)::value_type state(st_wait);
+        if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                             std::memory_order_relaxed)) {
             w->co->sched->add_ready_task(w->co);
         } else { /* timeout */
-            co::free(w, sizeof(*w));
+            ::free(w);
         }
     }
 }
 
 inline void event_impl::reset() {
-    xx::mutex_guard g(_m);
+    std::unique_lock<std::mutex> g(_m);
     _signaled = false;
 }
 
 class sync_event_impl {
   public:
-    explicit sync_event_impl(bool m, bool s)
-        : _wt(0), _sn(0), _signaled(s), _manual_reset(m) {
-        xx::cv_init(&_cv);
-    }
+    explicit sync_event_impl(bool m, bool s) : _wt(0), _sn(0), _signaled(s), _manual_reset(m) {}
 
-    ~sync_event_impl() {
-        xx::cv_free(&_cv);
-    }
+    ~sync_event_impl() = default;
 
     void wait() {
-        xx::mutex_guard g(_m);
+        std::unique_lock<std::mutex> g(_m);
         if (_signaled) {
             if (!_manual_reset) _signaled = false;
             return;
         }
         ++_wt;
-        xx::cv_wait(&_cv, _m.native_handle());
+        _cv.wait(g);
     }
 
-    bool wait(uint32 ms) {
-        xx::mutex_guard g(_m);
+    bool wait(uint32_t ms) {
+        std::unique_lock<std::mutex> g(_m);
         if (_signaled) {
             if (!_manual_reset) _signaled = false;
             return true;
         }
         if (ms == 0) return false;
 
-        const uint32 sn = _sn;
+        const uint32_t sn = _sn;
         ++_wt;
-        const bool r = co::xx::cv_wait(&_cv, _m.native_handle(), ms);
-        if (!r && sn == _sn) { assert(_wt > 0); --_wt; }
+        const bool r = _cv.wait_for(g, std::chrono::milliseconds(ms)) == std::cv_status::no_timeout;
+        if (!r && sn == _sn) {
+            assert(_wt > 0);
+            --_wt;
+        }
         return r;
     }
 
     void signal() {
-        xx::mutex_guard g(_m);
+        std::unique_lock<std::mutex> g(_m);
         if (_wt > 0) {
             _wt = 0;
             if (_signaled && !_manual_reset) _signaled = false;
             ++_sn;
-            xx::cv_notify_all(&_cv);
+            _cv.notify_all();
         } else {
-            if (!_signaled ) _signaled = true;
+            if (!_signaled) _signaled = true;
         }
     }
 
-    void reset() {
-        xx::mutex_guard g(_m);
+    inline void reset() noexcept {
+        std::unique_lock<std::mutex> g(_m);
         _signaled = false;
     }
 
   private:
-    xx::mutex _m;
-    xx::cv_t _cv;
-    uint32 _wt;
-    uint32 _sn;
+    std::mutex _m;
+    std::condition_variable _cv;
+    uint32_t _wt;
+    uint32_t _sn;
     bool _signaled;
     const bool _manual_reset;
 };
 
-__thread bool g_done = false;
-
-class pipe_impl {
+class pipe_impl : public ref_counter {
   public:
-    pipe_impl(uint32 buf_size, uint32 blk_size, uint32 ms, pipe::C&& c, pipe::D&& d)
-        : _buf_size(buf_size), _blk_size(blk_size), _ms(ms), _has_cv(false),
-          _c(std::move(c)), _d(std::move(d)), _rx(0), _wx(0), _refn(1), _full(0), _closed(0) {
-        _buf = (char*) co::alloc(_buf_size);
+    explicit inline pipe_impl(uint32_t buf_size, uint32_t blk_size, uint32_t ms, pipe::C&& c,
+                              pipe::D&& d)
+        : ref_counter(),
+          _buf(buf_size ? (char*)::malloc(buf_size) : nullptr),
+          _buf_size(buf_size),
+          _blk_size(blk_size),
+          _ms(ms),
+          _c(std::move(c)),
+          _d(std::move(d)),
+          _m(),
+          _cv(),
+          _rx(0),
+          _wx(0),
+          _full(buf_size == 0),
+          _closed(0) {
+        if (_buf_size) assert(_buf);
     }
 
-    ~pipe_impl() {
-        co::free(_buf, _buf_size);
-        if (_has_cv) xx::cv_free(&_cv);
-    }
+    inline ~pipe_impl() { ::free(_buf); }
 
     void read(void* p);
     void write(void* p, int v);
-    bool done() const { return g_done; }
+    bool done() const noexcept { return _done; }
     void close();
-    bool is_closed() const { return atomic_load(&_closed, mo_relaxed); }
-
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
+    inline bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
 
     struct waitx : co::clink {
+        explicit constexpr inline waitx(Coroutine* _co, void* _buf)
+            : co(_co), dummy(nullptr) /*state(st_wait)*/, buf(_buf) {
+            // x.done = 0;
+        }
+        ~waitx() = delete;
         Coroutine* co;
         union {
-            uint8 state;
+            std::atomic_uint8_t state;
             struct {
-                uint8 state;
-                uint8 done; // 1: ok, 2: channel closed
-                uint8 v; // 0: cp, 1: mv, 2: need destruct the object in buf
+                std::atomic_uint8_t state;
+                uint8_t done;  // 1: ok, 2: channel closed
+                uint8_t v;     // 0: cp, 1: mv, 2: need destruct the object in buf
             } x;
             void* dummy;
         };
         void* buf;
-        size_t len; // total length of the memory
     };
 
-    waitx* create_waitx(Coroutine* co, void* buf) {
-        waitx* w;
-        if (co && gSched->on_stack(buf)) {
-            w = (waitx*) co::alloc(sizeof(waitx) + _blk_size);
-            w->buf = (char*)w + sizeof(waitx);
-            w->len = sizeof(waitx) + _blk_size;
+    inline waitx* create_waitx(Coroutine* co, void* buf) {
+        if (co && xx::current_sched()->on_stack(buf)) {
+            auto p = ::malloc(sizeof(waitx) + _blk_size);
+            assert(p);
+            return new (p) waitx(co, (char*)p + sizeof(waitx));
         } else {
-            w = (waitx*) co::alloc(sizeof(waitx));
-            w->buf = buf;
-            w->len = sizeof(waitx);
+            auto p = ::malloc(sizeof(waitx));
+            assert(p);
+            return new (p) waitx(co, buf);
         }
-        w->co = co;
-        w->state = st_wait;
-        w->x.done = 0;
-        return w;
     }
 
   private:
@@ -522,23 +442,25 @@ class pipe_impl {
     void _write_block(void* p, int v);
 
   private:
-    char* _buf;       // buffer
-    uint32 _buf_size; // buffer size
-    uint32 _blk_size; // block size
-    uint32 _ms;       // timeout in milliseconds
-    bool _has_cv;
+    char* _buf;          // buffer
+    uint32_t _buf_size;  // buffer size
+    uint32_t _blk_size;  // block size
+    uint32_t _ms;        // timeout in milliseconds
     xx::pipe::C _c;
     xx::pipe::D _d;
 
-    xx::mutex _m;
-    xx::cv_t _cv;
+    std::mutex _m;
+    std::condition_variable _cv;
     co::clist _wq;
-    uint32 _rx; // read pos
-    uint32 _wx; // write pos
-    uint32 _refn;
-    uint8 _full;
-    uint8 _closed;
+    uint32_t _rx;  // read pos
+    uint32_t _wx;  // write pos
+    uint8_t _full;
+    std::atomic_uint8_t _closed;
+
+  private:
+    static thread_local bool _done;
 };
+thread_local bool pipe_impl::_done{false};
 
 inline void pipe_impl::_read_block(void* p) {
     _d(p);
@@ -555,7 +477,7 @@ inline void pipe_impl::_write_block(void* p, int v) {
 }
 
 void pipe_impl::read(void* p) {
-    auto sched = gSched;
+    auto sched = xx::current_sched();  // gSched;
     _m.lock();
 
     // buffer is neither empty nor full
@@ -564,48 +486,80 @@ void pipe_impl::read(void* p) {
         _m.unlock();
         goto done;
     }
-
     // buffer is full
     if (_full) {
-        this->_read_block(p);
+        if (_buf) {
+            this->_read_block(p);
 
-        while (!_wq.empty()) {
-            waitx* w = (waitx*) _wq.pop_front(); // wait for write
-            if (_ms == (uint32)-1 || atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
-                this->_write_block(w->buf, w->x.v & 1);
-                if (w->x.v & 2) _d(w->buf);
-                w->x.done = 1;
-                if (w->co) {
-                    _m.unlock();
-                    w->co->sched->add_ready_task(w->co);
-                } else {
-                    xx::cv_notify_all(&_cv);
-                    _m.unlock();
+            while (!_wq.empty()) {
+                waitx* w = (waitx*)_wq.pop_front();  // wait for write
+                decltype(w->state)::value_type state(st_wait);
+                if (_ms == (uint32_t)-1 ||
+                    w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
+                    this->_write_block(w->buf, w->x.v & 1);
+                    if (w->x.v & 2) _d(w->buf);
+                    w->x.done = 1;
+                    if (w->co) {
+                        _m.unlock();
+                        w->co->sched->add_ready_task(w->co);
+                    } else {
+                        _cv.notify_all();
+                        _m.unlock();
+                    }
+                    goto done;
+
+                } else { /* timeout */
+                    if (w->x.v & 2) _d(w->buf);
+                    ::free(w);
                 }
-                goto done;
-
-            } else { /* timeout */
-                if (w->x.v & 2) _d(w->buf);
-                co::free(w, w->len);
             }
+
+            _full = 0;
+            _m.unlock();
+            goto done;
+        } else {
+            while (!_wq.empty()) {
+                waitx* w = (waitx*)_wq.pop_front();  // wait for write
+                decltype(w->state)::value_type state(st_wait);
+                if (_ms == (uint32_t)-1 ||
+                    w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
+                    _c(p, w->buf, w->x.v & 1);
+                    if (w->x.v & 2) _d(w->buf);
+                    w->x.done = 1;
+                    if (w->co) {
+                        _m.unlock();
+                        w->co->sched->add_ready_task(w->co);
+                    } else {
+                        _cv.notify_all();
+                        _m.unlock();
+                    }
+                    goto done;
+
+                } else { /* timeout */
+                    if (w->x.v & 2) _d(w->buf);
+                    ::free(w);
+                }
+            }
+            // _m.unlock();
+            // goto done;
         }
-
-        _full = 0;
-        _m.unlock();
-        goto done;
     }
-
     // buffer is empty
-    if (this->is_closed()) { _m.unlock(); goto enod; }
+    if (this->is_closed()) {
+        _m.unlock();
+        goto enod;
+    }
     if (sched) {
         auto co = sched->running();
         waitx* w = this->create_waitx(co, p);
         w->x.v = (w->buf != p ? 0 : 2);
-        _wq.push_back(w);
+        _wq.push_back(w);  // wait queue for read
         _m.unlock();
 
         co->waitx = (waitx_t*)w;
-        if (_ms != (uint32)-1) sched->add_timer(_ms);
+        if (_ms != (uint32_t)-1) sched->add_timer(_ms);
         sched->yield();
 
         co->waitx = 0;
@@ -613,57 +567,64 @@ void pipe_impl::read(void* p) {
             if (w->x.done == 1) {
                 if (w->buf != p) {
                     _d(p);
-                    _c(p, w->buf, 1); // mv
+                    _c(p, w->buf, 1);  // mv
                     _d(w->buf);
                 }
-                co::free(w, w->len);
+                ::free(w);
                 goto done;
             }
 
-            assert(w->x.done == 2); // channel closed
-            co::free(w, w->len);
+            assert(w->x.done == 2);  // channel closed
+            ::free(w);
             goto enod;
         }
         goto enod;
 
     } else {
         bool r = true;
-        waitx* w = this->create_waitx(NULL, p);
-        _wq.push_back(w);
-        if (!_has_cv) { xx::cv_init(&_cv); _has_cv = true; }
+        waitx* w = this->create_waitx(nullptr, p);
+        _wq.push_back(w);  // wait for read queue
 
+        std::unique_lock<std::mutex> g(_m, std::adopt_lock);
         for (;;) {
-            if (_ms == (uint32)-1) {
-                xx::cv_wait(&_cv, _m.native_handle());
+            if (_ms == (uint32_t)-1) {
+                _cv.wait(g);
             } else {
-                r = xx::cv_wait(&_cv, _m.native_handle(), _ms);
+                r = _cv.wait_for(g, std::chrono::milliseconds(_ms)) == std::cv_status::no_timeout;
             }
-            if (r || !atomic_bool_cas(&w->state, st_wait, st_timeout, mo_relaxed, mo_relaxed)) {
+            decltype(w->state)::value_type state(st_wait);
+            if (r || !w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                       std::memory_order_relaxed)) {
                 const auto x = w->x.done;
                 if (x) {
-                    _m.unlock();
-                    co::free(w, w->len);
+                    g.unlock();
+                    g.release();
+                    ::free(w);
                     if (x == 1) goto done;
-                    goto enod; // x == 2, channel closed
+                    goto enod;  // x == 2, channel closed
                 }
             } else {
-                _m.unlock();
+                g.unlock();
+                g.release();
                 goto enod;
             }
         }
     }
 
-  enod:
-    g_done = false;
+enod:
+    _done = false;
     return;
-  done:
-    g_done = true;
+done:
+    _done = true;
 }
 
 void pipe_impl::write(void* p, int v) {
-    auto sched = gSched;
+    auto sched = xx::current_sched();  // gSched;
     _m.lock();
-    if (this->is_closed()) { _m.unlock(); goto enod; }
+    if (this->is_closed()) {
+        _m.unlock();
+        goto enod;
+    }
 
     // buffer is neither empty nor full
     if (_rx != _wx) {
@@ -671,13 +632,16 @@ void pipe_impl::write(void* p, int v) {
         if (_rx == _wx) _full = 1;
         _m.unlock();
         goto done;
-    } 
+    }
 
     // buffer is empty
-    if (!_full) {
+    if (!_buf || !_full) {
         while (!_wq.empty()) {
-            waitx* w = (waitx*) _wq.pop_front(); // wait for read
-            if (_ms == (uint32)-1 || atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
+            waitx* w = (waitx*)_wq.pop_front();  // wait for read
+            decltype(w->state)::value_type state(st_wait);
+            if (_ms == (uint32_t)-1 ||
+                w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
                 w->x.done = 1;
                 if (w->co) {
                     if (w->x.v & 2) _d(w->buf);
@@ -687,22 +651,23 @@ void pipe_impl::write(void* p, int v) {
                 } else {
                     _d(w->buf);
                     _c(w->buf, p, v);
-                    xx::cv_notify_all(&_cv);
+                    _cv.notify_all();
                     _m.unlock();
                 }
                 goto done;
 
             } else { /* timeout */
-                co::free(w, w->len);
+                ::free(w);
             }
         }
-
-        this->_write_block(p, v);
-        if (_rx == _wx) _full = 1;
-        _m.unlock();
-        goto done;
+        if (_buf) {
+            this->_write_block(p, v);
+            if (_rx == _wx) _full = 1;
+            _m.unlock();
+            goto done;
+        }
     }
-    
+
     // buffer is full
     if (sched) {
         auto co = sched->running();
@@ -711,131 +676,522 @@ void pipe_impl::write(void* p, int v) {
             _c(w->buf, p, v);
             w->x.v = 1 | 2;
         } else {
-            w->x.v = (uint8)v;
+            w->x.v = (uint8_t)v;
         }
         _wq.push_back(w);
         _m.unlock();
 
         co->waitx = (waitx_t*)w;
-        if (_ms != (uint32)-1) sched->add_timer(_ms);
+        if (_ms != (uint32_t)-1) sched->add_timer(_ms);
         sched->yield();
 
-        co->waitx = 0;
+        co->waitx = nullptr;
         if (!sched->timeout()) {
-            co::free(w, w->len);
+            ::free(w);
             goto done;
         }
-        goto enod; // timeout
+        goto enod;  // timeout
 
     } else {
         bool r = true;
-        waitx* w = this->create_waitx(NULL, p);
-        w->x.v = (uint8)v;
+        waitx* w = this->create_waitx(nullptr, p);
+        w->x.v = (uint8_t)v;
         _wq.push_back(w);
-        if (!_has_cv) { xx::cv_init(&_cv); _has_cv = true; }
-
+        std::unique_lock<std::mutex> g(_m, std::adopt_lock);
         for (;;) {
-            if (_ms == (uint32)-1) {
-                xx::cv_wait(&_cv, _m.native_handle());
+            if (_ms == (uint32_t)-1) {
+                _cv.wait(g);
             } else {
-                r = xx::cv_wait(&_cv, _m.native_handle(), _ms);
+                r = _cv.wait_for(g, std::chrono::milliseconds(_ms)) == std::cv_status::no_timeout;
             }
-            if (r || !atomic_bool_cas(&w->state, st_wait, st_timeout, mo_relaxed, mo_relaxed)) {
+            decltype(w->state)::value_type state(st_wait);
+            if (r || !w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                       std::memory_order_relaxed)) {
                 if (w->x.done) {
                     assert(w->x.done == 1);
-                    _m.unlock();
-                    co::free(w, w->len);
+                    g.unlock();
+                    g.release();
+                    ::free(w);
                     goto done;
                 }
             } else {
-                _m.unlock();
+                g.unlock();
+                g.release();
                 goto enod;
             }
         }
     }
 
-  enod:
-    g_done = false;
+enod:
+    _done = false;
     return;
-  done:
-    g_done = true;
+done:
+    _done = true;
 }
 
 void pipe_impl::close() {
-    const auto x = atomic_cas(&_closed, 0, 1, mo_relaxed, mo_relaxed);
-    if (x == 0) {
-        xx::mutex_guard g(_m);
+    decltype(_closed)::value_type closed{0};
+    _closed.compare_exchange_strong(closed, 1, std::memory_order_relaxed,
+                                    std::memory_order_relaxed);
+    if (closed == 0) {
+        std::unique_lock<std::mutex> g(_m);
         if (_rx == _wx && !_full) { /* empty */
             while (!_wq.empty()) {
-                waitx* w = (waitx*) _wq.pop_front(); // wait for read
-                if (atomic_bool_cas(&w->state, st_wait, st_ready, mo_relaxed, mo_relaxed)) {
-                    w->x.done = 2; // channel closed
+                waitx* w = (waitx*)_wq.pop_front();  // wait for read
+                decltype(w->state)::value_type state(st_wait);
+                if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
+                    w->x.done = 2;  // channel closed
                     if (w->co) {
                         w->co->sched->add_ready_task(w->co);
                     } else {
-                        xx::cv_notify_all(&_cv);
+                        _cv.notify_all();
                     }
                 } else {
-                    co::free(w, w->len);
+                    ::free(w);
                 }
             }
         }
-        atomic_store(&_closed, 2, mo_relaxed);
+        _closed.store(2, std::memory_order_relaxed);
 
-    } else if (x == 1) {
-        while (atomic_load(&_closed, mo_relaxed) != 2) co::sleep(1);
+    } else if (closed == 1) {
+        while (_closed.load(std::memory_order_relaxed) != 2) co::sleep(1);
     }
 }
-
-pipe::pipe(uint32 buf_size, uint32 blk_size, uint32 ms, pipe::C&& c, pipe::D&& d) {
-    _p = co::alloc(sizeof(pipe_impl), co::cache_line_size);
-    new (_p) pipe_impl(buf_size, blk_size, ms, std::move(c), std::move(d));
-}
+pipe::pipe(uint32_t buf_size, uint32_t blk_size, uint32_t ms, pipe::C&& c, pipe::D&& d)
+    : _p(new pipe_impl(buf_size, blk_size, ms, std::move(c), std::move(d))) {}
 
 pipe::pipe(const pipe& p) : _p(p._p) {
-    if (_p) god::cast<pipe_impl*>(_p)->ref();
+    if (_p) reinterpret_cast<pipe_impl*>(_p)->ref();
 }
 
 pipe::~pipe() {
     const auto p = (pipe_impl*)_p;
     if (p && p->unref() == 0) {
-        p->~pipe_impl();
-        co::free(_p, sizeof(pipe_impl));
-        _p = 0;
+        delete p;
+        _p = nullptr;
     }
 }
 
-void pipe::read(void* p) const {
-    god::cast<pipe_impl*>(_p)->read(p);
+void pipe::read(void* p) const { reinterpret_cast<pipe_impl*>(_p)->read(p); }
+
+void pipe::write(void* p, int v) const { reinterpret_cast<pipe_impl*>(_p)->write(p, v); }
+
+bool pipe::done() const noexcept { return reinterpret_cast<pipe_impl*>(_p)->done(); }
+
+void pipe::close() const { reinterpret_cast<pipe_impl*>(_p)->close(); }
+
+bool pipe::is_closed() const noexcept { return reinterpret_cast<pipe_impl*>(_p)->is_closed(); }
+
+//=====================
+class pipe_impl_cap : public ref_counter {
+    struct node : public clink {
+        char data[0];
+    };
+
+  public:
+    explicit inline pipe_impl_cap(uint32_t cap, uint32_t blk_size, uint32_t ms, pipe::C&& c,
+                                  pipe::D&& d)
+        : ref_counter(),
+          _cap(cap),
+          _size(0),
+          _blk_size(blk_size),
+          _ms(ms),
+          _c(std::move(c)),
+          _d(std::move(d)),
+          _m(),
+          _cv(),
+          _closed(0) {}
+
+    inline ~pipe_impl_cap() {
+        auto n = _list.front();
+        while (n) {
+            _list.pop_front();
+            _d(((node*)n)->data);
+            ::free(n);
+        };
+    }
+
+    inline bool empty() const noexcept { return 0 == _size; }
+    // TODO: _size > UINT32_MAX
+    inline bool full() const noexcept { return _cap == 0 ? false : _size == _cap; }
+
+    void read(void* p);
+    void write(void* p, int v);
+    bool done() const noexcept { return _done; }
+    void close();
+    inline bool is_closed() const noexcept { return _closed.load(std::memory_order_relaxed); }
+
+    struct waitx : co::clink {
+        explicit inline waitx(Coroutine* _co, void* _buf) : co(_co), state(st_wait), buf(_buf) {
+            x.done = 0;
+        }
+        ~waitx() = delete;
+        Coroutine* co;
+        union {
+            std::atomic_uint8_t state;
+            struct {
+                std::atomic_uint8_t state;
+                uint8_t done;  // 1: ok, 2: channel closed
+                uint8_t v;     // 0: cp, 1: mv, 2: need destruct the object in buf
+            } x;
+            void* dummy;
+        };
+        void* buf;
+    };
+
+    inline waitx* create_waitx(Coroutine* co, void* buf) {
+        if (co && xx::current_sched()->on_stack(buf)) {
+            auto p = ::malloc(sizeof(waitx) + _blk_size);
+            assert(p);
+            return new (p) waitx(co, (char*)p + sizeof(waitx));
+        } else {
+            auto p = ::malloc(sizeof(waitx));
+            assert(p);
+            return new (p) waitx(co, buf);
+        }
+    }
+
+  private:
+    void _read_block(void* p, void* src);
+    void _write_block(void* dst, void* p, int v);
+
+  private:
+    co::clist _list;
+    uint32_t _cap;  // capcity
+    uint32_t _size;
+    uint32_t _blk_size;  // block size
+    uint32_t _ms;        // timeout in milliseconds
+    xx::pipe::C _c;
+    xx::pipe::D _d;
+
+    std::mutex _m;
+    std::condition_variable _cv;
+    co::clist _wq;
+
+    std::atomic_uint8_t _closed;
+
+  private:
+    static thread_local bool _done;
+};
+thread_local bool pipe_impl_cap::_done{false};
+
+inline void pipe_impl_cap::_read_block(void* p, void* src) {
+    _d(p);
+    _c(p, src, 1);
+    _d(src);
 }
 
-void pipe::write(void* p, int v) const {
-    god::cast<pipe_impl*>(_p)->write(p, v);
+inline void pipe_impl_cap::_write_block(void* dst, void* p, int v) { _c(dst, p, v); }
+
+void pipe_impl_cap::read(void* p) {
+    auto sched = xx::current_sched();  // gSched;
+    _m.lock();
+
+    // buffer is neither empty nor full
+    if (!empty() && !full()) {
+        auto n = _list.front();
+        _list.pop_front();
+        --_size;
+        this->_read_block(p, ((node*)n)->data);
+        ::free(n);
+        _m.unlock();
+        goto done;
+    }
+
+    // buffer is full
+    if (full()) {
+        auto n = _list.front();
+        _list.pop_front();
+        --_size;
+        this->_read_block(p, ((node*)n)->data);
+        ::free(n);
+
+        while (!_wq.empty()) {
+            waitx* w = (waitx*)_wq.pop_front();  // wait for write
+            decltype(w->state)::value_type state(st_wait);
+            if (_ms == (uint32_t)-1 ||
+                w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
+                node* n = (node*)::malloc(sizeof(node) + _blk_size);
+                n->prev = n->next = nullptr;
+                this->_write_block(n->data, w->buf, w->x.v & 1);
+                _list.push_back(n);
+                ++_size;
+                if (w->x.v & 2) _d(w->buf);
+                w->x.done = 1;
+                if (w->co) {
+                    _m.unlock();
+                    w->co->sched->add_ready_task(w->co);
+                } else {
+                    _cv.notify_all();
+                    _m.unlock();
+                }
+                goto done;
+
+            } else { /* timeout */
+                if (w->x.v & 2) _d(w->buf);
+                ::free(w);
+            }
+        }
+
+        _m.unlock();
+        goto done;
+    }
+
+    // buffer is empty
+    if (this->is_closed()) {
+        _m.unlock();
+        goto enod;
+    }
+    if (sched) {
+        auto co = sched->running();
+        waitx* w = this->create_waitx(co, p);
+        w->x.v = (w->buf != p ? 0 : 2);
+        _wq.push_back(w);
+        _m.unlock();
+
+        co->waitx = (waitx_t*)w;
+        if (_ms != (uint32_t)-1) sched->add_timer(_ms);
+        sched->yield();
+
+        co->waitx = 0;
+        if (!sched->timeout()) {
+            if (w->x.done == 1) {
+                if (w->buf != p) {
+                    _d(p);
+                    _c(p, w->buf, 1);  // mv
+                    _d(w->buf);
+                }
+                ::free(w);
+                goto done;
+            }
+
+            assert(w->x.done == 2);  // channel closed
+            ::free(w);
+            goto enod;
+        }
+        goto enod;
+
+    } else {
+        bool r = true;
+        waitx* w = this->create_waitx(nullptr, p);
+        _wq.push_back(w);
+
+        std::unique_lock<std::mutex> g(_m, std::adopt_lock);
+        for (;;) {
+            if (_ms == (uint32_t)-1) {
+                _cv.wait(g);
+            } else {
+                r = _cv.wait_for(g, std::chrono::milliseconds(_ms)) == std::cv_status::no_timeout;
+            }
+            decltype(w->state)::value_type state(st_wait);
+            if (r || !w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                       std::memory_order_relaxed)) {
+                const auto x = w->x.done;
+                if (x) {
+                    g.unlock();
+                    g.release();
+                    ::free(w);
+                    if (x == 1) goto done;
+                    goto enod;  // x == 2, channel closed
+                }
+            } else {
+                g.unlock();
+                g.release();
+                goto enod;
+            }
+        }
+    }
+
+enod:
+    _done = false;
+    return;
+done:
+    _done = true;
 }
 
-bool pipe::done() const {
-    return god::cast<pipe_impl*>(_p)->done();
+void pipe_impl_cap::write(void* p, int v) {
+    auto sched = xx::current_sched();  // gSched;
+    _m.lock();
+    if (this->is_closed()) {
+        _m.unlock();
+        goto enod;
+    }
+
+    // buffer is neither empty nor full
+    if (!empty() && !full()) {
+        node* n = (node*)::malloc(sizeof(node) + _blk_size);
+        n->prev = n->next = nullptr;
+        this->_write_block(n->data, p, v);
+        _list.push_back(n);
+        ++_size;
+        _m.unlock();
+        goto done;
+    }
+
+    // buffer is empty
+    if (empty()) {
+        while (!_wq.empty()) {
+            waitx* w = (waitx*)_wq.pop_front();  // wait for read
+            decltype(w->state)::value_type state(st_wait);
+            if (_ms == (uint32_t)-1 ||
+                w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                 std::memory_order_relaxed)) {
+                w->x.done = 1;
+                if (w->co) {
+                    if (w->x.v & 2) _d(w->buf);
+                    _c(w->buf, p, v);
+                    _m.unlock();
+                    w->co->sched->add_ready_task(w->co);
+                } else {
+                    _d(w->buf);
+                    _c(w->buf, p, v);
+                    _cv.notify_all();
+                    _m.unlock();
+                }
+                goto done;
+
+            } else { /* timeout */
+                ::free(w);
+            }
+        }
+        node* n = (node*)::malloc(sizeof(node) + _blk_size);
+        n->prev = n->next = nullptr;
+        this->_write_block(n->data, p, v);
+        _list.push_back(n);
+        ++_size;
+        _m.unlock();
+        goto done;
+    }
+
+    // buffer is full
+    if (sched) {
+        auto co = sched->running();
+        waitx* w = this->create_waitx(co, p);
+        if (w->buf != p) { /* p is on the coroutine stack */
+            _c(w->buf, p, v);
+            w->x.v = 1 | 2;
+        } else {
+            w->x.v = (uint8_t)v;
+        }
+        _wq.push_back(w);
+        _m.unlock();
+
+        co->waitx = (waitx_t*)w;
+        if (_ms != (uint32_t)-1) sched->add_timer(_ms);
+        sched->yield();
+
+        co->waitx = nullptr;
+        if (!sched->timeout()) {
+            ::free(w);
+            goto done;
+        }
+        goto enod;  // timeout
+
+    } else {
+        bool r = true;
+        waitx* w = this->create_waitx(nullptr, p);
+        w->x.v = (uint8_t)v;
+        _wq.push_back(w);
+        std::unique_lock<std::mutex> g(_m, std::adopt_lock);
+        for (;;) {
+            if (_ms == (uint32_t)-1) {
+                _cv.wait(g);
+            } else {
+                r = _cv.wait_for(g, std::chrono::milliseconds(_ms)) == std::cv_status::no_timeout;
+            }
+            decltype(w->state)::value_type state(st_wait);
+            if (r || !w->state.compare_exchange_strong(state, st_timeout, std::memory_order_relaxed,
+                                                       std::memory_order_relaxed)) {
+                if (w->x.done) {
+                    assert(w->x.done == 1);
+                    g.unlock();
+                    g.release();
+                    ::free(w);
+                    goto done;
+                }
+            } else {
+                g.unlock();
+                g.release();
+                goto enod;
+            }
+        }
+    }
+
+enod:
+    _done = false;
+    return;
+done:
+    _done = true;
 }
 
-void pipe::close() const {
-    god::cast<pipe_impl*>(_p)->close();
+void pipe_impl_cap::close() {
+    decltype(_closed)::value_type closed{0};
+    _closed.compare_exchange_strong(closed, 1, std::memory_order_relaxed,
+                                    std::memory_order_relaxed);
+    if (closed == 0) {
+        std::unique_lock<std::mutex> g(_m);
+        if (empty()) { /* empty */
+            while (!_wq.empty()) {
+                waitx* w = (waitx*)_wq.pop_front();  // wait for read
+                decltype(w->state)::value_type state(st_wait);
+                if (w->state.compare_exchange_strong(state, st_ready, std::memory_order_relaxed,
+                                                     std::memory_order_relaxed)) {
+                    w->x.done = 2;  // channel closed
+                    if (w->co) {
+                        w->co->sched->add_ready_task(w->co);
+                    } else {
+                        _cv.notify_all();
+                    }
+                } else {
+                    ::free(w);
+                }
+            }
+        }
+        _closed.store(2, std::memory_order_relaxed);
+
+    } else if (closed == 1) {
+        while (_closed.load(std::memory_order_relaxed) != 2) co::sleep(1);
+    }
 }
 
-bool pipe::is_closed() const {
-    return god::cast<pipe_impl*>(_p)->is_closed();
+pipe_cap::pipe_cap(uint32_t cap, uint32_t blk_size, uint32_t ms, pipe::C&& c, pipe::D&& d)
+    : _p(new pipe_impl_cap(cap, blk_size, ms, std::move(c), std::move(d))) {}
+
+pipe_cap::pipe_cap(const pipe_cap& p) : _p(p._p) {
+    if (_p) reinterpret_cast<pipe_impl_cap*>(_p)->ref();
 }
 
-class pool_impl {
+pipe_cap::~pipe_cap() {
+    const auto p = (pipe_impl_cap*)_p;
+    if (p && p->unref() == 0) {
+        delete p;
+        _p = nullptr;
+    }
+}
+
+void pipe_cap::read(void* p) const { reinterpret_cast<pipe_impl_cap*>(_p)->read(p); }
+
+void pipe_cap::write(void* p, int v) const { reinterpret_cast<pipe_impl_cap*>(_p)->write(p, v); }
+
+bool pipe_cap::done() const noexcept { return reinterpret_cast<pipe_impl_cap*>(_p)->done(); }
+
+void pipe_cap::close() const { reinterpret_cast<pipe_impl_cap*>(_p)->close(); }
+
+bool pipe_cap::is_closed() const noexcept {
+    return reinterpret_cast<pipe_impl_cap*>(_p)->is_closed();
+}
+//=======================
+
+class pool_impl : public ref_counter {
   public:
     typedef co::vector<void*> V;
 
-    pool_impl()
-        : _maxcap((size_t)-1), _refn(1) {
-        this->_make_pools();
-    }
+    pool_impl() : ref_counter(), _maxcap((size_t)-1) { this->_make_pools(); }
 
     pool_impl(std::function<void*()>&& ccb, std::function<void(void*)>&& dcb, size_t cap)
-        : _maxcap(cap), _refn(1), _ccb(std::move(ccb)), _dcb(std::move(dcb)) {
+        : ref_counter(), _maxcap(cap), _ccb(std::move(ccb)), _dcb(std::move(dcb)) {
         this->_make_pools();
     }
 
@@ -847,32 +1203,28 @@ class pool_impl {
     void* pop();
     void push(void* p);
     void clear();
-    size_t size() const;
+    size_t size() const noexcept;
 
     void _make_pools() {
         _size = co::sched_num();
-        _pools = (V*) co::zalloc(sizeof(V) * _size);
+        _pools = (V*)::calloc(_size, sizeof(V));
     }
 
     void _free_pools() {
-        for (int i = 0; i < _size; ++i) _pools[i].~V();
-        co::free(_pools, sizeof(V) * _size);
+        for (size_t i = 0; i < _size; ++i) _pools[i].~V();
+        ::free(_pools);
     }
-
-    void ref() { atomic_inc(&_refn, mo_relaxed); }
-    uint32 unref() { return atomic_dec(&_refn, mo_acq_rel); }
 
   private:
     V* _pools;
     size_t _size;
     size_t _maxcap;
-    uint32 _refn;
     std::function<void*()> _ccb;
     std::function<void(void*)> _dcb;
 };
 
 inline void* pool_impl::pop() {
-    auto s = gSched;
+    auto s = xx::current_sched();  // gSched;
     CHECK(s) << "must be called in coroutine..";
     auto& v = _pools[s->id()];
     return !v.empty() ? v.pop_back() : (_ccb ? _ccb() : nullptr);
@@ -880,7 +1232,7 @@ inline void* pool_impl::pop() {
 
 inline void pool_impl::push(void* p) {
     if (p) {
-        auto s = gSched;
+        auto s = xx::current_sched();  //  gSched;
         CHECK(s) << "must be called in coroutine..";
         auto& v = _pools[s->id()];
         (v.size() < _maxcap || !_dcb) ? v.push_back(p) : _dcb(p);
@@ -892,11 +1244,12 @@ inline void pool_impl::push(void* p) {
 void pool_impl::clear() {
     if (xx::is_active()) {
         auto& scheds = co::scheds();
-        co::wait_group wg((uint32)scheds.size());
+        co::wait_group wg((uint32_t)scheds.size());
         for (auto& s : scheds) {
             s->go([this, wg]() {
-                auto& v = this->_pools[gSched->id()];
-                if (this->_dcb) for (auto& e : v) this->_dcb(e);
+                auto& v = this->_pools[xx::current_sched()->id()];
+                if (this->_dcb)
+                    for (auto& e : v) this->_dcb(e);
                 v.clear();
                 wg.done();
             });
@@ -905,183 +1258,131 @@ void pool_impl::clear() {
     } else {
         for (size_t i = 0; i < _size; ++i) {
             auto& v = _pools[i];
-            if (this->_dcb) for (auto& e : v) this->_dcb(e);
+            if (this->_dcb)
+                for (auto& e : v) this->_dcb(e);
             v.clear();
         }
     }
 }
 
-inline size_t pool_impl::size() const {
-    auto s = gSched;
+inline size_t pool_impl::size() const noexcept {
+    auto s = xx::current_sched();  // gSched;
     CHECK(s) << "must be called in coroutine..";
     return _pools[s->id()].size();
 }
 
-} // xx
+}  // namespace xx
 
-mutex::mutex() {
-    _p = co::alloc(sizeof(xx::mutex_impl), co::cache_line_size);
-    new (_p) xx::mutex_impl();
-}
+mutex::mutex() : _p(new xx::mutex_impl) {}
 
 mutex::mutex(const mutex& m) : _p(m._p) {
-    if (_p) god::cast<xx::mutex_impl*>(_p)->ref();
+    if (_p) reinterpret_cast<xx::mutex_impl*>(_p)->ref();
 }
 
 mutex::~mutex() {
-    const auto p = (xx::mutex_impl*)_p;
+    const auto p = reinterpret_cast<xx::mutex_impl*>(_p);
     if (p && p->unref() == 0) {
-        p->~mutex_impl();
-        co::free(_p, sizeof(xx::mutex_impl));
-        _p = 0;
+        delete p;
+        _p = nullptr;
     }
 }
 
-void mutex::lock() const {
-    god::cast<xx::mutex_impl*>(_p)->lock();
-}
+void mutex::lock() const { reinterpret_cast<xx::mutex_impl*>(_p)->lock(); }
 
-void mutex::unlock() const {
-    god::cast<xx::mutex_impl*>(_p)->unlock();
-}
+void mutex::unlock() const { reinterpret_cast<xx::mutex_impl*>(_p)->unlock(); }
 
-bool mutex::try_lock() const {
-    return god::cast<xx::mutex_impl*>(_p)->try_lock();
-}
+bool mutex::try_lock() const noexcept { return reinterpret_cast<xx::mutex_impl*>(_p)->try_lock(); }
 
-
-event::event(bool manual_reset, bool signaled) {
-    _p = co::alloc(sizeof(xx::event_impl), co::cache_line_size);
-    new (_p) xx::event_impl(manual_reset, signaled);
-}
+event::event(bool manual_reset, bool signaled) : _p(new xx::event_impl(manual_reset, signaled)) {}
 
 event::event(const event& e) : _p(e._p) {
-    if (_p) god::cast<xx::event_impl*>(_p)->ref();
+    if (_p) reinterpret_cast<xx::event_impl*>(_p)->ref();
 }
 
 event::~event() {
-    const auto p = (xx::event_impl*)_p;
+    const auto p = reinterpret_cast<xx::event_impl*>(_p);
     if (p && p->unref() == 0) {
-        p->~event_impl();
-        co::free(_p, sizeof(xx::event_impl));
+        delete p;
         _p = 0;
     }
 }
 
-bool event::wait(uint32 ms) const {
-    return god::cast<xx::event_impl*>(_p)->wait(ms);
-}
+bool event::wait(uint32_t ms) const { return reinterpret_cast<xx::event_impl*>(_p)->wait(ms); }
 
-void event::signal() const {
-    god::cast<xx::event_impl*>(_p)->signal();
-}
+void event::signal() const { reinterpret_cast<xx::event_impl*>(_p)->signal(); }
 
-void event::reset() const {
-    god::cast<xx::event_impl*>(_p)->reset();
-}
+void event::reset() const { reinterpret_cast<xx::event_impl*>(_p)->reset(); }
 
-
-sync_event::sync_event(bool manual_reset, bool signaled) {
-    _p = co::alloc(sizeof(xx::sync_event_impl), co::cache_line_size);
-    new (_p) xx::sync_event_impl(manual_reset, signaled);
-}
+sync_event::sync_event(bool manual_reset, bool signaled)
+    : _p(new xx::sync_event_impl(manual_reset, signaled)) {}
 
 sync_event::~sync_event() {
     if (_p) {
-        ((xx::sync_event_impl*)_p)->~sync_event_impl();
-        co::free(_p, sizeof(xx::sync_event_impl));
+        delete (xx::sync_event_impl*)_p;
         _p = 0;
     }
 }
 
-void sync_event::signal() {
-    ((xx::sync_event_impl*)_p)->signal();
-}
+void sync_event::signal() { reinterpret_cast<xx::sync_event_impl*>(_p)->signal(); }
 
-void sync_event::reset() {
-    ((xx::sync_event_impl*)_p)->reset();
-}
+void sync_event::reset() { reinterpret_cast<xx::sync_event_impl*>(_p)->reset(); }
 
-void sync_event::wait() {
-    ((xx::sync_event_impl*)_p)->wait();
-}
+void sync_event::wait() { reinterpret_cast<xx::sync_event_impl*>(_p)->wait(); }
 
-bool sync_event::wait(uint32 ms) {
-    return ((xx::sync_event_impl*)_p)->wait(ms);
-}
+bool sync_event::wait(uint32_t ms) { return reinterpret_cast<xx::sync_event_impl*>(_p)->wait(ms); }
 
-
-wait_group::wait_group(uint32 n) {
-    _p = co::alloc(sizeof(xx::event_impl), co::cache_line_size);
-    new (_p) xx::event_impl(false, false, n);
-}
+wait_group::wait_group(uint32_t n) : _p(new xx::event_impl(false, false, n)) {}
 
 wait_group::wait_group(const wait_group& wg) : _p(wg._p) {
-    if (_p) god::cast<xx::event_impl*>(_p)->ref();
+    if (_p) reinterpret_cast<xx::event_impl*>(_p)->ref();
 }
 
 wait_group::~wait_group() {
-    const auto p = (xx::event_impl*)_p;
+    const auto p = reinterpret_cast<xx::event_impl*>(_p);
     if (p && p->unref() == 0) {
-        p->~event_impl();
-        co::free(_p, sizeof(xx::event_impl));
-        _p = 0;
+        delete p;
+        _p = nullptr;
     }
 }
-
-void wait_group::add(uint32 n) const {
-    atomic_add(god::cast<xx::event_impl*>(_p)->wg(), n, mo_relaxed);
+uint32_t wait_group::load() const {
+    return reinterpret_cast<xx::event_impl*>(_p)->wg().load(std::memory_order_relaxed);
+}
+void wait_group::add(uint32_t n) const {
+    reinterpret_cast<xx::event_impl*>(_p)->wg().fetch_add(n, std::memory_order_relaxed);
 }
 
 void wait_group::done() const {
-    const auto e = god::cast<xx::event_impl*>(_p);
-    const uint32 x = atomic_dec(e->wg(), mo_acq_rel);
-    CHECK(x != (uint32)-1);
+    const auto e = reinterpret_cast<xx::event_impl*>(_p);
+    const uint32_t x = e->wg().fetch_sub(1, std::memory_order_acq_rel) - 1;  // --e->wg();
+    CHECK(x != (uint32_t)-1);
     if (x == 0) e->signal();
 }
 
-void wait_group::wait() const {
-    god::cast<xx::event_impl*>(_p)->wait((uint32)-1);
-}
+void wait_group::wait() const { reinterpret_cast<xx::event_impl*>(_p)->wait((uint32_t)-1); }
 
-
-pool::pool() {
-    _p = co::alloc(sizeof(xx::pool_impl), co::cache_line_size);
-    new (_p) xx::pool_impl();
-}
+pool::pool() : _p(new xx::pool_impl) {}
 
 pool::pool(const pool& p) : _p(p._p) {
-    if (_p) god::cast<xx::pool_impl*>(_p)->ref();
+    if (_p) reinterpret_cast<xx::pool_impl*>(_p)->ref();
 }
 
 pool::~pool() {
-    const auto p = (xx::pool_impl*)_p;
+    const auto p = reinterpret_cast<xx::pool_impl*>(_p);
     if (p && p->unref() == 0) {
-        p->~pool_impl();
-        co::free(_p, sizeof(xx::pool_impl));
+        delete p;
         _p = 0;
     }
 }
 
-pool::pool(std::function<void*()>&& ccb, std::function<void(void*)>&& dcb, size_t cap) {
-    _p = co::alloc(sizeof(xx::pool_impl));
-    new (_p) xx::pool_impl(std::move(ccb), std::move(dcb), cap);
-}
+pool::pool(std::function<void*()>&& ccb, std::function<void(void*)>&& dcb, size_t cap)
+    : _p(new xx::pool_impl(std::move(ccb), std::move(dcb), cap)) {}
 
-void* pool::pop() const {
-    return god::cast<xx::pool_impl*>(_p)->pop();
-}
+void* pool::pop() const { return reinterpret_cast<xx::pool_impl*>(_p)->pop(); }
 
-void pool::push(void* p) const {
-    god::cast<xx::pool_impl*>(_p)->push(p);
-}
+void pool::push(void* p) const { reinterpret_cast<xx::pool_impl*>(_p)->push(p); }
 
-void pool::clear() const {
-    god::cast<xx::pool_impl*>(_p)->clear();
-}
+void pool::clear() const { reinterpret_cast<xx::pool_impl*>(_p)->clear(); }
 
-size_t pool::size() const {
-    return god::cast<xx::pool_impl*>(_p)->size();
-}
+size_t pool::size() const noexcept { return reinterpret_cast<xx::pool_impl*>(_p)->size(); }
 
-} // co
+}  // namespace co

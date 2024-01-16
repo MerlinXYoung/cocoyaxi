@@ -1,3 +1,4 @@
+#pragma once
 #define COOST_SHARED ${COOST_SHARED}
 #ifndef L1_CACHE_LINE_SIZE 
 #define L1_CACHE_LINE_SIZE ${CACHE_LINE_SIZE}

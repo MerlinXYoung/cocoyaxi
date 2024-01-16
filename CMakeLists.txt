@@ -6,6 +6,8 @@ endif()
 
 project(coost VERSION 3.0.0)
 
+include(cmake/utils.cmake)
+
 if(MSVC)
     enable_language(C CXX ASM_MASM)
 else()

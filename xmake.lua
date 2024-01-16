@@ -95,5 +95,19 @@ add_includedirs("include")
 add_installfiles("(include/**)", {prefixdir = ""})
 add_installfiles("*.md", {prefixdir = "include/co"})
 
+-- redefine file macro, usage:before_build_file(redefine_file_macro)
+function redefine_file_macro(target, sourcefile, opt)  
+    -- print(sourcefile)
+    local config = target:fileconfig(sourcefile)
+    local c = {}
+    if (config)
+    then
+        c["defines"] = table.join(config["defines"], '__FILE__="'..sourcefile..'"')
+    else 
+        c["defines"] =  '__FILE__="'..sourcefile..'"'
+    end
+    target:fileconfig_set(sourcefile, c)
+end
+
 -- include sub-projects
 includes("src", "gen", "test", "unitest")

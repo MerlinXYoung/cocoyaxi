@@ -31,7 +31,7 @@ Coost, **co** for short, is like [boost](https://www.boost.org/), but more light
 
 </td><td width=34% valign=top>
 
-- Atomic operation (atomic)
+- ~~Atomic operation (atomic)~~
 - **Efficient stream (fastream)**
 - Efficient string (fastring)
 - String utility (str)
@@ -47,7 +47,7 @@ Coost, **co** for short, is like [boost](https://www.boost.org/), but more light
 - Path library
 - File utilities (fs)
 - System operations (os)
-- **Fast memory allocator**
+- **~~Fast memory allocator~~**
  
 </td></tr>
 </table>
@@ -101,7 +101,7 @@ void f() {
 
 ```cpp
 #include "co/flag.h"
-#include "co/cout.h"
+#include "co/color.h"
 
 DEF_bool(x, false, "x");
 DEF_bool(y, true, "y");
@@ -148,7 +148,8 @@ log supports two types of logs: one is level log, which is divided into 5 levels
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
 
-    TLOG("xx") << "s" << 23; // topic log
+    TOPIC_LOG("xx") << "s" << 23; // topic log
+    TLOG << "hello " << 23;  // trace
     DLOG << "hello " << 23;  // debug
     LOG << "hello " << 23;   // info
     WLOG << "hello " << 23;  // warning

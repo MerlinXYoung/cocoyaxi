@@ -1,6 +1,7 @@
 #ifndef _WIN32
 
 #include "co/os.h"
+
 #include <stdio.h>
 #include <unistd.h>
 
@@ -16,13 +17,11 @@ fastring env(const char* name) {
 }
 
 bool env(const char* name, const char* value) {
-    if (value == NULL || *value == '\0') return ::unsetenv(name) == 0;
+    if (value == nullptr || *value == '\0') return ::unsetenv(name) == 0;
     return ::setenv(name, value, 1) == 0;
 }
 
-fastring homedir() {
-    return os::env("HOME");
-}
+fastring homedir() { return os::env("HOME"); }
 
 fastring cwd() {
     fastring s(128);
@@ -56,17 +55,11 @@ fastring exename() {
     return s.substr(s.rfind('/') + 1);
 }
 
-int pid() {
-    return (int) getpid();
-}
+int pid() { return (int)getpid(); }
 
-int cpunum() {
-    return (int) sysconf(_SC_NPROCESSORS_ONLN);
-}
+int cpunum() { return (int)sysconf(_SC_NPROCESSORS_ONLN); }
 
-size_t pagesize() {
-    return (size_t) sysconf(_SC_PAGESIZE);
-}
+size_t pagesize() { return (size_t)sysconf(_SC_PAGESIZE); }
 
 #ifdef __linux__
 fastring exepath() {
@@ -83,7 +76,8 @@ fastring exepath() {
 }
 
 void daemon() {
-    const int r = ::daemon(1, 0); (void)r;
+    const int r = ::daemon(1, 0);
+    (void)r;
 }
 
 #else
@@ -120,6 +114,6 @@ bool system(const char* cmd) {
     return f ? pclose(f) != -1 : false;
 }
 
-} // os
+}  // namespace os
 
 #endif

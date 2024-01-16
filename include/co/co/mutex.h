@@ -21,7 +21,7 @@ class __coapi mutex {
 
     void unlock() const;
 
-    bool try_lock() const;
+    bool try_lock() const noexcept;
 
   private:
     void* _p;

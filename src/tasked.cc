@@ -1,7 +1,10 @@
 #include "co/tasked.h"
-#include "co/vector.h"
-#include "co/time.h"
+
+#include <atomic>
+
 #include "co/co/thread.h"
+#include "co/time.h"
+#include "co/vector.h"
 
 namespace co {
 namespace xx {
@@ -11,22 +14,17 @@ class TaskedImpl {
     typedef std::function<void()> F;
 
     struct Task {
-        Task(F&& f, int p, int c)
-            : fun(std::move(f)), period(p), count(c) {
-        }
+        Task(F&& f, int p, int c) : fun(std::move(f)), period(p), count(c) {}
         F fun;
-        int period; // in seconds
+        int period;  // in seconds
         int count;
     };
 
-    TaskedImpl()
-        : _stop(0), _tasks(32), _new_tasks(32), _ev(), _mtx() {
+    TaskedImpl() : _stop(0), _tasks(32), _new_tasks(32), _ev(), _mtx() {
         std::thread(&TaskedImpl::loop, this).detach();
     }
 
-    ~TaskedImpl() {
-        this->stop();
-    }
+    ~TaskedImpl() { this->stop(); }
 
     void run_in(F&& f, int sec) {
         std::lock_guard<std::mutex> g(_mtx);
@@ -47,7 +45,7 @@ class TaskedImpl {
     void loop();
 
   private:
-    int _stop;
+    std::atomic_int _stop;
     co::vector<Task> _tasks;
     co::vector<Task> _new_tasks;
     co::sync_event _ev;
@@ -62,8 +60,8 @@ void TaskedImpl::run_at(F&& f, int hour, int minute, int second, bool daily) {
 
     fastring t = now::str("%H%M%S");
     int now_hour = (t[0] - '0') * 10 + (t[1] - '0');
-    int now_min  = (t[2] - '0') * 10 + (t[3] - '0');
-    int now_sec  = (t[4] - '0') * 10 + (t[5] - '0');
+    int now_min = (t[2] - '0') * 10 + (t[3] - '0');
+    int now_sec = (t[4] - '0') * 10 + (t[5] - '0');
 
     int now_seconds = now_hour * 3600 + now_min * 60 + now_sec;
     int seconds = hour * 3600 + minute * 60 + second;
@@ -75,12 +73,12 @@ void TaskedImpl::run_at(F&& f, int hour, int minute, int second, bool daily) {
 }
 
 void TaskedImpl::loop() {
-    int64 ms = 0;
+    int64_t ms = 0;
     int sec = 0;
     co::Timer timer;
     co::vector<Task> tmp(32);
 
-    while (!_stop) {
+    while (!_stop.load(std::memory_order_relaxed)) {
         timer.restart();
         {
             std::lock_guard<std::mutex> g(_mtx);
@@ -93,7 +91,7 @@ void TaskedImpl::loop() {
         }
 
         if (ms >= 1000) {
-            sec = (int) (ms / 1000);
+            sec = (int)(ms / 1000);
             ms -= sec * 1000;
         }
 
@@ -113,44 +111,45 @@ void TaskedImpl::loop() {
         }
 
         _ev.wait(1000);
-        if (_stop) { atomic_store(&_stop, 2); return; }
+        // if (_stop.load(std::memory_order_relaxed))
+        //     if (_stop) {
+        //         atomic_store(&_stop, 2);
+        //         return;
+        //     }
         ms += timer.ms();
     }
+
+    atomic_store(&_stop, 2);
 }
 
 void TaskedImpl::stop() {
-    int x = atomic_cas(&_stop, 0, 1);
-    if (x == 0) {
+    decltype(_stop)::value_type stop = 0;
+    _stop.compare_exchange_strong(stop, 1, std::memory_order_seq_cst, std::memory_order_seq_cst);
+    if (0 == stop) {
         _ev.signal();
-        while (_stop != 2) sleep::ms(1);
+        while (_stop.load(std::memory_order_relaxed) != 2) sleep::ms(1);
         std::lock_guard<std::mutex> g(_mtx);
         _tasks.clear();
         _new_tasks.clear();
-    } else if (x == 1) {
-        while (_stop != 2) sleep::ms(1);
+    } else if (1 == stop) {
+        while (_stop.load(std::memory_order_relaxed) != 2) sleep::ms(1);
     }
 }
 
-} // xx
+}  // namespace xx
 
-Tasked::Tasked() {
-    _p = co::make<xx::TaskedImpl>();
-}
+Tasked::Tasked() { _p = new xx::TaskedImpl(); }
 
 Tasked::~Tasked() {
     if (_p) {
-        co::del((xx::TaskedImpl*)_p);
+        delete (xx::TaskedImpl*)_p;
         _p = 0;
     }
 }
 
-void Tasked::run_in(F&& f, int sec) {
-    ((xx::TaskedImpl*)_p)->run_in(std::move(f), sec);
-}
+void Tasked::run_in(F&& f, int sec) { ((xx::TaskedImpl*)_p)->run_in(std::move(f), sec); }
 
-void Tasked::run_every(F&& f, int sec) {
-    ((xx::TaskedImpl*)_p)->run_every(std::move(f), sec);
-}
+void Tasked::run_every(F&& f, int sec) { ((xx::TaskedImpl*)_p)->run_every(std::move(f), sec); }
 
 void Tasked::run_at(F&& f, int hour, int minute, int second) {
     ((xx::TaskedImpl*)_p)->run_at(std::move(f), hour, minute, second, false);
@@ -160,8 +159,6 @@ void Tasked::run_daily(F&& f, int hour, int minute, int second) {
     ((xx::TaskedImpl*)_p)->run_at(std::move(f), hour, minute, second, true);
 }
 
-void Tasked::stop() {
-    ((xx::TaskedImpl*)_p)->stop();
-}
+void Tasked::stop() { ((xx::TaskedImpl*)_p)->stop(); }
 
-} // co
+}  // namespace co

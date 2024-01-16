@@ -1,6 +1,7 @@
-#include "co/unitest.h"
-#include "co/def.h"
 #include "co/fastream.h"
+
+#include "co/def.h"
+#include "co/unitest.h"
 
 namespace test {
 
@@ -179,24 +180,24 @@ DEF_test(fastream) {
     }
 
     DEF_case(binary) {
-        uint16 u16 = 16;
-        uint32 u32 = 32;
-        uint64 u64 = 64;
+        uint16_t u16 = 16;
+        uint32_t u32 = 32;
+        uint64_t u64 = 64;
 
         fastream fs;
         fs.append(u16);
         EXPECT_EQ(fs.size(), sizeof(u16));
-        EXPECT_EQ(*((const uint16*) fs.data()), 16);
+        EXPECT_EQ(*((const uint16_t*)fs.data()), 16);
 
         fs.clear();
         fs.append(u32);
         EXPECT_EQ(fs.size(), sizeof(u32));
-        EXPECT_EQ(*((const uint32*) fs.data()), 32);
+        EXPECT_EQ(*((const uint32_t*)fs.data()), 32);
 
         fs.clear();
         fs.append(u64);
         EXPECT_EQ(fs.size(), sizeof(u64));
-        EXPECT_EQ(*((const uint64*) fs.data()), 64);
+        EXPECT_EQ(*((const uint64_t*)fs.data()), 64);
 
         fs.append(fs);
         EXPECT_EQ(fs.size(), sizeof(u64) * 2);
@@ -227,15 +228,15 @@ DEF_test(fastream) {
 
     DEF_case(max_size) {
         fastream fs;
-        fs << MAX_UINT64;
+        fs << UINT64_MAX;
         EXPECT_LT(fs.size(), 24);
 
         fs.clear();
-        fs << MIN_INT64;
+        fs << INT64_MIN;
         EXPECT_LT(fs.size(), 24);
 
         fs.clear();
-        fs << (void*) MAX_UINT64;
+        fs << (void*)UINT64_MAX;
         EXPECT_LT(fs.size(), 24);
 
         fs.clear();
@@ -244,4 +245,4 @@ DEF_test(fastream) {
     }
 }
 
-} // namespace test
+}  // namespace test

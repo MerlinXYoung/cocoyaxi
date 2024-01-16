@@ -38,7 +38,7 @@
 #include "co/hash/md5.h"
 
 #ifdef _MSC_VER
-#pragma warning (disable:4244)
+#pragma warning(disable : 4244)
 #endif
 
 /*
@@ -48,18 +48,18 @@
  * architectures that lack an AND-NOT instruction, just like in Colin Plumb's
  * implementation.
  */
-#define F(x, y, z)          ((z) ^ ((x) & ((y) ^ (z))))
-#define G(x, y, z)          ((y) ^ ((z) & ((x) ^ (y))))
-#define H(x, y, z)          (((x) ^ (y)) ^ (z))
-#define H2(x, y, z)         ((x) ^ ((y) ^ (z)))
-#define I(x, y, z)          ((y) ^ ((x) | ~(z)))
+#define F(x, y, z) ((z) ^ ((x) & ((y) ^ (z))))
+#define G(x, y, z) ((y) ^ ((z) & ((x) ^ (y))))
+#define H(x, y, z) (((x) ^ (y)) ^ (z))
+#define H2(x, y, z) ((x) ^ ((y) ^ (z)))
+#define I(x, y, z) ((y) ^ ((x) | ~(z)))
 
 /*
  * The MD5 transformation for all four rounds.
  */
-#define STEP(f, a, b, c, d, x, t, s) \
-    (a) += f((b), (c), (d)) + (x) + (t); \
-    (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s)))); \
+#define STEP(f, a, b, c, d, x, t, s)                         \
+    (a) += f((b), (c), (d)) + (x) + (t);                     \
+    (a) = (((a) << (s)) | (((a)&0xffffffff) >> (32 - (s)))); \
     (a) += (b);
 
 /*
@@ -71,19 +71,13 @@
  * doesn't work.
  */
 #if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
-#  define SET(n) \
-    (*(uint32*) &ptr[(n) * 4])
-#  define GET(n) \
-    SET(n)
+#define SET(n) (*(uint32_t*)&ptr[(n)*4])
+#define GET(n) SET(n)
 #else
-#  define SET(n) \
-    (ctx->block[(n)] = \
-    (uint32)ptr[(n) * 4] | \
-    ((uint32)ptr[(n) * 4 + 1] << 8) | \
-    ((uint32)ptr[(n) * 4 + 2] << 16) | \
-    ((uint32)ptr[(n) * 4 + 3] << 24))
-#  define GET(n) \
-    (ctx->block[(n)])
+#define SET(n)                                                                  \
+    (ctx->block[(n)] = (uint32_t)ptr[(n)*4] | ((uint32_t)ptr[(n)*4 + 1] << 8) | \
+                       ((uint32_t)ptr[(n)*4 + 2] << 16) | ((uint32_t)ptr[(n)*4 + 3] << 24))
+#define GET(n) (ctx->block[(n)])
 #endif
 
 /*
@@ -91,11 +85,11 @@
  * the bit counters.  There are no alignment requirements.
  */
 static const void* body(md5_ctx_t* ctx, const void* data, size_t size) {
-    const uint8* ptr;
-    uint32 a, b, c, d;
-    uint32 saved_a, saved_b, saved_c, saved_d;
+    const uint8_t* ptr;
+    uint32_t a, b, c, d;
+    uint32_t saved_a, saved_b, saved_c, saved_d;
 
-    ptr = (const uint8*) data;
+    ptr = (const uint8_t*)data;
     a = ctx->a;
     b = ctx->b;
     c = ctx->c;
@@ -212,14 +206,14 @@ void md5_init(md5_ctx_t* ctx) {
 }
 
 void md5_update(md5_ctx_t* ctx, const void* data, size_t size) {
-    uint32 saved_lo;
+    uint32_t saved_lo;
     size_t used, available;
 
     saved_lo = ctx->lo;
     if ((ctx->lo = (saved_lo + size) & 0x1fffffff) < saved_lo) {
         ++ctx->hi;
     }
-    ctx->hi += (uint32) (size >> 29);
+    ctx->hi += (uint32_t)(size >> 29);
 
     used = saved_lo & 0x3f;
 
@@ -232,7 +226,7 @@ void md5_update(md5_ctx_t* ctx, const void* data, size_t size) {
         }
 
         memcpy(&ctx->buffer[used], data, available);
-        data = (const uint8*) data + available;
+        data = (const uint8_t*)data + available;
         size -= available;
         body(ctx, ctx->buffer, 64);
     }
@@ -245,7 +239,7 @@ void md5_update(md5_ctx_t* ctx, const void* data, size_t size) {
     memcpy(ctx->buffer, data, size);
 }
 
-void md5_final(md5_ctx_t* ctx, uint8 res[16]) {
+void md5_final(md5_ctx_t* ctx, uint8_t res[16]) {
     size_t used, available;
 
     used = ctx->lo & 0x3f;
@@ -295,12 +289,12 @@ void md5_final(md5_ctx_t* ctx, uint8 res[16]) {
 }
 
 void md5sum(const void* s, size_t n, char res[32]) {
-    uint8 buf[16];
+    uint8_t buf[16];
     md5digest(s, n, (char*)buf);
 
     char* x = res;
     for (int i = 0; i < 16; i += 4) {
-        #define hex_tb "0123456789abcdef"
+#define hex_tb "0123456789abcdef"
         x[0] = hex_tb[buf[i] >> 4];
         x[1] = hex_tb[buf[i] & 0x0f];
         x[2] = hex_tb[buf[i + 1] >> 4];
@@ -310,6 +304,6 @@ void md5sum(const void* s, size_t n, char res[32]) {
         x[6] = hex_tb[buf[i + 3] >> 4];
         x[7] = hex_tb[buf[i + 3] & 0x0f];
         x += 8;
-        #undef hex_tb
+#undef hex_tb
     }
 }

@@ -1,3 +1,4 @@
+#include <atomic>
 #include "co/all.h"
 
 DEF_string(ip, "127.0.0.1", "ip");
@@ -6,7 +7,7 @@ DEF_int32(client_num, 1, "client num");
 DEF_string(key, "", "private key file");
 DEF_string(ca, "", "certificate file");
 
-bool g_stopped = false;
+std::atomic_bool g_stopped {false};
 
 void conn_cb(tcp::Connection conn) {
     char buf[8] = { 0 };
@@ -18,7 +19,7 @@ void conn_cb(tcp::Connection conn) {
             break;
         } else if (r < 0) { /* error or timeout */
             if (co::timeout()) {
-                if (g_stopped) {
+                if (g_stopped.load(std::memory_order_relaxed)) {
                     conn.reset();
                     break;
                 }
@@ -35,7 +36,7 @@ void conn_cb(tcp::Connection conn) {
                 conn.reset(3000);
                 break;
             }
-            if (g_stopped) {
+            if (g_stopped.load(std::memory_order_relaxed)) {
                 conn.reset(1000);
                 break;
             }
@@ -132,7 +133,8 @@ int main(int argc, char** argv) {
 
     sleep::sec(2);
     serv.exit();
-    atomic_store(&g_stopped, true);
+    // co::atomic_store(&g_stopped, true);
+    g_stopped.store(true);
     delete gPool;
 
     sleep::sec(5);

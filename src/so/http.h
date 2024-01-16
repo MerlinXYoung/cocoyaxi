@@ -8,7 +8,7 @@ struct http_req_t {
     http_req_t() = delete;
     ~http_req_t() = delete;
 
-    void add_header(uint32 k, uint32 v);
+    void add_header(uint32_t k, uint32_t v);
     const char* header(const char* key) const;
 
     void clear() {
@@ -19,15 +19,15 @@ struct http_req_t {
     }
 
     // DO NOT change orders of the members here.
-    uint32 method;
-    uint32 version;
-    uint32 body; // body:  buf->data() + body
-    uint32 body_size;
+    uint32_t method;
+    uint32_t version;
+    uint32_t body;  // body:  buf->data() + body
+    uint32_t body_size;
     fastring url;
-    fastring* buf; // http data: | header | \r\n\r\n | body |
-    uint32* arr;   // array of header index: [<k,v>]
-    uint32 arr_size;
-    uint32 arr_cap;
+    fastring* buf;  // http data: | header | \r\n\r\n | body |
+    uint32_t* arr;  // array of header index: [<k,v>]
+    uint32_t arr_size;
+    uint32_t arr_cap;
 };
 
 struct http_res_t {
@@ -54,8 +54,8 @@ struct http_res_t {
     }
 
     // DO NOT change orders of the members here.
-    uint32 status;
-    uint32 version;
+    uint32_t status;
+    uint32_t version;
     fastring* buf;
     fastring header;
     size_t body_size;
@@ -64,4 +64,4 @@ struct http_res_t {
 int parse_http_req(fastring* buf, size_t size, http_req_t* req);
 void send_error_message(int err, http_res_t* res, void* conn);
 
-} // http
+}  // namespace http

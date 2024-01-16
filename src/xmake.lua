@@ -80,3 +80,6 @@ target("libco")
     if is_plat("macosx", "iphoneos") then
         add_files("co/fishhook/fishhook.c")
     end
+
+    -- add_cxflags("-Wno-builtin-macro-redefined")
+    -- before_build_file(redefine_file_macro)

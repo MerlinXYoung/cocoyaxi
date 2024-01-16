@@ -1,14 +1,12 @@
 #include "co/tasked.h"
-#include "co/cout.h"
+
+#include "co/color.h"
+#include "co/print.h"
 #include "co/time.h"
 
-void f() {
-    co::print("f(): ", now::str());
-}
+void f() { co::print("f(): ", now::str()); }
 
-void g() {
-    co::print("g(): ", now::str());
-}
+void g() { co::print("g(): ", now::str()); }
 
 int main(int argc, char** argv) {
     co::print("now: ", now::str());

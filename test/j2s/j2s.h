@@ -55,13 +55,13 @@ struct XX {
         data.from_json(_x_.get("data"));
         do {
             auto& _unamed_v1 = _x_.get("ai");
-            for (uint32 i = 0; i < _unamed_v1.array_size(); ++i) {
+            for (uint32_t i = 0; i < _unamed_v1.array_size(); ++i) {
                 ai.push_back((int)_unamed_v1[i].as_int64());
             }
         } while (0);
         do {
             auto& _unamed_v1 = _x_.get("ao");
-            for (uint32 i = 0; i < _unamed_v1.array_size(); ++i) {
+            for (uint32_t i = 0; i < _unamed_v1.array_size(); ++i) {
                 _unamed_s2 _unamed_v2;
                 _unamed_v2.from_json(_unamed_v1[i]);
                 ao.emplace_back(std::move(_unamed_v2));
@@ -93,4 +93,4 @@ struct XX {
     }
 };
 
-} // xx
+}  // namespace xx

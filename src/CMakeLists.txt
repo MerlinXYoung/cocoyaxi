@@ -31,6 +31,8 @@ endif()
 add_library(co ${CO_SRC_FILES})
 add_library(coost::co ALIAS co)
 
+redefine_file_macro(co)
+
 target_include_directories(co
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

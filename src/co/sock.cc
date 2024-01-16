@@ -47,7 +47,7 @@ sock_t socket(int domain, int type, int protocol) {
 
 int close(sock_t fd, int ms) {
     if (fd < 0) return 0;
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     if (sched) {
         sched->del_io_event(fd);
         if (ms > 0) sched->sleep(ms);
@@ -59,7 +59,7 @@ int close(sock_t fd, int ms) {
 
 int shutdown(sock_t fd, char c) {
     if (fd < 0) return 0;
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     int how;
     if (sched) {
         switch (c) {
@@ -104,7 +104,7 @@ int listen(sock_t fd, int backlog) {
 }
 
 sock_t accept(sock_t fd, void* addr, int* addrlen) {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     CHECK(sched) << "must be called in coroutine..";
 
     io_event ev(fd, ev_read);
@@ -130,7 +130,7 @@ sock_t accept(sock_t fd, void* addr, int* addrlen) {
 }
 
 int connect(sock_t fd, const void* addr, int addrlen, int ms) {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     CHECK(sched) << "must be called in coroutine..";
 
     do {
@@ -155,7 +155,7 @@ int connect(sock_t fd, const void* addr, int addrlen, int ms) {
 }
 
 int recv(sock_t fd, void* buf, int n, int ms) {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     CHECK(sched) << "must be called in coroutine..";
 
     io_event ev(fd, ev_read);
@@ -194,7 +194,7 @@ int recvn(sock_t fd, void* buf, int n, int ms) {
 }
 
 int recvfrom(sock_t fd, void* buf, int n, void* addr, int* addrlen, int ms) {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     CHECK(sched) << "must be called in coroutine..";
 
     io_event ev(fd, ev_read);
@@ -211,7 +211,7 @@ int recvfrom(sock_t fd, void* buf, int n, void* addr, int* addrlen, int ms) {
 }
 
 int send(sock_t fd, const void* buf, int n, int ms) {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     CHECK(sched) << "must be called in coroutine..";
 
     const char* p = (const char*) buf;
@@ -236,7 +236,7 @@ int send(sock_t fd, const void* buf, int n, int ms) {
 }
 
 int sendto(sock_t fd, const void* buf, int n, const void* addr, int addrlen, int ms) {
-    const auto sched = xx::gSched;
+    const auto sched = xx::current_sched();//xx::gSched;
     CHECK(sched) << "must be called in coroutine..";
 
     const char* p = (const char*) buf;

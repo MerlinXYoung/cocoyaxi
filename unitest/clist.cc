@@ -1,5 +1,6 @@
-#include "co/unitest.h"
 #include "co/clist.h"
+
+#include "co/unitest.h"
 
 namespace test {
 
@@ -12,8 +13,8 @@ DEF_test(clist) {
     co::clink e;
 
     DEF_case(empty) {
-        EXPECT_EQ(l.front(), l.null);
-        EXPECT_EQ(l.back(), l.null);
+        EXPECT(!l.front());
+        EXPECT(!l.back());
         EXPECT(l.empty());
     }
 
@@ -22,7 +23,7 @@ DEF_test(clist) {
         EXPECT_EQ(l.front(), &a);
         EXPECT_EQ(l.back(), &a);
         EXPECT_EQ(a.prev, &a);
-        EXPECT_EQ(a.next, l.null);
+        EXPECT(!a.next);
 
         l.clear();
         EXPECT(l.empty());
@@ -40,7 +41,7 @@ DEF_test(clist) {
         EXPECT_EQ(d.next, &c);
         EXPECT_EQ(c.next, &b);
         EXPECT_EQ(b.next, &a);
-        EXPECT_EQ(a.next, l.null);
+        EXPECT(!a.next);
         EXPECT_EQ(d.prev, &a);
         EXPECT_EQ(c.prev, &d);
         EXPECT_EQ(b.prev, &c);
@@ -58,8 +59,8 @@ DEF_test(clist) {
         l.pop_back();
         l.pop_front();
         EXPECT(l.empty());
-        EXPECT_EQ(l.pop_back(), l.null);
-        EXPECT_EQ(l.pop_front(), l.null);
+        EXPECT(!l.pop_back());
+        EXPECT(!l.pop_front());
 
         l.clear();
         l.push_back(&a);
@@ -71,7 +72,7 @@ DEF_test(clist) {
         EXPECT_EQ(a.next, &b);
         EXPECT_EQ(b.next, &c);
         EXPECT_EQ(c.next, &d);
-        EXPECT_EQ(d.next, l.null);
+        EXPECT(!d.next);
         EXPECT_EQ(a.prev, &d);
         EXPECT_EQ(b.prev, &a);
         EXPECT_EQ(c.prev, &b);
@@ -87,12 +88,12 @@ DEF_test(clist) {
         l.push_back(&e);
         EXPECT_EQ(l.front(), &a);
         EXPECT_EQ(l.back(), &e);
-        EXPECT_EQ(e.next, l.null);
+        EXPECT(!e.next);
 
         l.erase(&e);
         EXPECT_EQ(l.front(), &a);
         EXPECT_EQ(l.back(), &d);
-        EXPECT_EQ(d.next, l.null);
+        EXPECT(!d.next);
 
         l.push_back(&e);
         l.erase(&c);
@@ -126,12 +127,12 @@ DEF_test(clist) {
         EXPECT_EQ(l.back(), &d);
         EXPECT_EQ(e.next, &a);
         EXPECT_EQ(a.prev, &e);
-        EXPECT_EQ(d.next, l.null);
+        EXPECT(!d.next);
 
         l.move_back(&e);
         EXPECT_EQ(l.front(), &a);
         EXPECT_EQ(l.back(), &e);
-        EXPECT_EQ(e.next, l.null);
+        EXPECT(!e.next);
         EXPECT_EQ(e.prev, &d);
         EXPECT_EQ(a.prev, &e);
 
@@ -155,10 +156,10 @@ DEF_test(clist) {
         EXPECT_EQ(c.prev, &b);
         EXPECT_EQ(a.next, &d);
         EXPECT_EQ(d.prev, &a);
-        EXPECT_EQ(b.next, l.null);
+        EXPECT(!b.next);
         EXPECT_EQ(b.prev, &e);
         EXPECT_EQ(e.next, &b);
     }
 }
 
-} // test
+}  // namespace test

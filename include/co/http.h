@@ -1,15 +1,17 @@
 #pragma once
 
-#include "fastring.h"
 #include <functional>
+
+#include "fastring.h"
+
 
 namespace http {
 
 /**
  * ===========================================================================
- * HTTP client 
- *   - libcurl & zlib required. 
- *   - openssl required for https. 
+ * HTTP client
+ *   - libcurl & zlib required.
+ *   - openssl required for https.
  * ===========================================================================
  */
 
@@ -17,7 +19,7 @@ struct curl_ctx_t;
 
 /**
  * http client for coroutine programming
- *   - NOTE: It will not url-encode the url passed in. Call url_encode() in 
+ *   - NOTE: It will not url-encode the url passed in. Call url_encode() in
  *     co/hash/url.h to encode the url if necessary.
  */
 class __coapi Client {
@@ -92,9 +94,7 @@ class __coapi Client {
      */
     void post(const char* url, const char* data, size_t size);
 
-    void post(const char* url, const char* s) {
-        this->post(url, s, strlen(s));
-    }
+    void post(const char* url, const char* s) { this->post(url, s, strlen(s)); }
 
     /**
      * perform a HTTP PUT request
@@ -112,18 +112,14 @@ class __coapi Client {
      */
     void del(const char* url, const char* data, size_t size);
 
-    void del(const char* url, const char* s) {
-        this->del(url, s, strlen(s));
-    }
+    void del(const char* url, const char* s) { this->del(url, s, strlen(s)); }
 
     /**
      * perform a HTTP DELETE request without a body
      *
      * @param url  This url will appear in the request line, it MUST begins with '/'.
      */
-    void del(const char* url) {
-        return this->del(url, "", 0);
-    }
+    void del(const char* url) { return this->del(url, "", 0); }
 
     /**
      * set http url
@@ -199,21 +195,26 @@ class __coapi Client {
     curl_ctx_t* _ctx;
 };
 
-
 /**
  * ===========================================================================
- * HTTP server 
- *   - openssl required for https. 
- *   - only support HTTP/1.0 & HTTP/1.1 at this moment. 
+ * HTTP server
+ *   - openssl required for https.
+ *   - only support HTTP/1.0 & HTTP/1.1 at this moment.
  * ===========================================================================
  */
 
 enum Version {
-    kHTTP10, kHTTP11,
+    kHTTP10,
+    kHTTP11,
 };
 
 enum Method {
-    kGet, kHead, kPost, kPut, kDelete, kOptions,
+    kGet,
+    kHead,
+    kPost,
+    kPut,
+    kDelete,
+    kOptions,
 };
 
 struct http_req_t;
@@ -224,26 +225,26 @@ class __coapi Req {
     Req() : _p(0) {}
     ~Req();
 
-    Version version()        const { return (Version) ((uint32*)_p)[1]; }
-    Method method()          const { return (Method)  ((uint32*)_p)[0]; }
-    bool is_method_get()     const { return this->method() == kGet; }
-    bool is_method_head()    const { return this->method() == kHead; }
-    bool is_method_post()    const { return this->method() == kPost; }
-    bool is_method_put()     const { return this->method() == kPut; }
-    bool is_method_delete()  const { return this->method() == kDelete; }
+    Version version() const { return (Version)((uint32_t*)_p)[1]; }
+    Method method() const { return (Method)((uint32_t*)_p)[0]; }
+    bool is_method_get() const { return this->method() == kGet; }
+    bool is_method_head() const { return this->method() == kHead; }
+    bool is_method_post() const { return this->method() == kPost; }
+    bool is_method_put() const { return this->method() == kPut; }
+    bool is_method_delete() const { return this->method() == kDelete; }
     bool is_method_options() const { return this->method() == kOptions; }
 
-    const fastring& url()    const { return *(fastring*)((uint32*)_p + 4); }
+    const fastring& url() const { return *(fastring*)((uint32_t*)_p + 4); }
 
     // return a null-terminated value of the header
     const char* header(const char* key) const;
 
-    // return a pointer to the body, which may be not null-terminated, call 
+    // return a pointer to the body, which may be not null-terminated, call
     // body_size() to get the length.
     const char* body() const;
 
     // get length of the body
-    size_t body_size() const { return ((uint32*)_p)[3]; }
+    size_t body_size() const { return ((uint32_t*)_p)[3]; }
 
   private:
     http_req_t* _p;
@@ -258,7 +259,7 @@ class __coapi Res {
      * set response code
      *   - NOTE: it MUST be called before set_body() or body()
      */
-    void set_status(int status) { *(uint32*)_p = status; }
+    void set_status(int status) { *(uint32_t*)_p = status; }
 
     /**
      * add a HTTP header to the response
@@ -283,11 +284,11 @@ class __coapi Res {
 };
 
 /**
- * http server based on coroutine 
- *   - support both http and https, openssl required for https. 
- *   - support both ipv4 and ipv6. 
- *   - NOTE: http::Server will not url-decode the url in the request. The user may 
- *     call url_decode() in co/hash/url.h to decode the url, if necessary. 
+ * http server based on coroutine
+ *   - support both http and https, openssl required for https.
+ *   - support both ipv4 and ipv6.
+ *   - NOTE: http::Server will not url-decode the url in the request. The user may
+ *     call url_decode() in co/hash/url.h to decode the url, if necessary.
  */
 class __coapi Server {
   public:
@@ -295,9 +296,9 @@ class __coapi Server {
     ~Server();
 
     /**
-     * set a callback for handling http request 
-     * 
-     * @param f  a pointer to void xxx(const Req&, Res&), or 
+     * set a callback for handling http request
+     *
+     * @param f  a pointer to void xxx(const Req&, Res&), or
      *           a reference of std::function<void(const Req&, Res&)>
      */
     Server& on_req(std::function<void(const Req&, Res&)>&& f);
@@ -307,30 +308,30 @@ class __coapi Server {
     }
 
     /**
-     * set a callback for handling http request 
-     * 
+     * set a callback for handling http request
+     *
      * @param f  a pointer to a method in class T.
      * @param o  a pointer to an object of class T.
      */
-    template<typename T>
+    template <typename T>
     Server& on_req(void (T::*f)(const Req&, Res&), T* o) {
         return on_req(std::bind(f, o, std::placeholders::_1, std::placeholders::_2));
     }
 
     /**
-     * start a http server 
-     *   - It will not block the calling thread. 
-     * 
+     * start a http server
+     *   - It will not block the calling thread.
+     *
      * @param ip    server ip, either an ipv4 or ipv6 address, default: "0.0.0.0".
      * @param port  server port, default: 80.
      */
-    void start(const char* ip="0.0.0.0", int port=80);
+    void start(const char* ip = "0.0.0.0", int port = 80);
 
     /**
-     * start a https server 
-     *   - openssl required by this method. 
-     *   - It will not block the calling thread. 
-     * 
+     * start a https server
+     *   - openssl required by this method.
+     *   - It will not block the calling thread.
+     *
      * @param ip    server ip, either an ipv4 or ipv6 address.
      * @param port  server port.
      * @param key   path of the private key file for ssl.
@@ -340,8 +341,8 @@ class __coapi Server {
 
     /**
      * exit the server gracefully
-     *   - Once `exit()` was called, the listening socket will be closed, and new 
-     *     connections will not be accepted. Since co v3.0, the server will reset 
+     *   - Once `exit()` was called, the listening socket will be closed, and new
+     *     connections will not be accepted. Since co v3.0, the server will reset
      *     previously established connections.
      */
     void exit();
@@ -352,14 +353,14 @@ class __coapi Server {
     DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
-} // http
+}  // namespace http
 
 namespace so {
 
 /**
- * start a static http server 
- *   - This function will block the calling thread. 
- * 
+ * start a static http server
+ *   - This function will block the calling thread.
+ *
  * @param root_dir  docroot, default: the current directory.
  * @param ip        server ip, either an ipv4 or ipv6 address, default: "0.0.0.0"
  * @param port      server port, default: 80.
@@ -367,10 +368,10 @@ namespace so {
 __coapi void easy(const char* root_dir = ".", const char* ip = "0.0.0.0", int port = 80);
 
 /**
- * start a static https server 
- *   - This function will block the calling thread. 
- *   - openssl required by this method. 
- * 
+ * start a static https server
+ *   - This function will block the calling thread.
+ *   - openssl required by this method.
+ *
  * @param root_dir  docroot.
  * @param ip        server ip, either an ipv4 or ipv6 address.
  * @param port      server port.
@@ -379,4 +380,4 @@ __coapi void easy(const char* root_dir = ".", const char* ip = "0.0.0.0", int po
  */
 __coapi void easy(const char* root_dir, const char* ip, int port, const char* key, const char* ca);
 
-} // so
+}  // namespace so

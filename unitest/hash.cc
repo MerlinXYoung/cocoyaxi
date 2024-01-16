@@ -1,7 +1,8 @@
-#include "co/unitest.h"
 #include "co/hash.h"
-#include "co/time.h"
+
 #include "co/str.h"
+#include "co/time.h"
+#include "co/unitest.h"
 
 namespace test {
 
@@ -26,20 +27,12 @@ DEF_test(hash) {
     }
 
     DEF_case(url_code) {
-        EXPECT_EQ(
-            url_encode("https://github.com/idealvin/co/xx.cc#L23"),
-            "https://github.com/idealvin/co/xx.cc#L23"
-        );
+        EXPECT_EQ(url_encode("https://github.com/idealvin/co/xx.cc#L23"),
+                  "https://github.com/idealvin/co/xx.cc#L23");
 
-        EXPECT_EQ(
-            url_encode("http://xx.com/hello world"),
-            "http://xx.com/hello%20world"
-        );
+        EXPECT_EQ(url_encode("http://xx.com/hello world"), "http://xx.com/hello%20world");
 
-        EXPECT_EQ(
-            url_decode("http://xx.com/hello%20world"),
-            "http://xx.com/hello world"
-        );
+        EXPECT_EQ(url_decode("http://xx.com/hello%20world"), "http://xx.com/hello world");
     }
 
     DEF_case(hash) {
@@ -53,4 +46,4 @@ DEF_test(hash) {
     }
 }
 
-} // test
+}  // namespace test

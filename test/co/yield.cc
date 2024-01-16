@@ -1,5 +1,6 @@
 #include "co/co.h"
-#include "co/cout.h"
+#include "co/color.h"
+#include "co/print.h"
 #include "co/time.h"
 
 void* gco = 0;
