@@ -72,10 +72,10 @@ class chan {
               cap * sizeof(T), sizeof(T), ms,
               [](void* dst, void* src, int o) {
                   switch (o) {
-                      case 0:
+                      case 0:  // CP
                           new (dst) T(*static_cast<const T*>(src));
                           break;
-                      case 1:
+                      case 1:  // MOVE
                           new (dst) T(std::move(*static_cast<T*>(src)));
                           break;
                   }
@@ -133,10 +133,10 @@ class chan1 {
               cap, sizeof(T), ms,
               [](void* dst, void* src, int o) {
                   switch (o) {
-                      case 0:
+                      case 0:  // CP
                           new (dst) T(*static_cast<const T*>(src));
                           break;
-                      case 1:
+                      case 1:  // MV
                           new (dst) T(std::move(*static_cast<T*>(src)));
                           break;
                   }
