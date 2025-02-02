@@ -1,10 +1,13 @@
 #include "co/str.h"
+
 #include <math.h>
+
 #include <algorithm>
 
 namespace str {
 
-fastring replace(const char* s, size_t n, const char* sub, size_t m, const char* to, size_t l, size_t t) {
+fastring replace(const char* s, size_t n, const char* sub, size_t m, const char* to, size_t l,
+                 size_t t) {
     if (unlikely(m == 0)) return fastring(s, n);
 
     const char* p;
@@ -26,7 +29,7 @@ co::vector<fastring> split(const char* s, size_t n, char c, size_t t) {
     const char* p;
     const char* const end = s + n;
 
-    while ((p = (const char*) ::memchr(s, c, end - s))) {
+    while ((p = (const char*)::memchr(s, c, end - s))) {
         v.emplace_back(s, p - s);
         s = p + 1;
         if (v.size() == t) break;
@@ -57,7 +60,11 @@ co::vector<fastring> split(const char* s, size_t n, const char* c, size_t m, siz
 // co::error() is equal to errno on linux/mac, that's not the fact on windows.
 #ifdef _WIN32
 #define _co_set_error(e) co::error(e)
-#define _co_reset_error() do { errno = 0; co::error(0); } while (0)
+#define _co_reset_error() \
+    do {                  \
+        errno = 0;        \
+        co::error(0);     \
+    } while (0)
 #else
 #define _co_set_error(e)
 #define _co_reset_error() errno = 0
@@ -71,53 +78,53 @@ bool to_bool(const char* s) {
     return false;
 }
 
-int32 to_int32(const char* s) {
-    int64 x = to_int64(s);
-    if (unlikely(x > MAX_INT32 || x < MIN_INT32)) {
+int32_t to_int32(const char* s) {
+    int64_t x = to_int64(s);
+    if (unlikely(x > INT32_MAX || x < INT32_MIN)) {
         co::error(ERANGE);
         return 0;
     }
-    return (int32)x;
+    return (int32_t)x;
 }
 
-uint32 to_uint32(const char* s) {
-    int64 x = (int64) to_uint64(s);
-    int64 absx = x < 0 ? -x : x;
-    if (unlikely(absx > MAX_UINT32)) {
+uint32_t to_uint32(const char* s) {
+    int64_t x = (int64_t)to_uint64(s);
+    int64_t absx = x < 0 ? -x : x;
+    if (unlikely(absx > UINT32_MAX)) {
         co::error(ERANGE);
         return 0;
     }
-    return (uint32)x;
+    return (uint32_t)x;
 }
 
 inline int _Shift(char c) {
     switch (c) {
-      case 'k':
-      case 'K':
-        return 10;
-      case 'm':
-      case 'M':
-        return 20;
-      case 'g':
-      case 'G':
-        return 30;
-      case 't':
-      case 'T':
-        return 40;
-      case 'p':
-      case 'P':
-        return 50;
-      default:
-        return 0;
+        case 'k':
+        case 'K':
+            return 10;
+        case 'm':
+        case 'M':
+            return 20;
+        case 'g':
+        case 'G':
+            return 30;
+        case 't':
+        case 'T':
+            return 40;
+        case 'p':
+        case 'P':
+            return 50;
+        default:
+            return 0;
     }
 }
 
-int64 to_int64(const char* s) {
+int64_t to_int64(const char* s) {
     _co_reset_error();
     if (!*s) return 0;
 
     char* end = 0;
-    int64 x = strtoll(s, &end, 0);
+    int64_t x = strtoll(s, &end, 0);
     if (errno != 0) {
         _co_set_error(errno);
         return 0;
@@ -130,7 +137,7 @@ int64 to_int64(const char* s) {
         int shift = _Shift(s[n - 1]);
         if (shift != 0) {
             if (x == 0) return 0;
-            if (x < (MIN_INT64 >> shift) || x > (MAX_INT64 >> shift)) {
+            if (x < (INT64_MIN >> shift) || x > (INT64_MAX >> shift)) {
                 co::error(ERANGE);
                 return 0;
             }
@@ -142,12 +149,12 @@ int64 to_int64(const char* s) {
     return 0;
 }
 
-uint64 to_uint64(const char* s) {
+uint64_t to_uint64(const char* s) {
     _co_reset_error();
     if (!*s) return 0;
 
     char* end = 0;
-    uint64 x = strtoull(s, &end, 0);
+    uint64_t x = strtoull(s, &end, 0);
     if (errno != 0) {
         _co_set_error(errno);
         return 0;
@@ -160,9 +167,9 @@ uint64 to_uint64(const char* s) {
         int shift = _Shift(s[n - 1]);
         if (shift != 0) {
             if (x == 0) return 0;
-            int64 absx = (int64)x;
+            int64_t absx = (int64_t)x;
             if (absx < 0) absx = -absx;
-            if (absx > static_cast<int64>(MAX_UINT64 >> shift)) {
+            if (absx > static_cast<int64_t>(UINT64_MAX >> shift)) {
                 co::error(ERANGE);
                 return 0;
             }
@@ -191,4 +198,4 @@ double to_double(const char* s) {
 #undef _co_set_error
 #undef _co_reset_error
 
-} // namespace str
+}  // namespace str

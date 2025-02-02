@@ -1,78 +1,70 @@
 #pragma once
 
-#include "god.h"
-#include "mem.h"
-#include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <initializer_list>
+
+#include "def.h"
+#include "god.h"
 
 namespace co {
 
-template<typename T>
+template <typename T>
 class vector {
   public:
-    constexpr vector() noexcept
-        : _cap(0), _size(0), _p(0) {
-    }
+    constexpr vector() noexcept : _cap(0), _size(0), _p(0) {}
 
     // create an empty vector with capacity: @cap
-    explicit vector(size_t cap)
-        : _cap(cap), _size(0), _p((T*) co::alloc(sizeof(T) * cap)) {
-    }
+    explicit vector(size_t cap) : _cap(cap), _size(0), _p((T*)::malloc(sizeof(T) * cap)) {}
 
     // create an vector of n elements with value @x
     //   - cond: X is not int or T is int.
-    //   - e.g. 
+    //   - e.g.
     //     co::vector<int> a(4, 3);     -> [3,3,3,3]
     //     co::vector<char> x(2, 'x');  -> ['x','x']
-    template<typename X, god::if_t<
-        !god::is_same<god::rm_cvref_t<X>, int>() ||
-        god::is_same<god::rm_cv_t<T>, int>(), int
-    > = 0>
-    vector(size_t n, X&& x)
-        : _cap(n), _size(n), _p((T*) co::alloc(sizeof(T) * n)) {
+    template <typename X, god::if_t<!god::is_same<god::rm_cvref_t<X>, int>() ||
+                                        god::is_same<god::rm_cv_t<T>, int>(),
+                                    int> = 0>
+    vector(size_t n, X&& x) : _cap(n), _size(n), _p((T*)::malloc(sizeof(T) * n)) {
         for (size_t i = 0; i < n; ++i) new (_p + i) T(x);
     }
 
     // create an vector of n elements with default value
     //   - cond: X is int and T is not int.
-    //   - e.g. 
+    //   - e.g.
     //     co::vector<fastring> a(4, 0);
-    template<typename X, god::if_t<
-        god::is_same<god::rm_cvref_t<X>, int>() &&
-        !god::is_same<god::rm_cv_t<T>, int>(), int
-    > = 0>
-    vector(size_t n, X&&)
-        : _cap(n), _size(n), _p((T*) co::alloc(sizeof(T) * n)) {
+    template <typename X, god::if_t<god::is_same<god::rm_cvref_t<X>, int>() &&
+                                        !god::is_same<god::rm_cv_t<T>, int>(),
+                                    int> = 0>
+    vector(size_t n, X&&) : _cap(n), _size(n), _p((T*)::malloc(sizeof(T) * n)) {
         for (size_t i = 0; i < n; ++i) new (_p + i) T();
     }
 
-    vector(const vector& x)
-        : _cap(x.size()), _size(_cap) {
-        _p = (T*) co::alloc(sizeof(T) * _cap);
+    vector(const vector& x) : _cap(x.size()), _size(_cap) {
+        _p = (T*)::malloc(sizeof(T) * _cap);
         this->_copy_n(_p, x._p, _cap);
     }
 
-    vector(vector&& x) noexcept
-        : _cap(x._cap), _size(x._size), _p(x._p) {
+    vector(vector&& x) noexcept : _cap(x._cap), _size(x._size), _p(x._p) {
         x._p = 0;
         x._cap = x._size = 0;
     }
 
     // create vector from an initializer list
     vector(std::initializer_list<T> x)
-        : _cap(x.size()), _size(0), _p((T*) co::alloc(sizeof(T) * _cap)) {
+        : _cap(x.size()), _size(0), _p((T*)::malloc(sizeof(T) * _cap)) {
         for (const auto& e : x) new (_p + _size++) T(e);
     }
 
-    template<typename It, god::if_t<god::is_class<It>(), int> = 0>
+    template <typename It, god::if_t<std::is_class<It>::value, int> = 0>
     vector(It beg, It end) : vector(8) {
         this->append(beg, end);
     }
 
     // create vector from an vector
-    vector(T* p, size_t n)
-        : _cap(n), _size(n), _p((T*) co::alloc(sizeof(T) * n)) {
+    vector(T* p, size_t n) : _cap(n), _size(n), _p((T*)::malloc(sizeof(T) * n)) {
         this->_copy_n(_p, p, n);
     }
 
@@ -116,7 +108,8 @@ class vector {
 
     void reserve(size_t n) {
         if (_cap < n) {
-            _p = this->_realloc(_p, sizeof(T) * _cap, sizeof(T) * n); assert(_p);
+            _p = this->_realloc(_p, sizeof(T) * _cap, sizeof(T) * n);
+            assert(_p);
             _cap = n;
         }
     }
@@ -132,7 +125,7 @@ class vector {
     void reset() {
         if (_p) {
             this->_destruct_range(_p, 0, _size);
-            co::free(_p, sizeof(T) * _cap);
+            ::free(_p);
             _p = 0;
             _cap = _size = 0;
         }
@@ -160,7 +153,7 @@ class vector {
         _size += n;
     }
 
-    template<typename It, god::if_t<god::is_class<It>(), int> = 0>
+    template <typename It, god::if_t<std::is_class<It>::value, int> = 0>
     void append(It beg, It end) {
         for (auto it = beg; it != end; ++it) this->append(*it);
     }
@@ -205,10 +198,10 @@ class vector {
     }
 
     // insert a new element (construct with args x...) at the back
-    //   - e.g. 
+    //   - e.g.
     //     co::vector<fastring> x; x.emplace_back(4, 'x'); // x.back() -> "xxxx"
-    template<typename ... X>
-    void emplace_back(X&& ... x) {
+    template <typename... X>
+    void emplace_back(X&&... x) {
         this->_realloc_if_no_more_memory();
         new (_p + _size++) T(std::forward<X>(x)...);
     }
@@ -247,9 +240,7 @@ class vector {
         std::swap(_p, x._p);
     }
 
-    void swap(vector&& x) noexcept {
-        x.swap(*this);
-    }
+    void swap(vector&& x) noexcept { x.swap(*this); }
 
     class iterator {
       public:
@@ -257,9 +248,15 @@ class vector {
         T& operator*() const { return *_p; }
         bool operator==(const iterator& it) const noexcept { return _p == it._p; }
         bool operator!=(const iterator& it) const noexcept { return _p != it._p; }
-        iterator& operator++() noexcept { ++_p; return *this; }
+        iterator& operator++() noexcept {
+            ++_p;
+            return *this;
+        }
         iterator operator++(int) noexcept { return iterator(_p++); }
-        iterator& operator--() noexcept { --_p; return *this; }
+        iterator& operator--() noexcept {
+            --_p;
+            return *this;
+        }
         iterator operator--(int) noexcept { return iterator(_p--); }
 
       private:
@@ -274,75 +271,78 @@ class vector {
         if (unlikely(_cap == _size)) {
             const size_t cap = _cap;
             _cap += (_cap >> 1) + 1;
-            _p = this->_realloc(_p, sizeof(T) * cap, sizeof(T) * _cap); assert(_p);
+            _p = this->_realloc(_p, sizeof(T) * cap, sizeof(T) * _cap);
+            assert(_p);
         }
     }
 
-    template<typename X, god::if_t<god::is_trivially_copyable<X>(), int> = 0>
+    template <typename X, god::if_t<std::is_trivially_copyable<X>::value, int> = 0>
     X* _realloc(X* p, size_t o, size_t n) {
-        return (X*) co::realloc(p, o, n);
+        return (X*)::realloc(p, n);
     }
 
-    template<typename X, god::if_t<!god::is_trivially_copyable<X>(), int> = 0>
+    template <typename X, god::if_t<!std::is_trivially_copyable<X>::value, int> = 0>
     X* _realloc(X* p, size_t o, size_t n) {
-        X* x = (X*) co::try_realloc(p, o, n);
-        if (!x) {
-            x = (X*) co::alloc(n);
-            this->_move_n(x, p, _size);
-            this->_destruct_range(p, 0, _size);
-            co::free(p, o);
-        }
+        // X* x = (X*)co::try_realloc(p, o, n);
+        // if (!x) {
+        X* x = (X*)::malloc(n);
+        this->_move_n(x, p, _size);
+        this->_destruct_range(p, 0, _size);
+        ::free(p);
+        // }
         return x;
     }
 
-    template<typename X, god::if_t<god::is_trivially_copyable<X>(), int> = 0>
+    template <typename X, god::if_t<std::is_trivially_copyable<X>::value, int> = 0>
     void _copy_n(X* dst, const X* src, size_t n) {
         memcpy(dst, src, sizeof(X) * n);
     }
 
-    template<typename X, god::if_t<!god::is_trivially_copyable<X>(), int> = 0>
+    template <typename X, god::if_t<!std::is_trivially_copyable<X>::value, int> = 0>
     void _copy_n(X* dst, const X* src, size_t n) {
         for (size_t i = 0; i < n; ++i) new (dst + i) X(src[i]);
     }
 
-    template<typename X, god::if_t<god::is_trivially_copyable<X>(), int> = 0>
+    template <typename X, god::if_t<std::is_trivially_copyable<X>::value, int> = 0>
     void _move_n(X* dst, X* src, size_t n) {
         memcpy(dst, src, sizeof(X) * n);
     }
 
-    template<typename X, god::if_t<!god::is_trivially_copyable<X>(), int> = 0>
+    template <typename X, god::if_t<!std::is_trivially_copyable<X>::value, int> = 0>
     void _move_n(X* dst, X* src, size_t n) {
         for (size_t i = 0; i < n; ++i) new (dst + i) X(std::move(src[i]));
     }
 
-    template<typename X, god::if_t<!god::is_class<X>(), int> = 0>
+    template <typename X, god::if_t<!std::is_class<X>::value, int> = 0>
     void _construct_range(X* p, size_t beg, size_t end) {
         if (beg < end) memset(p + beg, 0, (end - beg) * sizeof(X));
     }
 
-    template<typename X, god::if_t<god::is_class<X>(), int> = 0>
+    template <typename X, god::if_t<std::is_class<X>::value, int> = 0>
     void _construct_range(X* p, size_t beg, size_t end) {
         for (; beg < end; ++beg) new (p + beg) X();
     }
 
-    template<typename X, god::if_t<god::is_trivially_destructible<X>(), int> = 0>
+    template <typename X, god::if_t<std::is_trivially_destructible<X>::value, int> = 0>
     void _destruct(X&) {}
 
-    template<typename X, god::if_t<!god::is_trivially_destructible<X>(), int> = 0>
-    void _destruct(X& p) { p.~X(); }
+    template <typename X, god::if_t<!std::is_trivially_destructible<X>::value, int> = 0>
+    void _destruct(X& p) {
+        p.~X();
+    }
 
-    template<typename X, god::if_t<god::is_trivially_destructible<X>(), int> = 0>
+    template <typename X, god::if_t<std::is_trivially_destructible<X>::value, int> = 0>
     void _destruct_range(X*, size_t, size_t) {}
 
-    template<typename X, god::if_t<!god::is_trivially_destructible<X>(), int> = 0>
+    template <typename X, god::if_t<!std::is_trivially_destructible<X>::value, int> = 0>
     void _destruct_range(X* p, size_t beg, size_t end) {
         for (; beg < end; ++beg) p[beg].~X();
     }
-  
+
   private:
     size_t _cap;
     size_t _size;
     T* _p;
 };
 
-} // co
+}  // namespace co

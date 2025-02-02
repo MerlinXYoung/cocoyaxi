@@ -1,4 +1,7 @@
+#include <atomic>
+
 #include "co/all.h"
+
 
 DEF_string(h, "127.0.0.1", "server ip");
 DEF_int32(p, 9988, "server port");
@@ -28,10 +31,10 @@ void conn_cb(tcp::Connection conn) {
     }
 }
 
-bool g_stop = false;
+std::atomic_bool g_stop{false};
 struct Count {
-    uint32 r;
-    uint32 s;
+    uint32_t r;
+    uint32_t s;
     char x[56];
 };
 Count* g_count;
@@ -39,10 +42,7 @@ co::wait_group g_wg;
 
 void client_fun(int i) {
     tcp::Client c(FLG_h.c_str(), FLG_p, false);
-    defer(
-        c.close();
-        g_wg.done();
-    );
+    defer(c.close(); g_wg.done(););
     if (!c.connect(3000)) {
         co::print("connect to server failed..");
         return;
@@ -51,7 +51,7 @@ void client_fun(int i) {
     fastring buf(FLG_l, '\0');
     auto& count = g_count[i];
 
-    while (!g_stop) {
+    while (!g_stop.load(std::memory_order_relaxed)) {
         int r = c.send(buf.data(), FLG_l);
         if (r <= 0) {
             break;
@@ -64,7 +64,7 @@ void client_fun(int i) {
         } else if (r == 0) {
             co::print("server close the connection");
             break;
-        } 
+        }
         ++count.r;
     }
 }
@@ -80,11 +80,12 @@ int main(int argc, char** argv) {
         tcp::Server().on_connection(conn_cb).start("0.0.0.0", FLG_p);
         while (true) sleep::sec(1024);
     } else {
-        g_count = (Count*) co::zalloc(sizeof(Count) * FLG_c);
+        g_count = (Count*)::calloc(FLG_c, sizeof(Count));
         g_wg.add(FLG_c);
         go([]() {
             co::sleep(FLG_t * 1000);
-            atomic_store(&g_stop, true);
+            // co::atomic_store(&g_stop, true);
+            g_stop.store(true);
         });
         for (int i = 0; i < FLG_c; ++i) {
             go(client_fun, i);
@@ -100,10 +101,7 @@ int main(int argc, char** argv) {
 
         co::print("server: ", FLG_h, ":", FLG_p);
         co::print("connection num: ", FLG_c, ", msg len: ", FLG_l, ", time: ", FLG_t, " seconds");
-        co::print("speed: ",
-            (ssum / FLG_t), " request/sec, ",
-            (rsum / FLG_t), " response/sec"
-        );
+        co::print("speed: ", (ssum / FLG_t), " request/sec, ", (rsum / FLG_t), " response/sec");
         co::print("requests: ", ssum);
         co::print("responses: ", rsum);
     }

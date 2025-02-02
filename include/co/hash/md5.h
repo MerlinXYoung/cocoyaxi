@@ -27,23 +27,22 @@
 #include "../fastring.h"
 
 typedef struct {
-    uint32 lo, hi;
-    uint32 a, b, c, d;
-    uint8 buffer[64];
-    uint32 block[16];
+    uint32_t lo, hi;
+    uint32_t a, b, c, d;
+    uint8_t buffer[64];
+    uint32_t block[16];
 } md5_ctx_t;
 
 __coapi void md5_init(md5_ctx_t* ctx);
 __coapi void md5_update(md5_ctx_t* ctx, const void* s, size_t n);
-__coapi void md5_final(md5_ctx_t* ctx, uint8 res[16]);
-
+__coapi void md5_final(md5_ctx_t* ctx, uint8_t res[16]);
 
 // md5digest, 16-byte binary string
 inline void md5digest(const void* s, size_t n, char res[16]) {
     md5_ctx_t ctx;
     md5_init(&ctx);
     md5_update(&ctx, s, n);
-    md5_final(&ctx, (uint8*)res);
+    md5_final(&ctx, (uint8_t*)res);
 }
 
 // return a 16-byte binary string
@@ -54,18 +53,11 @@ inline fastring md5digest(const void* s, size_t n) {
     return x;
 }
 
-inline fastring md5digest(const char* s) {
-    return md5digest(s, strlen(s));
-}
+inline fastring md5digest(const char* s) { return md5digest(s, strlen(s)); }
 
-inline fastring md5digest(const fastring& s) {
-    return md5digest(s.data(), s.size());
-}
+inline fastring md5digest(const fastring& s) { return md5digest(s.data(), s.size()); }
 
-inline fastring md5digest(const std::string& s) {
-    return md5digest(s.data(), s.size());
-}
-
+inline fastring md5digest(const std::string& s) { return md5digest(s.data(), s.size()); }
 
 // md5sum, result is stored in @res.
 __coapi void md5sum(const void* s, size_t n, char res[32]);
@@ -78,14 +70,8 @@ inline fastring md5sum(const void* s, size_t n) {
     return x;
 }
 
-inline fastring md5sum(const char* s) {
-    return md5sum(s, strlen(s));
-}
+inline fastring md5sum(const char* s) { return md5sum(s, strlen(s)); }
 
-inline fastring md5sum(const fastring& s) {
-    return md5sum(s.data(), s.size());
-}
+inline fastring md5sum(const fastring& s) { return md5sum(s.data(), s.size()); }
 
-inline fastring md5sum(const std::string& s) {
-    return md5sum(s.data(), s.size());
-}
+inline fastring md5sum(const std::string& s) { return md5sum(s.data(), s.size()); }

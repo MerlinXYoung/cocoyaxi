@@ -1,8 +1,10 @@
 #ifdef _WIN32
 
-#include "co/os.h"
 #include <signal.h>
+
 #include <algorithm>
+
+#include "co/os.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -27,13 +29,13 @@ bool env(const char* name, const char* value) {
 }
 
 inline void backslash_to_slash(fastring& s) {
-    std::for_each((char*)s.data(), (char*)s.data() + s.size(), [](char& c){
+    std::for_each((char*)s.data(), (char*)s.data() + s.size(), [](char& c) {
         if (c == '\\') c = '/';
     });
 }
 
 fastring homedir() {
-    fastring s = os::env("USERPROFILE"); // SYSTEMDRIVE + HOMEPATH
+    fastring s = os::env("USERPROFILE");  // SYSTEMDRIVE + HOMEPATH
     backslash_to_slash(s);
     return s;
 }
@@ -54,8 +56,11 @@ static fastring _get_module_path() {
     DWORD n = 128, r = 0;
     fastring s(128);
     while (true) {
-        r = GetModuleFileNameA(NULL, (char*)s.data(), n);
-        if (r < n) { s.resize(r); break; }
+        r = GetModuleFileNameA(nullptr, (char*)s.data(), n);
+        if (r < n) {
+            s.resize(r);
+            break;
+        }
         n <<= 1;
         s.reserve(n);
     }
@@ -90,32 +95,26 @@ fastring exename() {
     return s.substr(s.rfind('\\') + 1);
 }
 
-int pid() {
-    return (int) GetCurrentProcessId();
-}
+int pid() { return (int)GetCurrentProcessId(); }
 
 int cpunum() {
     SYSTEM_INFO info;
     GetSystemInfo(&info);
-    return (int) info.dwNumberOfProcessors;
+    return (int)info.dwNumberOfProcessors;
 }
 
 size_t pagesize() {
     SYSTEM_INFO info;
     GetSystemInfo(&info);
-    return (size_t) info.dwPageSize;
+    return (size_t)info.dwPageSize;
 }
 
 void daemon() {}
 
-sig_handler_t signal(int sig, sig_handler_t handler, int) {
-    return ::signal(sig, handler);
-}
+sig_handler_t signal(int sig, sig_handler_t handler, int) { return ::signal(sig, handler); }
 
-bool system(const char* cmd) {
-    return ::system(cmd) != -1;
-}
+bool system(const char* cmd) { return ::system(cmd) != -1; }
 
-} // os
+}  // namespace os
 
 #endif

@@ -8,12 +8,10 @@ namespace co {
 // Support for threads(non-coroutine) is available since v2.0.1.
 class __coapi event {
   public:
-    explicit event(bool manual_reset=false, bool signaled=false);
+    explicit event(bool manual_reset = false, bool signaled = false);
     ~event();
 
-    event(event&& e) noexcept : _p(e._p) {
-        e._p = 0;
-    }
+    event(event&& e) noexcept : _p(e._p) { e._p = 0; }
 
     // copy constructor, just increment the reference count
     event(const event& e);
@@ -21,15 +19,13 @@ class __coapi event {
     void operator=(const event&) = delete;
 
     // wait until the event is signaled
-    void wait() const {
-        (void) this->wait((uint32)-1);
-    }
+    void wait() const { (void)this->wait((uint32_t)-1); }
 
     // Wait until the event is signaled or timed out.
     // Return true if it is signaled before timed out, otherwise false.
-    bool wait(uint32 ms) const ;
+    bool wait(uint32_t ms) const;
 
-    // Wake up all waiters. If no waiter is present, mark the event as signaled, 
+    // Wake up all waiters. If no waiter is present, mark the event as signaled,
     // and the next waiter that calls wait() will return immediately.
     void signal() const;
 
@@ -42,4 +38,4 @@ class __coapi event {
 
 typedef event Event;
 
-} // co
+}  // namespace co

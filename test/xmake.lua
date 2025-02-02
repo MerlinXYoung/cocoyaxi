@@ -9,7 +9,7 @@ function all_tests()
     end
     return res
 end
-
+    
 for _, test in ipairs(all_tests()) do
 target(test[1])
     if test[1] == "stack" then
@@ -21,4 +21,10 @@ target(test[1])
     set_default(false)
     add_deps("libco")
     add_files(test[2])
+
+    add_packages("RapidJSON")
+
+    
+    -- add_cxflags("-Wno-builtin-macro-redefined")
+    -- before_build_file(redefine_file_macro)
 end

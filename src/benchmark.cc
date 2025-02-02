@@ -1,11 +1,14 @@
 #include "co/benchmark.h"
+
+#include <iostream>
+
+#include "co/color.h"
 #include "co/fastring.h"
-#include "co/cout.h"
 
 namespace bm {
 namespace xx {
 
-int calc_iters(int64 ns) {
+int calc_iters(int64_t ns) {
     if (ns <= 1000) return 100 * 1000;
     if (ns <= 10000) return 10 * 1000;
     if (ns <= 100000) return 1000;
@@ -14,10 +17,9 @@ int calc_iters(int64 ns) {
     return 1;
 }
 
-static co::vector<Group>* g_g;
-
-inline co::vector<Group>& groups() {
-    return g_g ? *g_g : *(g_g = co::_make_static<co::vector<Group>>());
+inline std::vector<Group>& groups() {
+    static std::vector<Group> _g;
+    return _g;
 }
 
 bool add_group(const char* name, void (*f)(Group&)) {
@@ -67,15 +69,13 @@ void print_results(Group& g) {
         if (maxlen < x) maxlen = x;
     }
 
-    cout << "|  " << text::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ')
-         << "|  " << text::bold("ns/iter  ").blue()
-         << "|  " << text::bold("iters/s  ").blue()
-         << "|  " << text::bold("speedup  ").blue() << "|\n";
+    std::cout << "|  " << co::color::bold(g.name).blue() << fastring(maxlen - grplen + 2, ' ')
+              << "|  " << co::color::bold("ns/iter  ").blue() << "|  "
+              << co::color::bold("iters/s  ").blue() << "|  " << co::color::bold("speedup  ").blue()
+              << "|\n";
 
-    cout << "| " << fastring(maxlen + 2, '-') << ' '
-         << "| " << fastring(9, '-') << ' '
-         << "| " << fastring(9, '-') << ' '
-         << "| " << fastring(9, '-') << ' ' << "|\n";
+    std::cout << "| " << fastring(maxlen + 2, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "| "
+              << fastring(9, '-') << ' ' << "| " << fastring(9, '-') << ' ' << "|\n";
 
     for (size_t i = 0; i < g.res.size(); ++i) {
         auto& r = g.res[i];
@@ -83,13 +83,13 @@ void print_results(Group& g) {
         fastring t = Num(r.ns).str();
         size_t p = t.size() <= 7 ? 9 - t.size() : 2;
 
-        cout << "|  " << text::green(r.bm) << fastring(maxlen - bmlen + 2, ' ')
-             << "|  " << text::red(t) << fastring(p, ' ');
+        std::cout << "|  " << co::color::green(r.bm) << fastring(maxlen - bmlen + 2, ' ') << "|  "
+                  << co::color::red(t) << fastring(p, ' ');
 
         double x = r.ns > 0 ? 1000000000.0 / r.ns : 1.2e12;
         t = Num(x).str();
         p = t.size() <= 7 ? 9 - t.size() : 2;
-        cout << "|  " << text::red(t) << fastring(p, ' ');
+        std::cout << "|  " << co::color::red(t) << fastring(p, ' ');
 
         if (i == 0) {
             t = "1.0";
@@ -100,20 +100,20 @@ void print_results(Group& g) {
         }
 
         p = t.size() <= 7 ? 9 - t.size() : 2;
-        cout << "|  " << text::yellow(t) << fastring(p, ' ') << "|\n";
+        std::cout << "|  " << co::color::yellow(t) << fastring(p, ' ') << "|\n";
     }
 }
 
-} // xx
+}  // namespace xx
 
 void run_benchmarks() {
     auto& groups = xx::groups();
     for (size_t i = 0; i < groups.size(); ++i) {
-        if (i != 0) cout << '\n';
+        if (i != 0) std::cout << '\n';
         auto& g = groups[i];
         g.f(g);
         xx::print_results(g);
     }
 }
 
-} // bm
+}  // namespace bm

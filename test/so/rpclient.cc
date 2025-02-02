@@ -12,11 +12,11 @@ DEF_string(data, "{\"api\":\"ping\"}", "JSON body");
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
-    FLG_cout = true;
+    FLG_log_console = true;
 
     co::wait_group wg;
     wg.add();
-    go([wg](){
+    go([wg]() {
         rpc::Client c(FLG_ip.c_str(), FLG_port, FLG_ssl);
 
         co::Json req = json::parse(FLG_data);

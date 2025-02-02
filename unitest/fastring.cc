@@ -1,5 +1,6 @@
-#include "co/unitest.h"
 #include "co/fastring.h"
+
+#include "co/unitest.h"
 
 namespace test {
 
@@ -44,7 +45,7 @@ DEF_test(fastring) {
         {
             fastring s;
             EXPECT(s.empty());
-            EXPECT_EQ(s.size(), 0);        
+            EXPECT_EQ(s.size(), 0);
             s = "xxx";
             EXPECT_EQ(s, "xxx");
 
@@ -99,7 +100,7 @@ DEF_test(fastring) {
         EXPECT_EQ(s, "xxx");
         EXPECT_LT(s.size(), s.capacity());
 
-        s.append(s); // append self
+        s.append(s);  // append self
         EXPECT_EQ(s, "xxxxxx");
 
         s.resize(5);
@@ -133,7 +134,7 @@ DEF_test(fastring) {
         s.append(x);
         EXPECT_EQ(s, "xxx");
 
-        uint8 u = 'x';
+        uint8_t u = 'x';
         s.append(u);
         EXPECT_EQ(s, "xxxx");
 
@@ -388,11 +389,11 @@ DEF_test(fastring) {
         EXPECT_EQ(s.find('Y'), s.npos);
         EXPECT_EQ(s.ifind('Y'), 3);
         EXPECT_EQ(s.ifind('Y', 5), 5);
-        EXPECT_EQ(s.find('y', 0, 3), s.npos); // find in range [0, 3)
-        EXPECT_EQ(s.find('y', 0, 4), 3);      // find in range [0, 4)
-        EXPECT_EQ(s.find('y', 3, 3), 3);      // find in range [3, 6)
-        EXPECT_EQ(s.find('y', 4, 3), 4);      // find in range [4, 7)
-        EXPECT_EQ(s.find('y', 6, 3), s.npos); // find in range [6, 9)
+        EXPECT_EQ(s.find('y', 0, 3), s.npos);  // find in range [0, 3)
+        EXPECT_EQ(s.find('y', 0, 4), 3);       // find in range [0, 4)
+        EXPECT_EQ(s.find('y', 3, 3), 3);       // find in range [3, 6)
+        EXPECT_EQ(s.find('y', 4, 3), 4);       // find in range [4, 7)
+        EXPECT_EQ(s.find('y', 6, 3), s.npos);  // find in range [6, 9)
         EXPECT_EQ(s.find('y', 4), 4);
         EXPECT_EQ(s.find('y', 32), s.npos);
         EXPECT_EQ(s.rfind('a'), s.npos);
@@ -625,4 +626,4 @@ DEF_test(fastring) {
     }
 }
 
-} // namespace test
+}  // namespace test

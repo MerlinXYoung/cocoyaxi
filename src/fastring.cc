@@ -41,17 +41,17 @@ char* memrchr(const char* s, char c, size_t n) {
 #include "two_way.h"
 
 char* memmem(const char* s, size_t n, const char* p, size_t m) {
-    if (n < m) return NULL;
+    if (n < m) return nullptr;
     if (n == 0 || m == 0) return (char*)s;
 
     typedef unsigned char* S;
     if (m < LONG_NEEDLE_THRESHOLD) {
         const char* const b = s;
-        s = (const char*) memchr(s, *p, n);
+        s = (const char*)memchr(s, *p, n);
         if (!s || m == 1) return (char*)s;
 
-        n -= s - b; 
-        return n < m ? NULL : (char*)two_way_short_needle((S)s, n, (S)p, m);
+        n -= s - b;
+        return n < m ? nullptr : (char*)two_way_short_needle((S)s, n, (S)p, m);
     }
 
     return (char*)two_way_long_needle((S)s, n, (S)p, m);
@@ -75,7 +75,7 @@ static int _memicmp(const void* s, const void* t, size_t n) {
 #include "two_way.h"
 
 char* memimem(const char* s, size_t n, const char* p, size_t m) {
-    if (n < m) return NULL;
+    if (n < m) return nullptr;
     if (n == 0 || m == 0) return (char*)s;
 
     typedef unsigned char* S;
@@ -93,7 +93,7 @@ char* memrmem(const char* s, size_t n, const char* p, size_t m) {
     if (!e || m == 1) return (char*)e;
     if (e - s + 1 < m) return nullptr;
 
-    size_t off[256] = { 0 };
+    size_t off[256] = {0};
     for (size_t i = m; i > 0; --i) off[(unsigned char)p[i - 1]] = i;
 
     for (const char* b = e - m + 1;;) {
@@ -144,36 +144,35 @@ bool match(const char* s, size_t n, const char* p, size_t m) {
     return true;
 }
 
-} // str
+}  // namespace str
 
 fastring& fastring::trim(char c, char d) {
     if (this->empty()) return *this;
 
     size_t b, e;
     switch (d) {
-      case 'r':
-      case 'R':
-        e = _size;
-        while (e > 0 && _p[e - 1] == c) --e;
-        if (e != _size) _size = e;
-        break;
-      case 'l':
-      case 'L':
-        b = 0;
-        while (b < _size && _p[b] == c) ++b;
-        if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
-        break;
-      default:
-        b = 0, e = _size;
-        while (e > 0 && _p[e - 1] == c) --e;
-        if (e != _size) _size = e;
-        while (b < _size && _p[b] == c) ++b;
-        if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
-        break;
+        case 'r':
+        case 'R':
+            e = _size;
+            while (e > 0 && _p[e - 1] == c) --e;
+            if (e != _size) _size = e;
+            break;
+        case 'l':
+        case 'L':
+            b = 0;
+            while (b < _size && _p[b] == c) ++b;
+            if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
+            break;
+        default:
+            b = 0, e = _size;
+            while (e > 0 && _p[e - 1] == c) --e;
+            if (e != _size) _size = e;
+            while (b < _size && _p[b] == c) ++b;
+            if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
+            break;
     }
 
     return *this;
-
 }
 
 fastring& fastring::trim(const char* x, char d) {
@@ -181,30 +180,30 @@ fastring& fastring::trim(const char* x, char d) {
 
     const unsigned char* s = (const unsigned char*)x;
     const unsigned char* const p = (const unsigned char*)_p;
-    unsigned char bs[256] = { 0 };
+    unsigned char bs[256] = {0};
     while (*s) bs[*s++] = 1;
 
     size_t b, e;
     switch (d) {
-      case 'r':
-      case 'R':
-        e = _size;
-        while (e > 0 && bs[p[e - 1]]) --e;
-        if (e != _size) _size = e;
-        break;
-      case 'l':
-      case 'L':
-        b = 0;
-        while (b < _size && bs[p[b]]) ++b;
-        if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
-        break;
-      default:
-        b = 0, e = _size;
-        while (e > 0 && bs[p[e - 1]]) --e;
-        if (e != _size) _size = e;
-        while (b < _size && bs[p[b]]) ++b;
-        if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
-        break;
+        case 'r':
+        case 'R':
+            e = _size;
+            while (e > 0 && bs[p[e - 1]]) --e;
+            if (e != _size) _size = e;
+            break;
+        case 'l':
+        case 'L':
+            b = 0;
+            while (b < _size && bs[p[b]]) ++b;
+            if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
+            break;
+        default:
+            b = 0, e = _size;
+            while (e > 0 && bs[p[e - 1]]) --e;
+            if (e != _size) _size = e;
+            while (b < _size && bs[p[b]]) ++b;
+            if (b != 0 && (_size -= b) != 0) memmove(_p, _p + b, _size);
+            break;
     }
 
     return *this;
@@ -213,32 +212,33 @@ fastring& fastring::trim(const char* x, char d) {
 fastring& fastring::trim(size_t n, char d) {
     if (!this->empty()) {
         switch (d) {
-          case 'r':
-          case 'R':
-            _size = n < _size ? _size - n : 0;
-            break;
-          case 'l':
-          case 'L':
-            if (n < _size) {
-                _size -= n;
-                memmove(_p, _p + n, _size);
-            } else {
-                _size = 0;
-            }
-            break;
-          default:
-            if (n * 2 < _size) {
-                _size -= n * 2;
-                memmove(_p, _p + n, _size);
-            } else {
-                _size = 0;
-            }
+            case 'r':
+            case 'R':
+                _size = n < _size ? _size - n : 0;
+                break;
+            case 'l':
+            case 'L':
+                if (n < _size) {
+                    _size -= n;
+                    memmove(_p, _p + n, _size);
+                } else {
+                    _size = 0;
+                }
+                break;
+            default:
+                if (n * 2 < _size) {
+                    _size -= n * 2;
+                    memmove(_p, _p + n, _size);
+                } else {
+                    _size = 0;
+                }
         }
     }
     return *this;
 }
 
-fastring& fastring::replace(const char* sub, size_t n, const char* to, size_t m, size_t maxreplace) {
+fastring& fastring::replace(const char* sub, size_t n, const char* to, size_t m,
+                            size_t maxreplace) {
     if (this->empty() || n == 0) return *this;
 
     const char* from = _p;
@@ -278,7 +278,7 @@ fastring& fastring::tolower() {
 
 size_t fastring::find_first_of(const char* s, size_t pos, size_t n) const {
     if (pos < _size && n > 0) {
-        unsigned char bs[256] = { 0 };
+        unsigned char bs[256] = {0};
         for (size_t i = 0; i < n; ++i) bs[(unsigned char)s[i]] = 1;
         for (size_t i = pos; i < _size; ++i) {
             if (bs[(unsigned char)_p[i]]) return i;
@@ -289,7 +289,7 @@ size_t fastring::find_first_of(const char* s, size_t pos, size_t n) const {
 
 size_t fastring::find_first_not_of(const char* s, size_t pos, size_t n) const {
     if (pos < _size) {
-        unsigned char bs[256] = { 0 };
+        unsigned char bs[256] = {0};
         for (size_t i = 0; i < n; ++i) bs[(unsigned char)s[i]] = 1;
         for (size_t i = pos; i < _size; ++i) {
             if (!bs[(unsigned char)_p[i]]) return i;
@@ -307,7 +307,7 @@ size_t fastring::find_first_not_of(char c, size_t pos) const {
 
 size_t fastring::find_last_of(const char* s, size_t pos, size_t n) const {
     if (_size > 0 && n > 0) {
-        unsigned char bs[256] = { 0 };
+        unsigned char bs[256] = {0};
         for (size_t i = 0; i < n; ++i) bs[(unsigned char)s[i]] = 1;
         for (size_t i = (pos >= _size ? _size : (pos + 1)); i > 0;) {
             if (bs[(unsigned char)_p[--i]]) return i;
@@ -318,7 +318,7 @@ size_t fastring::find_last_of(const char* s, size_t pos, size_t n) const {
 
 size_t fastring::find_last_not_of(const char* s, size_t pos, size_t n) const {
     if (_size > 0) {
-        unsigned char bs[256] = { 0 };
+        unsigned char bs[256] = {0};
         for (size_t i = 0; i < n; ++i) bs[(unsigned char)s[i]] = 1;
         for (size_t i = (pos >= _size ? _size : (pos + 1)); i > 0;) {
             if (!bs[(unsigned char)_p[--i]]) return i;

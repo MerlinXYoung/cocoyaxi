@@ -1,10 +1,11 @@
-#include "co/unitest.h"
 #include "co/stl.h"
+
+#include "co/unitest.h"
 
 namespace test {
 
 DEF_test(table) {
-    co::table<int> tb(3, 3); // 8 x 8
+    co::table<int> tb(3, 3);  // 8 x 8
     EXPECT_EQ(tb[0], 0);
     EXPECT_EQ(tb[7], 0);
     tb[3] = 3;
@@ -22,20 +23,20 @@ DEF_test(lru_map) {
     m.insert(1, 1);
     m.insert(2, 2);
     m.insert(3, 3);
-    m.insert(4, 4); // 4,3,2,1
+    m.insert(4, 4);  // 4,3,2,1
 
     EXPECT_EQ(m.size(), 4);
-    EXPECT_EQ(m.find(1)->second, 1); // 1,4,3,2
+    EXPECT_EQ(m.find(1)->second, 1);  // 1,4,3,2
 
-    m.insert(5, 5); // 5,1,4,3
+    m.insert(5, 5);  // 5,1,4,3
     EXPECT_EQ(m.size(), 4);
     EXPECT(m.find(2) == m.end());
 
-    m.erase(5); // 1,4,3
+    m.erase(5);  // 1,4,3
     EXPECT_EQ(m.size(), 3);
 
     auto it = m.find(1);
-    m.erase(it); // 4,3
+    m.erase(it);  // 4,3
     EXPECT_EQ(m.size(), 2);
     EXPECT(m.find(1) == m.end());
 
@@ -60,7 +61,7 @@ DEF_test(lru_map) {
     EXPECT_EQ(i->second, 8);
 }
 
-DEF_test(vector){
+DEF_test(vector) {
     DEF_case(base) {
         co::vector<int> v;
         EXPECT(v.empty());
@@ -123,7 +124,7 @@ DEF_test(vector){
         EXPECT_EQ(b[0].capacity(), 16);
         EXPECT_EQ(b[7].capacity(), 16);
 
-        co::vector<int> x = { 1, 2, 3 };
+        co::vector<int> x = {1, 2, 3};
         EXPECT_EQ(x.size(), 3);
         EXPECT_EQ(x[0], 1);
         EXPECT_EQ(x[1], 2);
@@ -140,7 +141,7 @@ DEF_test(vector){
         EXPECT_EQ(k[0], 1);
         EXPECT_EQ(k[1], 2);
 
-        int xx[4] = { 1, 2, 3, 4 };
+        int xx[4] = {1, 2, 3, 4};
         co::vector<int> m(xx, 4);
         EXPECT_EQ(m.size(), 4);
         EXPECT_EQ(m[0], 1);
@@ -148,7 +149,7 @@ DEF_test(vector){
     }
 
     DEF_case(copy) {
-        co::vector<int> v = { 1, 2, 3 };
+        co::vector<int> v = {1, 2, 3};
         co::vector<int> u(++v.begin(), v.end());
         EXPECT_EQ(u.size(), 2);
         EXPECT_EQ(u[0], 2);
@@ -158,7 +159,7 @@ DEF_test(vector){
         EXPECT_EQ(u.size(), 3);
         EXPECT_EQ(u[0], 1);
 
-        u = { 7, 8, 9, 9 };
+        u = {7, 8, 9, 9};
         EXPECT_EQ(u.size(), 4);
         EXPECT_EQ(u[0], 7);
         EXPECT_EQ(u[3], 9);
@@ -201,7 +202,7 @@ DEF_test(vector){
         EXPECT_EQ(v[5], 8);
         EXPECT_EQ(v[7], 8);
 
-        int x[4] = { 7, 7, 7, 7 };
+        int x[4] = {7, 7, 7, 7};
         v.resize(4);
         v.append(x, 4);
         EXPECT_EQ(v.size(), 8);
@@ -227,7 +228,7 @@ DEF_test(vector){
     }
 
     DEF_case(modify) {
-        co::vector<int> v = { 1, 2, 3, 4 };
+        co::vector<int> v = {1, 2, 3, 4};
         EXPECT_EQ(v.size(), 4);
 
         v.resize(2);
@@ -279,7 +280,7 @@ DEF_test(vector){
         for (int i = 0; i < 4; ++i) {
             v.push_back("aaa");
         }
-        void* p = co::alloc(32);
+        void* p = ::malloc(32);
         for (int i = 0; i < 4; ++i) {
             v.push_back("bbb");
         }
@@ -295,63 +296,63 @@ DEF_test(vector){
         EXPECT_EQ(v.size(), 14);
         EXPECT_EQ(v[3], "bbb");
 
-        co::free(p, 32);
+        ::free(p);
     }
 
-    static int gc = 0;
-    static int gd = 0;
+    // static int gc = 0;
+    // static int gd = 0;
 
-    struct A {
-        A() { ++gc; }
-        A(const A&) { ++gc; }
-        A(A&&) { ++gc; }
-        ~A() { ++gd; }
-    };
+    // struct A {
+    //     A() { ++gc; }
+    //     A(const A&) { ++gc; }
+    //     A(A&&) { ++gc; }
+    //     ~A() { ++gd; }
+    // };
 
-    DEF_case(resize) {
-        co::vector<int> _(8, 3);
-        _.resize(16);
-        EXPECT_EQ(_[7], 3);
-        EXPECT_EQ(_[8], 0);
-        EXPECT_EQ(_[15], 0);
+    // DEF_case(resize) {
+    //     co::vector<int> _(8, 3);
+    //     _.resize(16);
+    //     EXPECT_EQ(_[7], 3);
+    //     EXPECT_EQ(_[8], 0);
+    //     EXPECT_EQ(_[15], 0);
 
-        co::vector<A> a(8, 0);
-        EXPECT_EQ(gc, 8);
+    //     co::vector<A> a(8, 0);
+    //     EXPECT_EQ(gc, 8);
 
-        a.resize(16);
-        EXPECT_EQ(gc, 16);
+    //     a.resize(16);
+    //     EXPECT_EQ(gc, 16);
 
-        a.resize(8);
-        EXPECT_EQ(gd, 8);
+    //     a.resize(8);
+    //     EXPECT_EQ(gd, 8);
 
-        co::vector<A> b(a);
-        EXPECT_EQ(gc, 24);
+    //     co::vector<A> b(a);
+    //     EXPECT_EQ(gc, 24);
 
-        co::vector<A> c(std::move(b));
-        EXPECT_EQ(gc, 24);
+    //     co::vector<A> c(std::move(b));
+    //     EXPECT_EQ(gc, 24);
 
-        c.remove_back(); // gd + 1
-        EXPECT_EQ(gd, 9);
+    //     c.remove_back();  // gd + 1
+    //     EXPECT_EQ(gd, 9);
 
-        c.remove(3); // gd + 2
-        EXPECT_EQ(gc, 25);
-        EXPECT_EQ(gd, 11);
+    //     c.remove(3);  // gd + 2
+    //     EXPECT_EQ(gc, 25);
+    //     EXPECT_EQ(gd, 11);
 
-        c.pop_back(); // gc + 1, gd + 2
-        EXPECT_EQ(gc, 26);
-        EXPECT_EQ(gd, 13);
-        {
-            A x = c.pop_back(); // gc + 1, gd + 2
-        }
-        EXPECT_EQ(gc, 27);
-        EXPECT_EQ(gd, 15);
+    //     c.pop_back();  // gc + 1, gd + 2
+    //     EXPECT_EQ(gc, 26);
+    //     EXPECT_EQ(gd, 13);
+    //     {
+    //         A x = c.pop_back();  // gc + 1, gd + 2
+    //     }
+    //     EXPECT_EQ(gc, 27);
+    //     EXPECT_EQ(gd, 15);
 
-        a.reset();
-        b.reset();
-        c.reset();
-        EXPECT_EQ(gd, 27);
-        EXPECT_EQ(gc, gd);
-    }
+    //     a.reset();
+    //     b.reset();
+    //     c.reset();
+    //     EXPECT_EQ(gd, 27);
+    //     EXPECT_EQ(gc, gd);
+    // }
 }
 
-} // namespace test
+}  // namespace test

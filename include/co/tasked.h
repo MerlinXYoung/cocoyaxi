@@ -53,7 +53,7 @@ class __coapi Tasked {
     void run_daily(F&& f, int hour=0, int minute=0, int second=0);
 
     // run f() at hour:minute:second every day
-    void run_daily(const F& f, int hour=0, int minute=0, int second=0) {
+    inline void run_daily(const F& f, int hour=0, int minute=0, int second=0) {
         this->run_daily(F(f), hour, minute, second);
     }
 

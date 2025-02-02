@@ -1,32 +1,10 @@
 #pragma once
 
-#include <stdint.h>
-#include <stddef.h>
-
-typedef int8_t  int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef uint8_t  uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-#define MAX_UINT8  ((uint8)  ~((uint8) 0))
-#define MAX_UINT16 ((uint16) ~((uint16)0))
-#define MAX_UINT32 ((uint32) ~((uint32)0))
-#define MAX_UINT64 ((uint64) ~((uint64)0))
-#define MAX_INT8   ((int8)  (MAX_UINT8  >> 1))
-#define MAX_INT16  ((int16) (MAX_UINT16 >> 1))
-#define MAX_INT32  ((int32) (MAX_UINT32 >> 1))
-#define MAX_INT64  ((int64) (MAX_UINT64 >> 1))
-#define MIN_INT8   ((int8)  ~MAX_INT8)
-#define MIN_INT16  ((int16) ~MAX_INT16)
-#define MIN_INT32  ((int32) ~MAX_INT32)
-#define MIN_INT64  ((int64) ~MAX_INT64)
+#include <cstddef>
+#include <cstdint>
 
 #define DISALLOW_COPY_AND_ASSIGN(T) \
-    T(const T&) = delete; \
+    T(const T&) = delete;           \
     void operator=(const T&) = delete
 
 #if SIZE_MAX == UINT64_MAX
@@ -40,8 +18,8 @@ typedef uint64_t uint64;
 #define __thread __declspec(thread)
 #endif
 #else
-#ifndef __forceinline 
-#define __forceinline __attribute__((always_inline))
+#ifndef __forceinline
+#define __forceinline __attribute__((always_inline)) inline
 #endif
 #endif
 
@@ -68,15 +46,15 @@ typedef uint64_t uint64;
 
 // __coapi: export symbols in shared library (libco.so or co.dll)
 #if COOST_SHARED > 0
-  #ifdef _WIN32
-    #ifdef BUILDING_CO_SHARED
-      #define __coapi __declspec(dllexport)
-    #else
-      #define __coapi __declspec(dllimport)
-    #endif
-  #else
-    #define __coapi __attribute__((visibility("default")))
-  #endif
+#ifdef _WIN32
+#ifdef BUILDING_CO_SHARED
+#define __coapi __declspec(dllexport)
 #else
-  #define __coapi
+#define __coapi __declspec(dllimport)
+#endif
+#else
+#define __coapi __attribute__((visibility("default")))
+#endif
+#else
+#define __coapi
 #endif

@@ -7,15 +7,15 @@ DEF_string(ca, "", "certificate file");
 DEF_int32(t, 0, "0: server & client, 1: server, 2: client");
 
 struct Header {
-    int32 magic;
-    int32 body_len;
+    int32_t magic;
+    int32_t body_len;
 };
 
 void on_connection(tcp::Connection conn) {
     const char* msg = "hello client";
     Header header;
     fastream buf(128);
-    int32 body_len;
+    int32_t body_len;
     int r;
 
     while (true) {
@@ -39,7 +39,7 @@ void on_connection(tcp::Connection conn) {
         LOG << "server recv: " << buf;
 
         header.magic = hton32(777);
-        header.body_len = hton32((uint32)strlen(msg));
+        header.body_len = hton32((uint32_t)strlen(msg));
         buf.clear();
         buf.append(&header, sizeof(header));
         buf.append(msg);
@@ -51,7 +51,7 @@ void on_connection(tcp::Connection conn) {
         }
     }
 
-  err:
+err:
     conn.close();
 }
 
@@ -65,12 +65,12 @@ void client_fun() {
     const char* msg = "hello server";
     Header header;
     fastream buf(128);
-    int32 body_len;
+    int32_t body_len;
     int r;
 
     while (true) {
         header.magic = hton32(777);
-        header.body_len = hton32((uint32)strlen(msg));
+        header.body_len = hton32((uint32_t)strlen(msg));
         buf.clear();
         buf.append(&header, sizeof(header));
         buf.append(msg);
@@ -103,14 +103,14 @@ void client_fun() {
         co::sleep(2000);
     }
 
-  err:
+err:
     c.disconnect();
     return;
 }
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
-    FLG_cout = true;
+    FLG_log_console = true;
 
     tcp::Server serv;
     serv.on_connection(on_connection);

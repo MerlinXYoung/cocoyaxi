@@ -1,5 +1,6 @@
 #include "co/co.h"
-#include "co/cout.h"
+#include "co/color.h"
+#include "co/print.h"
 
 int main(int argc, char** argv) {
     for (int i = -3; i < 140; ++i) {

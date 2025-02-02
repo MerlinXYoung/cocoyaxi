@@ -1,6 +1,11 @@
-#include "co/unitest.h"
 #include "co/co.h"
-#include "co/cout.h"
+
+#include <atomic>
+
+#include "co/color.h"
+#include "co/print.h"
+#include "co/unitest.h"
+
 
 namespace test {
 
@@ -9,21 +14,23 @@ int gd = 0;
 
 struct TestChan {
     explicit TestChan(int v = 0) : v(v) {
-        atomic_inc(&gc, mo_relaxed);
+        reinterpret_cast<std::atomic_int*>(&gc)->fetch_add(1, std::memory_order_relaxed);
     }
 
     TestChan(const TestChan& c) : v(c.v) {
-        atomic_inc(&gc, mo_relaxed);
+        reinterpret_cast<std::atomic_int*>(&gc)->fetch_add(1, std::memory_order_relaxed);
     }
 
     TestChan(TestChan&& c) : v(c.v) {
         c.v = 0;
-        atomic_inc(&gc, mo_relaxed);
+        // co::atomic_inc(&gc, co::mo_relaxed);
+        reinterpret_cast<std::atomic_int*>(&gc)->fetch_add(1, std::memory_order_relaxed);
     }
 
     ~TestChan() {
         if (v) v = 0;
-        atomic_inc(&gd, mo_relaxed);
+        // co::atomic_inc(&gd, co::mo_relaxed);
+        reinterpret_cast<std::atomic_int*>(&gd)->fetch_add(1, std::memory_order_relaxed);
     }
 
     int v;
@@ -33,13 +40,13 @@ struct queue {
     static const int N = 12;
     struct _memb : co::clink {
         size_t size;
-        uint8 rx;
-        uint8 wx;
+        uint8_t rx;
+        uint8_t wx;
         void* q[];
     };
 
     _memb* _make_memb() {
-        _memb* m = (_memb*) co::alloc(sizeof(_memb) + N * sizeof(void*));
+        _memb* m = (_memb*)::malloc(sizeof(_memb) + N * sizeof(void*));
         m->size = 0;
         m->rx = 0;
         m->wx = 0;
@@ -52,7 +59,7 @@ struct queue {
         for (auto h = _q.front(); h;) {
             const auto m = (_memb*)h;
             h = h->next;
-            co::free(m, sizeof(_memb) + N * sizeof(void*));
+            ::free(m);
             co::print("free memb: ", m);
         }
     }
@@ -61,7 +68,7 @@ struct queue {
     bool empty() const { return this->size() == 0; }
 
     void push_back(void* x) {
-        _memb* m = (_memb*) _q.back();
+        _memb* m = (_memb*)_q.back();
         if (!m || m->wx == N) {
             m = this->_make_memb();
             _q.push_back(m);
@@ -78,9 +85,9 @@ struct queue {
             if (_m->rx == _m->wx) {
                 _m->rx = _m->wx = 0;
                 if (_q.back() != _m) {
-                    _memb* const m = (_memb*) _q.pop_front();
+                    _memb* const m = (_memb*)_q.pop_front();
                     _m->size = m->size;
-                    co::free(m, sizeof(_memb) + N * sizeof(void*));
+                    ::free(m);
                 }
             }
         }
@@ -95,8 +102,8 @@ struct queue {
 
 struct Buffer {
     struct H {
-        uint32 cap;
-        uint32 size;
+        uint32_t cap;
+        uint32_t size;
         char p[];
     };
 
@@ -104,34 +111,38 @@ struct Buffer {
     ~Buffer() { this->reset(); }
 
     const char* data() const noexcept { return _h ? _h->p : 0; }
-    uint32 size() const noexcept { return _h ? _h->size : 0; }
-    uint32 capacity() const noexcept { return _h ? _h->cap : 0; }
-    void clear() noexcept { if (_h) _h->size = 0; }
+    uint32_t size() const noexcept { return _h ? _h->size : 0; }
+    uint32_t capacity() const noexcept { return _h ? _h->cap : 0; }
+    void clear() noexcept {
+        if (_h) _h->size = 0;
+    }
 
     void reset() {
         if (_h) {
-            co::free(_h, _h->cap + 8);
+            ::free(_h);
             _h = 0;
         }
     }
 
     void append(const void* p, size_t size) {
-        const uint32 n = (uint32)size;
+        const uint32_t n = (uint32_t)size;
         if (!_h) {
-            _h = (H*) co::alloc(size + 8); assert(_h);
+            _h = (H*)::malloc(size + 8);
+            assert(_h);
             _h->cap = n;
             _h->size = 0;
             goto lable;
         }
 
         if (_h->cap < _h->size + n) {
-            const uint32 o = _h->cap;
+            const uint32_t o = _h->cap;
             _h->cap += (o >> 1) + n;
-            _h = (H*) co::realloc(_h, o + 8, _h->cap + 8); assert(_h);
+            _h = (H*)::realloc(_h, _h->cap + 8);
+            assert(_h);
             goto lable;
         }
 
-      lable:
+    lable:
         memcpy(_h->p + _h->size, p, n);
         _h->size += n;
     }
@@ -143,10 +154,10 @@ struct Coroutine {
     Coroutine() { memset(this, 0, sizeof(*this)); }
     ~Coroutine() { buf.~Buffer(); }
 
-    uint32 id; // coroutine id
-    void* ctx; // coroutine context, points to the stack bottom
+    uint32_t id;  // coroutine id
+    void* ctx;    // coroutine context, points to the stack bottom
     union {
-        Buffer buf;   // for saving stack data of this coroutine
+        Buffer buf;  // for saving stack data of this coroutine
         void* pbuf;
     };
     void* x[5];
@@ -155,11 +166,10 @@ struct Coroutine {
 class CoroutinePool {
   public:
     static const int E = 5;
-    static const int N = 1 << E; // max coroutines per block
+    static const int N = 1 << E;  // max coroutines per block
     static const int M = 4;
 
-    CoroutinePool()
-        : _c(0), _o(0), _v(M), _use_count(M) {
+    CoroutinePool() : _c(0), _o(0), _v(M), _use_count(M) {
         _v.resize(M);
         _use_count.resize(M);
     }
@@ -173,39 +183,43 @@ class CoroutinePool {
 
     Coroutine* pop() {
         int id = 0;
-        if (!_v0.empty()) { id = _v0.pop_back(); goto reuse; }
-        if (!_vc.empty()) { id = _vc.pop_back(); goto reuse; }
+        if (!_v0.empty()) {
+            id = _v0.pop_back();
+            goto reuse;
+        }
+        if (!_vc.empty()) {
+            id = _vc.pop_back();
+            goto reuse;
+        }
         if (_o < N) goto newco;
         _c = !_blks.empty() ? *_blks.begin() : _c + 1;
         if (!_blks.empty()) _blks.erase(_blks.begin());
         _o = 0;
 
-      newco:
-        {
-            if (_c < _v.size()) {
-                if (!_v[_c]) _v[_c] = (Coroutine*) ::calloc(N, sizeof(Coroutine));
-            } else {
-                const int c = god::align_up<M>(_c + 1);
-                _v.resize(c);
-                _use_count.resize(c);
-                _v[_c] = (Coroutine*) ::calloc(N, sizeof(Coroutine));
-            }
-
-            auto& co = _v[_c][_o];
-            co.id = (_c << E) + _o++;
-            _use_count[_c]++;
-            return &co;
+    newco : {
+        if (_c < _v.size()) {
+            if (!_v[_c]) _v[_c] = (Coroutine*)::calloc(N, sizeof(Coroutine));
+        } else {
+            const int c = god::align_up<M>(_c + 1);
+            _v.resize(c);
+            _use_count.resize(c);
+            _v[_c] = (Coroutine*)::calloc(N, sizeof(Coroutine));
         }
 
-      reuse:
-        {
-            const int q = id >> E;
-            const int r = id & (N - 1);
-            auto& co = _v[q][r];
-            co.ctx = 0;
-            _use_count[q]++;
-            return &co;
-        }
+        auto& co = _v[_c][_o];
+        co.id = (_c << E) + _o++;
+        _use_count[_c]++;
+        return &co;
+    }
+
+    reuse : {
+        const int q = id >> E;
+        const int r = id & (N - 1);
+        auto& co = _v[q][r];
+        co.ctx = 0;
+        _use_count[q]++;
+        return &co;
+    }
     }
 
     void push(Coroutine* co) {
@@ -222,7 +236,7 @@ class CoroutinePool {
             goto end;
         }
 
-      end:
+    end:
         if (--_use_count[q] == 0) {
             ::free(_v[q]);
             _v[q] = 0;
@@ -247,13 +261,13 @@ class CoroutinePool {
     }
 
   private:
-    int _c; // current block
-    int _o; // offset in the current block [0, S)
+    int _c;  // current block
+    int _o;  // offset in the current block [0, S)
     co::vector<Coroutine*> _v;
     co::vector<int> _use_count;
-    co::vector<int> _v0; // id of coroutine in _v[0]
-    co::vector<int> _vc; // id of coroutine in _v[_c]
-    co::set<int> _blks; // blocks available
+    co::vector<int> _v0;  // id of coroutine in _v[0]
+    co::vector<int> _vc;  // id of coroutine in _v[_c]
+    co::set<int> _blks;   // blocks available
 };
 
 DEF_test(co) {
@@ -264,13 +278,13 @@ DEF_test(co) {
         wg.add(8);
         for (int i = 0; i < 7; ++i) {
             go([wg, &v]() {
-                atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
             });
         }
 
         std::thread([wg, &v]() {
-            atomic_inc(&v);
+            reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
             wg.done();
         }).detach();
 
@@ -317,7 +331,7 @@ DEF_test(co) {
         EXPECT_EQ(b.size(), 10);
         EXPECT_EQ(fastring(b.data(), b.size()), "helloworld");
 
-        const uint32 c = b.capacity();
+        const uint32_t c = b.capacity();
         b.clear();
         EXPECT_EQ(b.size(), 0);
         EXPECT_EQ(b.capacity(), c);
@@ -351,8 +365,8 @@ DEF_test(co) {
         EXPECT_EQ(e->id, 33);
         EXPECT_EQ(f->id, 34);
 
-        p.push(e); // push 33
-        p.push(f); // push 34
+        p.push(e);  // push 33
+        p.push(f);  // push 34
         e = p.pop();
         f = p.pop();
         EXPECT_EQ(e->id, 34);
@@ -365,7 +379,7 @@ DEF_test(co) {
         EXPECT_EQ(x->id, 128);
         EXPECT_EQ(y->id, 129);
 
-        p.push(b); // push 2
+        p.push(b);  // push 2
         z = p.pop();
         EXPECT_EQ(z->id, 2);
         o = p.pop();
@@ -400,6 +414,7 @@ DEF_test(co) {
         for (int i = 0; i < 12; ++i) {
             go([wg, m, &v]() {
                 co::mutex_guard g(m);
+                DLOG << "a";
                 ++v;
                 wg.done();
             });
@@ -408,6 +423,7 @@ DEF_test(co) {
         for (int i = 0; i < 4; ++i) {
             std::thread([wg, m, &v]() {
                 co::mutex_guard g(m);
+                DLOG << "t";
                 ++v;
                 wg.done();
             }).detach();
@@ -465,16 +481,16 @@ DEF_test(co) {
             wg.add(8);
             for (int i = 0; i < 7; ++i) {
                 go([wg, ev, &v]() {
-                    atomic_inc(&v);
+                    reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                     ev.wait();
-                    atomic_dec(&v);
+                    reinterpret_cast<std::atomic_int*>(&v)->fetch_sub(1, std::memory_order_relaxed);
                     wg.done();
                 });
             }
             std::thread([wg, ev, &v]() {
-                atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 ev.wait();
-                atomic_dec(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_sub(1, std::memory_order_relaxed);
                 wg.done();
             }).detach();
 
@@ -487,21 +503,32 @@ DEF_test(co) {
 
             wg.add(2);
             go([wg, ev, &v]() {
-                atomic_inc(&v);
-                while (v < 2) co::sleep(1);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
+                while (v < 2) {
+                    DLOG << v;
+                    co::sleep(1);
+                }
+                DLOG << "before wait";
                 ev.wait(1);
-                atomic_inc(&v);
+                DLOG << "end wait";
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
+                DLOG << "done";
             });
             std::thread([wg, ev, &v]() {
-                atomic_inc(&v);
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 while (v < 2) co::sleep(1);
+                DLOG << "before wait";
                 ev.wait(1);
-                atomic_inc(&v);
+                DLOG << "end wait";
+                reinterpret_cast<std::atomic_int*>(&v)->fetch_add(1, std::memory_order_relaxed);
                 wg.done();
+                DLOG << "done";
             }).detach();
 
-            while (v < 4) co::sleep(1);
+            while (v < 4) {
+                co::sleep(1);
+            }
             ev.signal();
             wg.wait();
             EXPECT_EQ(v, 4);
@@ -509,7 +536,7 @@ DEF_test(co) {
             EXPECT_EQ(ev.wait(0), false);
         }
         {
-            co::event ev(true, true); // manual reset
+            co::event ev(true, true);  // manual reset
             co::wait_group wg(1);
 
             go([wg, ev, &v]() {
@@ -677,7 +704,7 @@ DEF_test(co) {
 
             y.v = 0;
             ch >> y;
-            EXPECT(!ch.done()); // timeout
+            EXPECT(!ch.done());  // timeout
             EXPECT_EQ(y.v, 0);
 
             wg.add(2);
@@ -783,11 +810,7 @@ DEF_test(co) {
     }
 
     DEF_case(pool) {
-        co::pool p(
-            []() { return (void*) co::make<int>(0); },
-            [](void* p) { co::del((int*)p); },
-            8192
-        );
+        co::pool p([]() { return (void*)new int(0); }, [](void* p) { delete (int*)p; }, 8192);
 
         int n = co::sched_num();
         auto& scheds = co::scheds();
@@ -809,7 +832,7 @@ DEF_test(co) {
         wg.add(n);
         for (int i = 0; i < n; ++i) {
             scheds[i]->go([wg, p, i, &vi]() {
-                int* x = (int*) p.pop();
+                int* x = (int*)p.pop();
                 vi[i] = *x;
                 p.push(x);
                 wg.done();
@@ -825,4 +848,4 @@ DEF_test(co) {
     }
 }
 
-} // test
+}  // namespace test

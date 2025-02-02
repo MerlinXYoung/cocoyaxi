@@ -1,21 +1,21 @@
 #include "co/unitest.h"
+
 #include "co/time.h"
 
 namespace unitest {
 namespace xx {
 
-static co::vector<Test>* g_t;
-
-inline co::vector<Test>& tests() {
-    return g_t ? *g_t : *(g_t = co::_make_static<co::vector<Test>>());
+inline std::vector<Test>& tests() {
+    static std::vector<Test> _t;
+    return _t;
 }
 
-bool add_test(const char* name, bool& e, void(*f)(Test&)) {
+bool add_test(const char* name, bool& e, void (*f)(Test&)) {
     tests().push_back(Test(name, e, f));
     return true;
 }
 
-} // xx
+}  // namespace xx
 
 int run_tests() {
     // n: number of tests to do
@@ -25,63 +25,72 @@ int run_tests() {
     co::Timer timer;
     auto& tests = xx::tests();
 
-    co::vector<xx::Test*> enabled(32);
-    for (auto& t: tests) if (t.enabled) enabled.push_back(&t);
+    std::vector<xx::Test*> enabled;
+    enabled.reserve(32);
+    for (auto& t : tests)
+        if (t.enabled) enabled.push_back(&t);
 
     if (enabled.empty()) { /* run all tests by default */
         n = tests.size();
         for (auto& t : tests) {
-            cout << "> begin test: " << t.name << endl;
+            std::cout << "> begin test: " << t.name << std::endl;
             timer.restart();
             t.f(t);
-            if (!t.failed.empty()) { ++ft; fc += t.failed.size(); }
-            cout << "< test " << t.name << " done in " << timer.us() << " us" << endl;
+            if (!t.failed.empty()) {
+                ++ft;
+                fc += t.failed.size();
+            }
+            std::cout << "< test " << t.name << " done in " << timer.us() << " us" << std::endl;
         }
 
     } else {
         n = enabled.size();
-        for (auto& t: enabled) {
-            cout << "> begin test: " << t->name << endl;
+        for (auto& t : enabled) {
+            std::cout << "> begin test: " << t->name << std::endl;
             timer.restart();
             t->f(*t);
-            if (!t->failed.empty()) { ++ft; fc += t->failed.size(); }
-            cout << "< test " << t->name << " done in " << timer.us() << " us" << endl;
+            if (!t->failed.empty()) {
+                ++ft;
+                fc += t->failed.size();
+            }
+            std::cout << "< test " << t->name << " done in " << timer.us() << " us" << std::endl;
         }
     }
 
     if (fc == 0) {
         if (n > 0) {
-            cout << color::green << "\nCongratulations! All tests passed!" << color::deflt << endl;
+            std::cout << co::Color::green << "\nCongratulations! All tests passed!" << co::Color::deflt
+                      << std::endl;
         } else {
-            cout << "No test found. Done nothing." << endl;
+            std::cout << "No test found. Done nothing." << std::endl;
         }
 
     } else {
-        cout << color::red << "\nAha! " << fc << " case" << (fc > 1 ? "s" : "");
-        cout << " from " << ft << " test" << (ft > 1 ? "s" : "");
-        cout << " failed. See details below:\n" << color::deflt << endl;
+        std::cout << co::Color::red << "\nAha! " << fc << " case" << (fc > 1 ? "s" : "");
+        std::cout << " from " << ft << " test" << (ft > 1 ? "s" : "");
+        std::cout << " failed. See details below:\n" << co::Color::deflt << std::endl;
 
         const char* last_case = "";
         for (auto& t : tests) {
             if (!t.failed.empty()) {
-                cout << color::red << "In test " << t.name << ":\n" << color::deflt;
+                std::cout << co::Color::red << "In test " << t.name << ":\n" << co::Color::deflt;
                 for (auto& f : t.failed) {
                     if (strcmp(last_case, f.c) != 0) {
                         last_case = f.c;
-                        cout << color::red << " case " << f.c << ":\n" << color::deflt;
+                        std::cout << co::Color::red << " case " << f.c << ":\n" << co::Color::deflt;
                     }
-                    cout << color::yellow << "  " << f.file << ':' << f.line << "] "
-                        << color::deflt << f.msg << '\n';
+                    std::cout << co::Color::yellow << "  " << f.file << ':' << f.line << "] "
+                              << co::Color::deflt << f.msg << '\n';
                 }
-                cout.flush();
+                std::cout.flush();
             }
         }
 
-        cout << color::deflt;
-        cout.flush();
+        std::cout << co::Color::deflt;
+        std::cout.flush();
     }
 
     return fc;
 }
 
-} // namespace unitest
+}  // namespace unitest

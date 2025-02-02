@@ -1,145 +1,137 @@
 #pragma once
 
-#include "clist.h"
-#include "table.h"
-#include "vector.h"
-#include "fastream.h"
-#include "hash/murmur_hash.h"
-#include <list>
 #include <deque>
-#include <vector>
+#include <list>
 #include <map>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
+
+#include "clist.h"
+#include "fastream.h"
+#include "hash/murmur_hash.h"
+#include "table.h"
+#include "vector.h"
 
 namespace co {
 namespace xx {
 
-template<class T>
+template <class T>
 struct less {
-    template<class X, class Y>
+    template <class X, class Y>
     bool operator()(X&& x, Y&& y) const {
         return static_cast<X&&>(x) < static_cast<Y&&>(y);
     }
 };
 
-template<>
+template <>
 struct less<const char*> {
-    bool operator()(const char* x, const char* y) const {
-        return x != y && strcmp(x, y) < 0;
-    }
+    bool operator()(const char* x, const char* y) const { return x != y && strcmp(x, y) < 0; }
 };
 
-template<class T>
+template <class T>
 struct hash {
-    size_t operator()(const T& x) const noexcept {
-        return std::hash<T>()(x);
-    }
+    size_t operator()(const T& x) const noexcept { return std::hash<T>()(x); }
 };
 
-template<>
+template <>
 struct hash<const char*> {
-    size_t operator()(const char* x) const noexcept {
-        return murmur_hash(x, strlen(x));
-    }
+    size_t operator()(const char* x) const noexcept { return murmur_hash(x, strlen(x)); }
 };
 
-template<class T>
+template <class T>
 struct eq {
-    template<class X, class Y>
+    template <class X, class Y>
     bool operator()(X&& x, Y&& y) const {
         return static_cast<X&&>(x) == static_cast<Y&&>(y);
     }
 };
 
-template<>
+template <>
 struct eq<const char*> {
-    bool operator()(const char* x, const char* y) const {
-        return x == y || strcmp(x, y) == 0;
-    }
+    bool operator()(const char* x, const char* y) const { return x == y || strcmp(x, y) == 0; }
 };
 
-} // xx
+}  // namespace xx
 
-template<class T, class Alloc = co::stl_allocator<T>>
+template <class T, class Alloc = std::allocator<T>>
 using deque = std::deque<T, Alloc>;
 
-template<class T, class Alloc = co::stl_allocator<T>>
+template <class T, class Alloc = std::allocator<T>>
 using list = std::list<T, Alloc>;
 
-template<
-    class K, class V,
-    class L = xx::less<K>,
-    class Alloc = co::stl_allocator<std::pair<const K, V>>
-> using map = std::map<K, V, L, Alloc>;
+template <class K, class V, class L = xx::less<K>,
+          class Alloc = std::allocator<std::pair<const K, V>>>
+using map = std::map<K, V, L, Alloc>;
 
-template<
-    class K, class V,
-    class L = xx::less<K>,
-    class Alloc = co::stl_allocator<std::pair<const K, V>>
-> using multimap = std::multimap<K, V, L, Alloc>;
+template <class K, class V, class L = xx::less<K>,
+          class Alloc = std::allocator<std::pair<const K, V>>>
+using multimap = std::multimap<K, V, L, Alloc>;
 
-template<
-    class K, class L = xx::less<K>,
-    class Alloc = co::stl_allocator<K>
-> using set = std::set<K, L, Alloc>;
+template <class K, class L = xx::less<K>, class Alloc = std::allocator<K>>
+using set = std::set<K, L, Alloc>;
 
-template<
-    class K, class L = xx::less<K>,
-    class Alloc = co::stl_allocator<K>
-> using multiset = std::multiset<K, L, Alloc>;
+template <class K, class L = xx::less<K>, class Alloc = std::allocator<K>>
+using multiset = std::multiset<K, L, Alloc>;
 
-template<
-    class K, class V,
-    class Hash = xx::hash<K>,
-    class Pred = xx::eq<K>,
-    class Alloc = co::stl_allocator<std::pair<const K, V>>
-> using hash_map = std::unordered_map<K, V, Hash, Pred, Alloc>;
+template <class K, class V, class Hash = xx::hash<K>, class Pred = xx::eq<K>,
+          class Alloc = std::allocator<std::pair<const K, V>>>
+using hash_map = std::unordered_map<K, V, Hash, Pred, Alloc>;
 
-template<
-    class K,
-    class Hash = xx::hash<K>,
-    class Pred = xx::eq<K>,
-    class Alloc = co::stl_allocator<K>
-> using hash_set = std::unordered_set<K, Hash, Pred, Alloc>;
+template <class K, class Hash = xx::hash<K>, class Pred = xx::eq<K>,
+          class Alloc = std::allocator<K>>
+using hash_set = std::unordered_set<K, Hash, Pred, Alloc>;
 
-template<typename K, typename V>
+template <class K, class V, class Hash = xx::hash<K>, class Pred = xx::eq<K>,
+          class Alloc = std::allocator<std::pair<const K, V>>>
 class lru_map {
   public:
-    typedef typename co::hash_map<K, V>::iterator iterator;
-    typedef typename co::hash_map<K, V>::key_type key_type;
-    typedef typename co::hash_map<K, V>::value_type value_type;
+    typedef typename std::unordered_map<K, V, Hash, Pred, Alloc> impl_type;
+    typedef typename impl_type::iterator iterator;
+    typedef typename impl_type::key_type key_type;
+    typedef typename impl_type::value_type value_type;
+
+    typedef typename Alloc::template rebind<K>::other list_allocator;
+    // typedef typename std::allocator_traits<Alloc>::template rebind_alloc<K> list_allocator;
+
+    typedef typename std::list<K, list_allocator> list_type;
+
+    typedef typename std::pair<const K, typename list_type::iterator> help_value_type;
+
+    typedef typename Alloc::template rebind<help_value_type>::other help_allocator;
+    // typedef typename std::allocator_traits<Alloc>::template rebind_alloc<help_value_type>
+    // help_allocator;
+
+    typedef typename std::unordered_map<K, typename list_type::iterator, Hash, Pred, help_allocator>
+        help_type;
 
     lru_map() : _capacity(1024) {}
     ~lru_map() = default;
 
-    explicit lru_map(size_t capacity) {
-        _capacity = capacity > 0 ? capacity : 1024;
-    }
+    explicit lru_map(size_t capacity) { _capacity = capacity > 0 ? capacity : 1024; }
 
-    lru_map(lru_map&& x)
-        : _kv(std::move(x._kv)), _ki(std::move(x._ki)), _kl(std::move(x._kl)) {
+    lru_map(lru_map&& x) : _kv(std::move(x._kv)), _ki(std::move(x._ki)), _kl(std::move(x._kl)) {
         _capacity = x._capacity;
     }
 
-    size_t size()    const { return _kv.size(); }
-    bool empty()     const { return this->size() == 0; }
+    size_t size() const { return _kv.size(); }
+    bool empty() const { return this->size() == 0; }
     iterator begin() const { return ((lru_map*)this)->_kv.begin(); }
-    iterator end()   const { return ((lru_map*)this)->_kv.end(); }
+    iterator end() const { return ((lru_map*)this)->_kv.end(); }
 
     iterator find(const key_type& key) {
         iterator it = _kv.find(key);
         if (it != _kv.end() && _kl.front() != key) {
             auto ki = _ki.find(key);
-            _kl.splice(_kl.begin(), _kl, ki->second); // move key to the front
+            _kl.splice(_kl.begin(), _kl, ki->second);  // move key to the front
             ki->second = _kl.begin();
         }
         return it;
     }
 
     // The key is not inserted if it already exists.
-    template<typename Key, typename Val>
+    template <typename Key, typename Val>
     void insert(Key&& key, Val&& value) {
         if (_kv.size() >= _capacity) {
             K k = _kl.back();
@@ -164,9 +156,7 @@ class lru_map {
         }
     }
 
-    void erase(const key_type& key) {
-        this->erase(_kv.find(key));
-    }
+    void erase(const key_type& key) { this->erase(_kv.find(key)); }
 
     void clear() {
         _kv.clear();
@@ -181,15 +171,13 @@ class lru_map {
         std::swap(_capacity, x._capacity);
     }
 
-    void swap(lru_map&& x) noexcept {
-        x.swap(*this);
-    }
+    void swap(lru_map&& x) noexcept { x.swap(*this); }
 
   private:
-    co::hash_map<K, V> _kv;
-    co::hash_map<K, typename co::list<K>::iterator> _ki;
-    co::list<K> _kl;  // key list
-    size_t _capacity; // max capacity
+    impl_type _kv;
+    help_type _ki;
+    list_type _kl;     // key list
+    size_t _capacity;  // max capacity
     DISALLOW_COPY_AND_ASSIGN(lru_map);
 };
 
@@ -201,46 +189,40 @@ struct Fmt {
         for (size_t i = 0; i < n; ++i) {
             const char c = s[i];
             switch (c) {
-              case '"':
-                fs.append("\\\"", 2);
-                break;
-              case '\r':
-                fs.append("\\r", 2);
-                break;
-              case '\n':
-                fs.append("\\n", 2);
-                break;
-              case '\t':
-                fs.append("\\t", 2);
-                break;
-              case '\b':
-                fs.append("\\b", 2);
-                break;
-              case '\f':
-                fs.append("\\f", 2);
-                break;
-              case '\\':
-                fs.append("\\\\", 2);
-                break;
-              default:
-                fs.append(c);
-                break;
+                case '"':
+                    fs.append("\\\"", 2);
+                    break;
+                case '\r':
+                    fs.append("\\r", 2);
+                    break;
+                case '\n':
+                    fs.append("\\n", 2);
+                    break;
+                case '\t':
+                    fs.append("\\t", 2);
+                    break;
+                case '\b':
+                    fs.append("\\b", 2);
+                    break;
+                case '\f':
+                    fs.append("\\f", 2);
+                    break;
+                case '\\':
+                    fs.append("\\\\", 2);
+                    break;
+                default:
+                    fs.append(c);
+                    break;
             }
         }
         return fs.append('"');
     }
 
-    fastream& fmt(fastream& fs, const char* s) {
-        return fmt(fs, s, strlen(s));
-    }
+    fastream& fmt(fastream& fs, const char* s) { return fmt(fs, s, strlen(s)); }
 
-    fastream& fmt(fastream& fs, const fastring& s) {
-        return fmt(fs, s.data(), s.size());
-    }
+    fastream& fmt(fastream& fs, const fastring& s) { return fmt(fs, s.data(), s.size()); }
 
-    fastream& fmt(fastream& fs, const std::string& s) {
-        return fmt(fs, s.data(), s.size());
-    }
+    fastream& fmt(fastream& fs, const std::string& s) { return fmt(fs, s.data(), s.size()); }
 
     fastream& fmt(fastream& fs, char x) { return fs << x; }
     fastream& fmt(fastream& fs, signed char x) { return fs << x; }
@@ -258,14 +240,14 @@ struct Fmt {
     fastream& fmt(fastream& fs, unsigned long long x) { return fs << x; }
     fastream& fmt(fastream& fs, const void* x) { return fs << x; }
 
-    template<typename K, typename V>
+    template <typename K, typename V>
     fastream& fmt(fastream& fs, const std::pair<K, V>& x) {
         fmt(fs, x.first);
         fs << ':';
         return fmt(fs, x.second);
     }
 
-    template<typename T>
+    template <typename T>
     fastream& fmt(fastream& fs, const T& beg, const T& end, char c1, char c2) {
         if (beg != end) {
             fs << c1;
@@ -280,161 +262,161 @@ struct Fmt {
         return fs;
     }
 
-    template<typename T>
+    template <typename T>
     fastream& fmt(fastream& fs, const co::vector<T>& x) {
         return fmt(fs, x.begin(), x.end(), '[', ']');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const std::vector<T>& x) {
+    template <typename T, typename A>
+    fastream& fmt(fastream& fs, const std::vector<T, A>& x) {
         return fmt(fs, x.begin(), x.end(), '[', ']');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const co::deque<T>& x) {
+    // template<typename T>
+    // fastream& fmt(fastream& fs, const co::deque<T>& x) {
+    //     return fmt(fs, x.begin(), x.end(), '[', ']');
+    // }
+
+    template <typename T, typename A>
+    fastream& fmt(fastream& fs, const std::deque<T, A>& x) {
         return fmt(fs, x.begin(), x.end(), '[', ']');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const std::deque<T>& x) {
+    // template<typename T>
+    // fastream& fmt(fastream& fs, const co::list<T>& x) {
+    //     return fmt(fs, x.begin(), x.end(), '[', ']');
+    // }
+
+    template <typename T, typename A>
+    fastream& fmt(fastream& fs, const std::list<T, A>& x) {
         return fmt(fs, x.begin(), x.end(), '[', ']');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const co::list<T>& x) {
-        return fmt(fs, x.begin(), x.end(), '[', ']');
-    }
+    // template<typename T>
+    // fastream& fmt(fastream& fs, const co::set<T>& x) {
+    //     return fmt(fs, x.begin(), x.end(), '{', '}');
+    // }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const std::list<T>& x) {
-        return fmt(fs, x.begin(), x.end(), '[', ']');
-    }
-
-    template<typename T>
-    fastream& fmt(fastream& fs, const co::set<T>& x) {
+    template <typename T, typename C, typename A>
+    fastream& fmt(fastream& fs, const std::set<T, C, A>& x) {
         return fmt(fs, x.begin(), x.end(), '{', '}');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const std::set<T>& x) {
+    // template<typename T>
+    // fastream& fmt(fastream& fs, const co::hash_set<T>& x) {
+    //     return fmt(fs, x.begin(), x.end(), '{', '}');
+    // }
+
+    template <typename T, typename H, typename P, typename A>
+    fastream& fmt(fastream& fs, const std::unordered_set<T, H, P, A>& x) {
         return fmt(fs, x.begin(), x.end(), '{', '}');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const co::hash_set<T>& x) {
+    // template<typename K, typename V>
+    // fastream& fmt(fastream& fs, const co::map<K, V>& x) {
+    //     return fmt(fs, x.begin(), x.end(), '{', '}');
+    // }
+
+    template <typename K, typename V, typename C, typename A>
+    fastream& fmt(fastream& fs, const std::map<K, V, C, A>& x) {
         return fmt(fs, x.begin(), x.end(), '{', '}');
     }
 
-    template<typename T>
-    fastream& fmt(fastream& fs, const std::unordered_set<T>& x) {
+    // template<typename K, typename V>
+    // fastream& fmt(fastream& fs, const co::hash_map<K, V>& x) {
+    //     return fmt(fs, x.begin(), x.end(), '{', '}');
+    // }
+
+    template <typename K, typename V, typename H, typename P, typename A>
+    fastream& fmt(fastream& fs, const std::unordered_map<K, V, H, P, A>& x) {
         return fmt(fs, x.begin(), x.end(), '{', '}');
     }
 
-    template<typename K, typename V>
-    fastream& fmt(fastream& fs, const co::map<K, V>& x) {
-        return fmt(fs, x.begin(), x.end(), '{', '}');
-    }
-
-    template<typename K, typename V>
-    fastream& fmt(fastream& fs, const std::map<K, V>& x) {
-        return fmt(fs, x.begin(), x.end(), '{', '}');
-    }
-
-    template<typename K, typename V>
-    fastream& fmt(fastream& fs, const co::hash_map<K, V>& x) {
-        return fmt(fs, x.begin(), x.end(), '{', '}');
-    }
-
-    template<typename K, typename V>
-    fastream& fmt(fastream& fs, const std::unordered_map<K, V>& x) {
-        return fmt(fs, x.begin(), x.end(), '{', '}');
-    }
-
-    template<typename K, typename V>
-    fastream& fmt(fastream& fs, const co::lru_map<K, V>& x) {
+    template <typename K, typename V, typename H, typename P, typename A>
+    fastream& fmt(fastream& fs, const co::lru_map<K, V, H, P, A>& x) {
         return fmt(fs, x.begin(), x.end(), '{', '}');
     }
 };
 
-} // xx
-} // co
+}  // namespace xx
+}  // namespace co
 
-template<typename T>
+template <typename T>
 inline fastream& operator<<(fastream& fs, const co::vector<T>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename T>
-inline fastream& operator<<(fastream& fs, const std::vector<T>& x) {
+template <typename T, typename A>
+inline fastream& operator<<(fastream& fs, const std::vector<T, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename T>
-inline fastream& operator<<(fastream& fs, const co::deque<T>& x) {
+// template <typename T>
+// inline fastream& operator<<(fastream& fs, const co::deque<T>& x) {
+//     return co::xx::Fmt().fmt(fs, x);
+// }
+
+template <typename T, typename A>
+inline fastream& operator<<(fastream& fs, const std::deque<T, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename T>
-inline fastream& operator<<(fastream& fs, const std::deque<T>& x) {
+// template <typename T>
+// inline fastream& operator<<(fastream& fs, const co::list<T>& x) {
+//     return co::xx::Fmt().fmt(fs, x);
+// }
+
+template <typename T, typename A>
+inline fastream& operator<<(fastream& fs, const std::list<T, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename T>
-inline fastream& operator<<(fastream& fs, const co::list<T>& x) {
+// template <typename T>
+// inline fastream& operator<<(fastream& fs, const co::set<T>& x) {
+//     return co::xx::Fmt().fmt(fs, x);
+// }
+
+template <typename T, typename C, typename A>
+inline fastream& operator<<(fastream& fs, const std::set<T, C, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename T>
-inline fastream& operator<<(fastream& fs, const std::list<T>& x) {
+// template <typename T>
+// inline fastream& operator<<(fastream& fs, const co::hash_set<T>& x) {
+//     return co::xx::Fmt().fmt(fs, x);
+// }
+
+template <typename T, typename H, typename P, typename A>
+inline fastream& operator<<(fastream& fs, const std::unordered_set<T, H, P, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename T>
-inline fastream& operator<<(fastream& fs, const co::set<T>& x) {
-    return co::xx::Fmt().fmt(fs, x);
-}
-
-template<typename T>
-inline fastream& operator<<(fastream& fs, const std::set<T>& x) {
-    return co::xx::Fmt().fmt(fs, x);
-}
-
-template<typename T>
-inline fastream& operator<<(fastream& fs, const co::hash_set<T>& x) {
-    return co::xx::Fmt().fmt(fs, x);
-}
-
-template<typename T>
-inline fastream& operator<<(fastream& fs, const std::unordered_set<T>& x) {
-    return co::xx::Fmt().fmt(fs, x);
-}
-
-template<typename K, typename V>
+template <typename K, typename V>
 inline fastream& operator<<(fastream& fs, const std::pair<K, V>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename K, typename V>
-inline fastream& operator<<(fastream& fs, const co::map<K, V>& x) {
+// template <typename K, typename V>
+// inline fastream& operator<<(fastream& fs, const co::map<K, V>& x) {
+//     return co::xx::Fmt().fmt(fs, x);
+// }
+
+template <typename K, typename V, typename C, typename A>
+inline fastream& operator<<(fastream& fs, const std::map<K, V, C, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename K, typename V>
-inline fastream& operator<<(fastream& fs, const std::map<K, V>& x) {
+// template <typename K, typename V>
+// inline fastream& operator<<(fastream& fs, const co::hash_map<K, V>& x) {
+//     return co::xx::Fmt().fmt(fs, x);
+// }
+
+template <typename K, typename V, typename H, typename P, typename A>
+inline fastream& operator<<(fastream& fs, const std::unordered_map<K, V, H, P, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }
 
-template<typename K, typename V>
-inline fastream& operator<<(fastream& fs, const co::hash_map<K, V>& x) {
-    return co::xx::Fmt().fmt(fs, x);
-}
-
-template<typename K, typename V>
-inline fastream& operator<<(fastream& fs, const std::unordered_map<K, V>& x) {
-    return co::xx::Fmt().fmt(fs, x);
-}
-
-template<typename K, typename V>
-inline fastream& operator<<(fastream& fs, const co::lru_map<K, V>& x) {
+template <typename K, typename V, typename H, typename P, typename A>
+inline fastream& operator<<(fastream& fs, const co::lru_map<K, V, H, P, A>& x) {
     return co::xx::Fmt().fmt(fs, x);
 }

@@ -62,7 +62,7 @@ void fb() {
 
 int main(int argc, char** argv) {
     flag::parse(argc, argv);
-    FLG_cout = true;
+    FLG_log_console = true;
 
     wg.add();
     if (FLG_m.empty() && FLG_url.empty()) {
