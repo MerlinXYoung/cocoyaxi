@@ -8,6 +8,9 @@
 #include <time.h>         // for clock_gettime
 #else
 #include <sys/time.h>     // for gettimeofday
+#ifndef __APPLE__
+#include <pthread_np.h>   // for getting proper threadid on modern BSDs but not Mac OSX
+#endif
 #endif
 #endif
 
@@ -100,7 +103,11 @@ uint32 thread_id() { return syscall(SYS_gettid); }
 #else /* for mac, bsd.. */
 uint32 thread_id() {
     uint64 x;
+#ifdef __APPLE__
     pthread_threadid_np(0, &x);
+#else
+    x = pthread_getthreadid_np();
+#endif
     return (uint32)x;
 }
 #endif

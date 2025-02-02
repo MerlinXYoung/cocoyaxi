@@ -156,7 +156,7 @@ fastring randstr(const char* s, int n) {
     const uint32 mask = _get_mask(len);
     const uint32 step = (uint32)::ceil(1.6 * (mask * n) / len);
     fastring bytes(god::align_up<4>(step));
-    fastring res(n);
+    fastring res(n + 1);
     int pos = 0;
 
     res.resize(n);
